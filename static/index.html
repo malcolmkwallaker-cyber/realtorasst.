@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Realtor Daily Assistant</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">🏡</div>
+      <div class="logo-text">
+        <span class="logo-title">RealAssist</span>
+        <span class="logo-sub">Your Daily Edge</span>
+      </div>
+    </div>
+    <ul class="nav-links">
+      <li><button class="nav-btn active" data-tab="daily-plan">📅 Daily Planner</button></li>
+      <li><button class="nav-btn" data-tab="va-handoff">📋 VA Handoff for Dan</button></li>
+      <li><button class="nav-btn" data-tab="agent-howto">📚 Agent How-To Guide</button></li>
+    </ul>
+    <div class="sidebar-footer">
+      <p>Powered by Claude AI</p>
+    </div>
+  </nav>
+
+  <main class="content">
+
+    <!-- DAILY PLANNER TAB -->
+    <section id="daily-plan" class="tab-section active">
+      <div class="section-header">
+        <h1>Daily Planner</h1>
+        <p>Tell me what's on your plate today and I'll build your game plan.</p>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="appointments">Today's Appointments</label>
+          <textarea id="appointments" rows="4" placeholder="e.g. 10am - Buyer consult with the Johnsons&#10;2pm - Listing presentation at 123 Oak St&#10;4pm - Home inspection on Pine Ave deal"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="leads">Leads to Follow Up</label>
+          <textarea id="leads" rows="4" placeholder="e.g. Sarah M. - hot buyer, saw 3 homes last week, needs to decide&#10;Mike T. - called about listing, needs CMA&#10;Zillow lead from yesterday - first contact needed"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="pending-deals">Pending Deals / Transactions</label>
+          <textarea id="pending-deals" rows="4" placeholder="e.g. 456 Maple - under contract, inspection on Friday&#10;789 Elm - closing next Tuesday, need to confirm wire&#10;321 Oak - waiting on appraisal results"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="personal-notes">Anything Else on Your Mind</label>
+          <textarea id="personal-notes" rows="3" placeholder="e.g. Feeling scattered today, need help prioritizing&#10;Big listing appointment tomorrow I need to prep for&#10;Low on new leads, need prospecting time"></textarea>
+        </div>
+      </div>
+      <button class="btn-primary" id="generate-plan" onclick="generateDailyPlan()">
+        <span class="btn-icon">⚡</span> Generate My Day Plan
+      </button>
+      <div class="output-box" id="plan-output" style="display:none;">
+        <div class="output-header">
+          <h3>Your Game Plan for Today</h3>
+          <button class="btn-copy" onclick="copyOutput('plan-output-text')">Copy</button>
+        </div>
+        <div class="output-text" id="plan-output-text"></div>
+      </div>
+    </section>
+
+    <!-- VA HANDOFF TAB -->
+    <section id="va-handoff" class="tab-section">
+      <div class="section-header">
+        <h1>VA Handoff for Dan</h1>
+        <p>Describe what you need Dan to handle — I'll write him a clear, step-by-step brief.</p>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label for="tasks">Tasks for Dan</label>
+          <textarea id="tasks" rows="6" placeholder="e.g. Follow up with the 5 leads from open house on Saturday&#10;Update all active listings in the CRM with new status&#10;Send thank-you emails to last week's showings&#10;Schedule a call with our preferred lender for next week&#10;Pull comps for 789 Birch Lane listing appointment"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="priority">Priority Level</label>
+          <select id="priority">
+            <option value="urgent">🔴 Urgent — needs done ASAP</option>
+            <option value="high">🟠 High — by end of today</option>
+            <option value="normal" selected>🟡 Normal — by end of business</option>
+            <option value="low">🟢 Low — this week is fine</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="deadline">Specific Deadline (optional)</label>
+          <input type="text" id="deadline" placeholder="e.g. Before 3pm, By Friday, Before my listing appt" />
+        </div>
+        <div class="form-group full-width">
+          <label for="context">Background Context for Dan</label>
+          <textarea id="context" rows="3" placeholder="e.g. The open house leads are in Followup Boss tagged 'Open House 4/13'&#10;Use the standard thank-you email template in Google Drive&#10;The lender's name is Tom, his number is in the CRM"></textarea>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="generateVAHandoff()">
+        <span class="btn-icon">📋</span> Write Dan's Brief
+      </button>
+      <div class="output-box" id="handoff-output" style="display:none;">
+        <div class="output-header">
+          <h3>Handoff Brief for Dan</h3>
+          <button class="btn-copy" onclick="copyOutput('handoff-output-text')">Copy</button>
+        </div>
+        <div class="output-text" id="handoff-output-text"></div>
+      </div>
+    </section>
+
+    <!-- AGENT HOW-TO TAB -->
+    <section id="agent-howto" class="tab-section">
+      <div class="section-header">
+        <h1>Agent How-To Guide</h1>
+        <p>Generate training materials and SOPs for new or growing agents on your team.</p>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label for="topic">What Do You Need a Guide On?</label>
+          <input type="text" id="topic" placeholder="e.g. How to run a successful open house, How to handle buyer objections, How to price a listing, How to build a sphere of influence" />
+        </div>
+        <div class="form-group">
+          <label for="agent-experience">Agent Experience Level</label>
+          <select id="agent-experience">
+            <option value="new">New Agent — just licensed</option>
+            <option value="junior">Junior Agent — 1-2 years in</option>
+            <option value="experienced">Experienced — leveling up a skill</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="specific-questions">Specific Questions to Cover (optional)</label>
+          <input type="text" id="specific-questions" placeholder="e.g. How do I handle the 'I want to wait' objection? What do I bring?" />
+        </div>
+      </div>
+      <div class="quick-topics">
+        <p class="quick-label">Quick picks:</p>
+        <div class="topic-chips">
+          <button class="chip" onclick="setTopic('How to prospect for new listings using door knocking')">Door Knocking</button>
+          <button class="chip" onclick="setTopic('How to handle a buyer consultation from start to finish')">Buyer Consult</button>
+          <button class="chip" onclick="setTopic('How to price and present a listing')">Listing Presentation</button>
+          <button class="chip" onclick="setTopic('How to follow up with leads without being annoying')">Lead Follow-Up</button>
+          <button class="chip" onclick="setTopic('How to negotiate offers on behalf of clients')">Negotiation</button>
+          <button class="chip" onclick="setTopic('How to build and work your sphere of influence')">Sphere of Influence</button>
+          <button class="chip" onclick="setTopic('How to run an effective open house')">Open House</button>
+          <button class="chip" onclick="setTopic('How to manage a transaction from contract to close')">Contract to Close</button>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="generateAgentHowTo()">
+        <span class="btn-icon">📚</span> Generate How-To Guide
+      </button>
+      <div class="output-box" id="howto-output" style="display:none;">
+        <div class="output-header">
+          <h3>Agent How-To Guide</h3>
+          <button class="btn-copy" onclick="copyOutput('howto-output-text')">Copy</button>
+        </div>
+        <div class="output-text" id="howto-output-text"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
