@@ -19,6 +19,8 @@
       <li><button class="nav-btn active" data-tab="daily-plan">📅 Daily Planner</button></li>
       <li><button class="nav-btn" data-tab="va-handoff">📋 VA Handoff for Dan</button></li>
       <li><button class="nav-btn" data-tab="agent-howto">📚 Agent How-To Guide</button></li>
+      <li><button class="nav-btn" data-tab="activity-monitor">👁 Activity Monitor</button></li>
+      <li><button class="nav-btn" data-tab="sop-generator">📄 SOP Generator</button></li>
     </ul>
     <div class="sidebar-footer">
       <p>Powered by Claude AI</p>
@@ -150,6 +152,100 @@
           <button class="btn-copy" onclick="copyOutput('howto-output-text')">Copy</button>
         </div>
         <div class="output-text" id="howto-output-text"></div>
+      </div>
+    </section>
+
+    <!-- ACTIVITY MONITOR TAB -->
+    <section id="activity-monitor" class="tab-section">
+      <div class="section-header">
+        <h1>Activity Monitor</h1>
+        <p>Track what you do on your computer and phone so Claude can turn it into SOPs for your assistant.</p>
+      </div>
+
+      <div class="monitor-status-bar" id="monitor-status-bar">
+        <div class="status-indicator stopped" id="status-dot"></div>
+        <span id="status-label">Not recording</span>
+        <span id="activity-count" class="status-count"></span>
+      </div>
+
+      <div class="monitor-controls">
+        <button class="btn-primary" id="btn-start-monitor" onclick="startMonitor()">
+          <span class="btn-icon">▶</span> Start Recording
+        </button>
+        <button class="btn-secondary" id="btn-stop-monitor" onclick="stopMonitor()" disabled>
+          <span class="btn-icon">■</span> Stop Recording
+        </button>
+      </div>
+
+      <div class="monitor-note">
+        <p>The monitor tracks which app and window is active every 5 seconds. No keystrokes or screen content are captured. Data is stored locally in <code>activity.db</code>.</p>
+      </div>
+
+      <div id="monitor-error" class="error-banner" style="display:none;"></div>
+
+      <!-- Phone setup instructions -->
+      <div class="phone-setup">
+        <button class="phone-setup-toggle" onclick="togglePhoneSetup()">
+          <span>📱 Phone Setup Instructions</span>
+          <span id="phone-toggle-icon">▼</span>
+        </button>
+        <div id="phone-setup-body" class="phone-setup-body" style="display:none;">
+          <p>To track phone activity, send a webhook from your phone to this server:</p>
+          <p class="setup-endpoint"><strong>POST</strong> <code>http://&lt;your-server-ip&gt;:8000/api/phone/activity</code></p>
+          <p>Body (JSON):</p>
+          <pre class="setup-code">{"app_name": "Zillow", "window_title": "Zillow — Search", "duration_sec": 120, "source": "android"}</pre>
+
+          <div class="setup-platform">
+            <strong>Android (Tasker):</strong>
+            <ol>
+              <li>Create a Profile → Event: <em>App Opened</em></li>
+              <li>Task → HTTP Request → POST to the URL above</li>
+              <li>Body: <code>{"app_name":"%app_name","window_title":"%app_name opened","source":"android"}</code></li>
+            </ol>
+          </div>
+
+          <div class="setup-platform">
+            <strong>iOS (Shortcuts):</strong>
+            <ol>
+              <li>Open the Shortcuts app → Automation → New Automation</li>
+              <li>Trigger: <em>App Opens</em> → select your apps</li>
+              <li>Action: <em>Get Contents of URL</em> → Method: POST → URL above</li>
+              <li>Request Body (JSON): <code>{"app_name":"AppName","window_title":"AppName opened","source":"ios"}</code></li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SOP GENERATOR TAB -->
+    <section id="sop-generator" class="tab-section">
+      <div class="section-header">
+        <h1>SOP Generator</h1>
+        <p>Select a recorded work session and Claude will write a step-by-step SOP for your VA.</p>
+      </div>
+
+      <div class="form-group full-width" style="margin-bottom:24px;">
+        <label for="session-select">Select a Session</label>
+        <select id="session-select" onchange="onSessionChange()">
+          <option value="">— Load sessions —</option>
+        </select>
+      </div>
+
+      <div id="session-preview" class="session-preview" style="display:none;">
+        <h4 id="session-preview-label"></h4>
+        <div id="session-activity-list" class="activity-list"></div>
+      </div>
+
+      <button class="btn-primary" id="btn-generate-sop" onclick="generateSOP()" disabled>
+        <span class="btn-icon">✨</span> Generate SOP with Claude
+      </button>
+
+      <div class="output-box" id="sop-output" style="display:none;">
+        <div class="output-header">
+          <h3>Generated SOP</h3>
+          <button class="btn-copy" onclick="copyOutput('sop-output-text')">Copy</button>
+        </div>
+        <div class="output-text" id="sop-output-text"></div>
       </div>
     </section>
 

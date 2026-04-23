@@ -5,10 +5,12 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import anthropic
 from dotenv import load_dotenv
+import activity_monitor
 
 load_dotenv()
 
 app = FastAPI(title="Realtor Daily Assistant")
+activity_monitor.init_db()
 
 _api_key = os.environ.get("ANTHROPIC_API_KEY")
 if not _api_key:
@@ -40,6 +42,17 @@ class AgentHowToRequest(BaseModel):
     topic: str
     agent_experience: str = "new"
     specific_questions: str = ""
+
+
+class SessionIdRequest(BaseModel):
+    session_id: int
+
+
+class PhoneActivityRequest(BaseModel):
+    app_name: str
+    window_title: str
+    duration_sec: int = 0
+    source: str = "phone"
 
 
 def call_claude(prompt: str, max_tokens: int = 2048) -> str:
@@ -154,6 +167,99 @@ This should read like advice from a top-producing mentor, not a textbook."""
         return {"guide": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/monitor/start")
+async def monitor_start():
+    result = activity_monitor.start_monitor()
+    if result["status"] == "not_running_xdotool":
+        raise HTTPException(
+            status_code=503,
+            detail="xdotool is not installed. Install it with: sudo apt install xdotool"
+        )
+    return result
+
+
+@app.post("/api/monitor/stop")
+async def monitor_stop():
+    return activity_monitor.stop_monitor()
+
+
+@app.get("/api/monitor/status")
+async def monitor_status():
+    return activity_monitor.get_monitor_status()
+
+
+@app.get("/api/sessions")
+async def get_sessions():
+    activity_monitor.finalize_sessions()
+    return {"sessions": activity_monitor.list_sessions()}
+
+
+@app.get("/api/sessions/{session_id}/activities")
+async def get_session_activities(session_id: int):
+    acts = activity_monitor.get_session_activities(session_id)
+    if not acts:
+        raise HTTPException(status_code=404, detail="Session not found or has no activities")
+    return {"activities": acts}
+
+
+@app.post("/api/sessions/generate-sop")
+async def generate_sop(req: SessionIdRequest):
+    existing = activity_monitor.get_sop(req.session_id)
+    if existing:
+        return {"sop": existing}
+
+    activities = activity_monitor.get_session_activities(req.session_id)
+    if not activities:
+        raise HTTPException(status_code=404, detail="Session not found or has no activities")
+
+    lines = []
+    for a in activities:
+        mins = a["duration_sec"] // 60
+        secs = a["duration_sec"] % 60
+        dur = f"{mins}m {secs}s" if mins else f"{secs}s"
+        ts = a["timestamp"][11:16] if len(a["timestamp"]) >= 16 else a["timestamp"]
+        src = f"[{a['source']}]" if a["source"] != "desktop" else ""
+        lines.append(f"- [{ts}]{src} {a['app_name']} | {a['window_title']} | {dur}")
+    activity_log = "\n".join(lines)
+
+    prompt = f"""You are analyzing a computer and phone activity log captured from a real estate agent's devices.
+Your task is to reverse-engineer what the agent was doing and write a clear, reusable Standard Operating Procedure (SOP) that a virtual assistant could follow to replicate the same workflow.
+
+ACTIVITY LOG (chronological — format: [HH:MM][source?] App | Window Title | Duration):
+{activity_log}
+
+Based on this log, write a professional SOP document with these sections:
+
+1. TASK NAME — A short, descriptive title for what this workflow accomplishes
+
+2. PURPOSE — 1-2 sentences on why this task is done and what outcome it achieves
+
+3. TOOLS REQUIRED — List every app, website, or platform used (desktop and phone)
+
+4. STEP-BY-STEP INSTRUCTIONS — Numbered steps that replicate exactly what the agent did, inferred from the app and window title sequence. Be specific. Where a window title reveals a web page or document name, reference it explicitly.
+
+5. ESTIMATED TIME — Based on the actual durations in the log
+
+6. NOTES & TIPS — Any patterns you notice and advice for the VA doing this task
+
+Write in plain, direct language suitable for a real estate virtual assistant. Do not speculate beyond what the activity log shows."""
+
+    try:
+        sop_text = call_claude(prompt, max_tokens=3000)
+        activity_monitor.save_sop(req.session_id, sop_text)
+        return {"sop": sop_text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/phone/activity")
+async def phone_activity(req: PhoneActivityRequest):
+    activity_monitor.log_phone_activity(
+        req.app_name, req.window_title, req.duration_sec, req.source
+    )
+    return {"status": "logged"}
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
