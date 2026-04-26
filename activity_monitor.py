@@ -342,3 +342,80 @@ def get_sop(session_id: int) -> str | None:
     row = con.execute("SELECT sop_text FROM sessions WHERE id=?", (session_id,)).fetchone()
     con.close()
     return row[0] if row else None
+
+
+# ---------------------------------------------------------------------------
+# Terminal / CLI mode
+# ---------------------------------------------------------------------------
+
+def _cli_run() -> None:
+    """
+    Run the monitor in the terminal. Prints each window change as it happens.
+    Press Ctrl+C to stop. Activities are saved to activity.db as normal.
+    """
+    if not _check_xdotool():
+        print("Error: xdotool is not installed.")
+        print("Install it with:  sudo apt install xdotool")
+        return
+
+    init_db()
+    print("Activity Monitor running — press Ctrl+C to stop.\n")
+    print(f"{'TIME':<8} {'APP':<22} WINDOW TITLE")
+    print("-" * 72)
+
+    current_title: str | None = None
+    current_app: str | None = None
+    window_start: datetime | None = None
+
+    try:
+        while True:
+            info = _get_active_window_info()
+            now = datetime.now(timezone.utc)
+
+            if info is not None:
+                app_name, window_title = info
+
+                if current_title is None:
+                    current_app = app_name
+                    current_title = window_title
+                    window_start = now
+                elif window_title != current_title:
+                    duration = int((now - window_start).total_seconds())
+                    if duration >= 1:
+                        _insert_activity(
+                            window_start.isoformat(), current_app,
+                            current_title, duration
+                        )
+                        local_time = window_start.astimezone().strftime("%H:%M:%S")
+                        mins = duration // 60
+                        secs = duration % 60
+                        dur_str = f"({mins}m {secs}s)" if mins else f"({secs}s)"
+                        title_preview = current_title[:45] + "…" \
+                            if len(current_title) > 45 else current_title
+                        print(
+                            f"{local_time:<8} {current_app[:20]:<22} "
+                            f"{title_preview}  {dur_str}"
+                        )
+                    current_app = app_name
+                    current_title = window_title
+                    window_start = now
+
+            time.sleep(POLL_INTERVAL)
+
+    except KeyboardInterrupt:
+        # Flush last window
+        if current_title and window_start:
+            now = datetime.now(timezone.utc)
+            duration = int((now - window_start).total_seconds())
+            if duration >= 1:
+                _insert_activity(
+                    window_start.isoformat(), current_app,
+                    current_title, duration
+                )
+        n = finalize_sessions()
+        print(f"\nStopped. {n} session(s) saved to {DB_PATH}")
+        print("Open the web app and go to SOP Generator to turn sessions into SOPs.")
+
+
+if __name__ == "__main__":
+    _cli_run()
