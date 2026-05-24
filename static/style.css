@@ -389,6 +389,71 @@ select option {
   background: var(--text-dim);
 }
 
+/* PASSWORD MODAL */
+.pw-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.pw-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px 36px;
+  width: 360px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pw-logo {
+  font-size: 40px;
+  line-height: 1;
+}
+
+.pw-box h2 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.pw-box p {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.pw-box input[type="password"] {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 15px;
+  padding: 12px 16px;
+  font-family: inherit;
+  text-align: center;
+  letter-spacing: 2px;
+  width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.pw-box input[type="password"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.pw-error {
+  color: #f87171;
+  font-size: 13px;
+}
+
 /* RESPONSIVE */
 @media (max-width: 768px) {
   body {

@@ -1,7 +1,8 @@
 import os
-from fastapi import FastAPI, HTTPException
+import secrets
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import anthropic
 from dotenv import load_dotenv
@@ -9,6 +10,24 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = FastAPI(title="Realtor Daily Assistant")
+
+# ── Optional shared-password auth ─────────────────────────────────────────────
+# Set APP_PASSWORD in .env / your hosting platform's env vars.
+# When set, every request must include the header:  X-App-Password: <password>
+# The /health endpoint is always public so deployment health checks work.
+_APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
+
+@app.middleware("http")
+async def password_guard(request: Request, call_next):
+    if _APP_PASSWORD and request.url.path != "/health":
+        provided = request.headers.get("X-App-Password", "")
+        if not secrets.compare_digest(provided, _APP_PASSWORD):
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid or missing X-App-Password header"},
+                headers={"WWW-Authenticate": "X-App-Password"},
+            )
+    return await call_next(request)
 
 _api_key = os.environ.get("ANTHROPIC_API_KEY")
 if not _api_key:
