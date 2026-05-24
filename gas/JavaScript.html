@@ -1,0 +1,144 @@
+<script>
+// Tab navigation
+document.querySelectorAll('.nav-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var tab = btn.dataset.tab;
+    document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-section').forEach(function(s) { s.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById(tab).classList.add('active');
+  });
+});
+
+function showLoading(outputId) {
+  var box = document.getElementById(outputId);
+  box.style.display = 'block';
+  box.innerHTML =
+    '<div class="output-header"><h3>Generating...</h3></div>' +
+    '<div class="loading-state"><div class="spinner"></div><span>Claude is building your content...</span></div>';
+}
+
+function showResult(outputId, textId, title, content) {
+  var box = document.getElementById(outputId);
+  box.style.display = 'block';
+  box.innerHTML =
+    '<div class="output-header">' +
+      '<h3>' + title + '</h3>' +
+      '<button class="btn-copy" onclick="copyOutput(\'' + textId + '\')">Copy</button>' +
+    '</div>' +
+    '<div class="output-text" id="' + textId + '"></div>';
+  document.getElementById(textId).textContent = content;
+}
+
+function showError(outputId, message) {
+  var box = document.getElementById(outputId);
+  box.style.display = 'block';
+  box.innerHTML =
+    '<div class="output-header"><h3>Error</h3></div>' +
+    '<div class="output-text" style="color:#f87171;">' + message + '</div>';
+}
+
+// ── Daily Planner ─────────────────────────────────────────────────────────
+
+function generateDailyPlan() {
+  var btn = document.querySelector('#daily-plan .btn-primary');
+  btn.disabled = true;
+  showLoading('plan-output');
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      showResult('plan-output', 'plan-output-text', 'Your Game Plan for Today', result);
+      btn.disabled = false;
+    })
+    .withFailureHandler(function(err) {
+      showError('plan-output', err.message);
+      btn.disabled = false;
+    })
+    .generateDailyPlan({
+      appointments: document.getElementById('appointments').value,
+      leads: document.getElementById('leads').value,
+      pending_deals: document.getElementById('pending-deals').value,
+      personal_notes: document.getElementById('personal-notes').value
+    });
+}
+
+// ── VA Handoff ────────────────────────────────────────────────────────────
+
+function generateVAHandoff() {
+  var tasks = document.getElementById('tasks').value.trim();
+  if (!tasks) {
+    alert('Please describe the tasks for Dan.');
+    return;
+  }
+
+  var btn = document.querySelector('#va-handoff .btn-primary');
+  btn.disabled = true;
+  showLoading('handoff-output');
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      showResult('handoff-output', 'handoff-output-text', 'Handoff Brief for Dan', result);
+      btn.disabled = false;
+    })
+    .withFailureHandler(function(err) {
+      showError('handoff-output', err.message);
+      btn.disabled = false;
+    })
+    .generateVAHandoff({
+      tasks: tasks,
+      priority: document.getElementById('priority').value,
+      deadline: document.getElementById('deadline').value,
+      context: document.getElementById('context').value
+    });
+}
+
+// ── Agent How-To ──────────────────────────────────────────────────────────
+
+function generateAgentHowTo() {
+  var topic = document.getElementById('topic').value.trim();
+  if (!topic) {
+    alert('Please enter a topic for the how-to guide.');
+    return;
+  }
+
+  var btn = document.querySelector('#agent-howto .btn-primary');
+  btn.disabled = true;
+  showLoading('howto-output');
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      showResult('howto-output', 'howto-output-text', 'Agent How-To Guide', result);
+      btn.disabled = false;
+    })
+    .withFailureHandler(function(err) {
+      showError('howto-output', err.message);
+      btn.disabled = false;
+    })
+    .generateAgentHowTo({
+      topic: topic,
+      agent_experience: document.getElementById('agent-experience').value,
+      specific_questions: document.getElementById('specific-questions').value
+    });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+
+function setTopic(topic) {
+  document.getElementById('topic').value = topic;
+  document.getElementById('topic').focus();
+}
+
+function copyOutput(textId) {
+  var el = document.getElementById(textId);
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent).then(function() {
+    var btn = el.closest('.output-box').querySelector('.btn-copy');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function() {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+</script>

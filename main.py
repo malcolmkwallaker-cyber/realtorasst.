@@ -1,13 +1,39 @@
 import os
-from fastapi import FastAPI, HTTPException
+import secrets
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="Realtor Daily Assistant")
 
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+# ── Optional shared-password auth ─────────────────────────────────────────────
+# Set APP_PASSWORD in .env / your hosting platform's env vars.
+# When set, every request must include the header:  X-App-Password: <password>
+# The /health endpoint is always public so deployment health checks work.
+_APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
+
+@app.middleware("http")
+async def password_guard(request: Request, call_next):
+    if _APP_PASSWORD and request.url.path != "/health":
+        provided = request.headers.get("X-App-Password", "")
+        if not secrets.compare_digest(provided, _APP_PASSWORD):
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid or missing X-App-Password header"},
+                headers={"WWW-Authenticate": "X-App-Password"},
+            )
+    return await call_next(request)
+
+_api_key = os.environ.get("ANTHROPIC_API_KEY")
+if not _api_key:
+    raise RuntimeError("ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add your key.")
+
+client = anthropic.Anthropic(api_key=_api_key)
 
 SYSTEM_PROMPT = """You are a highly experienced real estate coach and operations expert.
 You help realtors run their business efficiently. Your tone is professional, practical,
@@ -43,6 +69,11 @@ def call_claude(prompt: str, max_tokens: int = 2048) -> str:
         messages=[{"role": "user", "content": prompt}],
     )
     return message.content[0].text
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
 
 @app.get("/")
@@ -145,3 +176,9 @@ This should read like advice from a top-producing mentor, not a textbook."""
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# CRE Lead Gen module — mounted only if Supabase is configured
+import os as _os
+if _os.environ.get("SUPABASE_URL") and _os.environ.get("SUPABASE_SERVICE_KEY"):
+    from lead_gen.api import router as _lead_router
+    app.include_router(_lead_router)
