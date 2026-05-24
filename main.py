@@ -157,3 +157,9 @@ This should read like advice from a top-producing mentor, not a textbook."""
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# CRE Lead Gen module — mounted only if Supabase is configured
+import os as _os
+if _os.environ.get("SUPABASE_URL") and _os.environ.get("SUPABASE_SERVICE_KEY"):
+    from lead_gen.api import router as _lead_router
+    app.include_router(_lead_router)
