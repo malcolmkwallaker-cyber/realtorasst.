@@ -334,7 +334,7 @@ G.makeSprite = (rows, colors) => {
     '....DD..DD....',
     '....DD..DD....',
     '...KK....KK...',
-  ], { Y: '#e6c86e', S: '#f0c9a0', K: C.ink, W: C.white, G: C.gray, T: C.yellow, D: C.dusk, F: C.yellow });
+  ], { Y: '#6b4226', S: '#f0c9a0', K: C.ink, W: C.white, G: C.gray, T: C.yellow, D: C.dusk, F: C.yellow });
 
   // JEFF NOBLEZA: sharp charcoal blazer, glasses, blueprints in hand
   S.jeffNobleza = G.makeSprite([
