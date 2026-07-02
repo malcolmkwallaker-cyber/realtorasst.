@@ -19,10 +19,16 @@ This creates `dist/realtor-rivals.html` — a single self-contained HTML file
 (GitHub Pages, Netlify, a USB stick). It runs offline in any browser on
 web, Mac, and Windows.
 
-### Host it on GitHub Pages
+### Play it online (GitHub Pages)
 
-Enable Pages for this repo and the game is playable at
-`https://<user>.github.io/<repo>/game/`.
+A workflow at `.github/workflows/deploy-game.yml` auto-deploys the game to
+GitHub Pages on every push. Once deployed, share the link:
+
+**https://malcolmkwallaker-cyber.github.io/realtorasst./**
+
+(Requires the repository to be public, or a GitHub plan that allows Pages
+on private repos. The single-file bundle at `/dist/realtor-rivals.html`
+is also served from the same site.)
 
 ## Desktop apps (Mac / Windows)
 
