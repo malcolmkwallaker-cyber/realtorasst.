@@ -5,7 +5,7 @@
 'use strict';
 
 G.Engine.register('select', {
-  ORDER: ['bridger', 'malcolm', 'grandpa', 'influencer', 'veteran', 'rookie'],
+  ORDER: ['bridger', 'malcolm', 'grandpa', 'influencer', 'veteran', 'rookie', 'blake', 'tyler'],
 
   enter() {
     this.t = 0;

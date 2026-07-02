@@ -185,6 +185,30 @@
       perk: 'rookie',
       unlockHint: 'LOSE A SEASON (IT BUILDS CHARACTER)',
     },
+    blake: {
+      id: 'blake', name: 'BLAKE SUDDATH', title: 'The Growth Guru', secret: true,
+      color: G.C.teal, accent: G.C.cyan, sprite: 'blakeSuddath',
+      bio: ['High-energy growth strategist. Deploys AI to do the',
+        'busywork and generate passive leads - but runs entirely',
+        'on coffee, and drags to a crawl the moment it runs dry.'],
+      strengths: ['AI PASSIVE LEADS', 'VIDEO +15%, FOLLOWERS +25%', 'COFFEE-POWERED (WEAKNESS)'],
+      ability: { name: 'AI OVERDRIVE', desc: 'Deploy AI drones: instant leads + a follower spike, plus 2 days of passive AI lead-gen. Once per day.' },
+      videoBonus: 0.15, openHouseBonus: 0, lakeLeadWeight: 1, negotiateBonus: 0, listingBonus: 0, luxuryValueBonus: 0,
+      perk: 'blake',
+      unlockHint: "TRIGGER BLAKE'S SCALE MODE AT THE LAB",
+    },
+    tyler: {
+      id: 'tyler', name: 'TYLER LEWIS', title: 'The Systems Architect', secret: true,
+      color: G.C.sky, accent: G.C.cyan, sprite: 'tylerLewis',
+      bio: ['Calm systems builder. WEAK EARLY - his automations need',
+        'a few days to gain momentum - but Daily Discipline compounds',
+        'until he is one of the strongest agents late in the season.'],
+      strengths: ['COMPOUNDING SYSTEMS', 'DAILY DISCIPLINE (SCALES)', 'WEAK EARLY / STRONG LATE'],
+      ability: { name: 'SYSTEM OVERRIDE', desc: 'Automate the night: auto follow-up, a lead advances, referrals spike. Grows stronger as your systems build. Once per day.' },
+      videoBonus: 0, openHouseBonus: 0.1, lakeLeadWeight: 1, negotiateBonus: 0.05, listingBonus: 0.1, luxuryValueBonus: 0,
+      perk: 'tyler',
+      unlockHint: "TRIGGER TYLER'S SYSTEM OVERRIDE AT THE LAB",
+    },
   };
   Object.assign(D.CHARACTERS, D.SECRET_CHARACTERS);
 

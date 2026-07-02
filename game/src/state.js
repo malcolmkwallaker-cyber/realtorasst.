@@ -107,6 +107,7 @@ G.State = {
       systemOverride: 0,
       openHouseEngine: 0,
       commercialUnlocked: false,
+      coffee: 100,          // Blake's coffee meter (only drains when playing Blake)
       rivalry: 0,
       dayVolume: 0,
       bigfootToday: false,
@@ -125,9 +126,12 @@ G.State = {
     const pool = G.shuffle(G.Data.BOSS_POOL).slice(0, 2);
     this.s.bossPlan = [...pool, G.Data.FINAL_BOSS];
 
-    // starting pipeline (the Rookie starts with almost nothing)
+    // starting pipeline (Rookie & Tyler start slow)
     if (this.perk() === 'rookie') {
       this.spawnLead('firsttime');
+    } else if (this.perk() === 'tyler') {
+      this.spawnLead('firsttime');
+      this.spawnLead('signcall');
     } else {
       this.spawnLead('facebook');
       this.spawnLead('firsttime');
@@ -158,6 +162,7 @@ G.State = {
     st.systemOverride = st.systemOverride || 0;
     st.openHouseEngine = st.openHouseEngine || 0;
     st.commercialUnlocked = st.commercialUnlocked || false;
+    st.coffee = st.coffee == null ? 100 : st.coffee;
     st.rivalry = st.rivalry || 0;
     st.dayVolume = st.dayVolume || 0;
     st.bigfootToday = st.bigfootToday || false;
@@ -193,7 +198,14 @@ G.State = {
       + (this.has('ai') ? 1 : 0)
       + (this.has('corporateHQ') ? 1 : 0)
       + (this.s.scaleMode > 0 ? 1 : 0)   // Blake's Scale Mode: everything speeds up
+      + (this.perk() === 'blake' && this.s.coffee <= 0 ? -1 : 0)  // out of coffee: slower
       + Math.min(3, this.rookieLevel());
+  },
+
+  // Tyler's Daily Discipline passive tier (playable). Dormant the first
+  // few days (weak early), then compounds (strong late).
+  tylerPassiveTier() {
+    return this.perk() === 'tyler' ? Math.floor((this.totalDay() - 1) / 3) : 0;
   },
 
   blakeBuff() {
@@ -209,7 +221,8 @@ G.State = {
     else if (s.aiOverdrive > 0) out.push({ t: 'AI' + s.aiOverdrive, c: G.C.lime });
     if (s.systemOverride > 0) out.push({ t: 'SYS' + s.systemOverride, c: G.C.sky });
     else if (s.openHouseEngine > 0) out.push({ t: 'OH' + s.openHouseEngine, c: G.C.orange });
-    if (s.tylerTier > 0) out.push({ t: 'DSC' + s.tylerTier, c: G.C.teal });
+    const dsc = s.tylerTier + this.tylerPassiveTier();
+    if (dsc > 0) out.push({ t: 'DSC' + dsc, c: G.C.teal });
     return out;
   },
 
@@ -239,6 +252,7 @@ G.State = {
     if (perk === 'grandpa') m *= 0.25;
     if (perk === 'veteran') m *= 0.5;
     if (perk === 'influencer') m *= 1.5;
+    if (perk === 'blake') m *= 1.25;
     return m;
   },
 
@@ -552,6 +566,13 @@ G.State = {
         G.Profile.bump('coffees');
         G.Profile.load().coffeeVisits++;
         G.Profile.save();
+        // Blake refuels at the coffee shop
+        if (this.perk() === 'blake') {
+          const wasEmpty = s.coffee <= 0;
+          s.coffee = 100;
+          if (wasEmpty) { s.energy = Math.min(s.energy + 1, this.maxEnergy()); lines.push('COFFEE REFILLED to 100%! Blake is back to 100 mph. (+1 energy)'); }
+          else lines.push('Coffee topped off to 100%. The cup that never empties, empties into Blake.');
+        }
         const targets = this.leadsInStage('new', 'hot', 'appt');
         for (const l of targets) l.warmth = G.clamp(l.warmth + 10, 0, 100);
         s.stats.happiness = G.clamp(s.stats.happiness + 2, 0, 100);
@@ -848,6 +869,7 @@ G.State = {
       }
       lines.push('', 'SCALE MODE active for 2 days: 2x leads, faster closes, +1 energy, free abilities.');
       G.Profile.award('scalemode');
+      G.Profile.unlock('blake', 'You triggered Blake\'s Scale Mode!');
     } else {
       // SPECIAL: AI Overdrive
       s.aiOverdrive = Math.max(s.aiOverdrive, 3);
@@ -900,6 +922,7 @@ G.State = {
       lines.push('', ...T.overrideLines);
       lines.push('SYSTEM OVERRIDE active 3 days.');
       G.Profile.award('sysoverride');
+      G.Profile.unlock('tyler', 'You triggered Tyler\'s System Override!');
     } else if (G.chance(T.engineChance)) {
       s.openHouseEngine = Math.max(s.openHouseEngine, 2);
       lines.push('', ...T.engineLines);
@@ -981,6 +1004,22 @@ G.State = {
       lines.push('HUSTLE! The rookie does everything, everywhere, all at once.');
       const r = advanceBest();
       lines.push(r || 'Nothing to hustle yet. The rookie does pushups instead.');
+    } else if (perk === 'blake') {
+      s.aiOverdrive = Math.max(s.aiOverdrive, 2);
+      const gain = Math.round(G.randInt(200, 500) * this.followerGainMult());
+      s.stats.followers += gain;
+      lines.push('AI OVERDRIVE! Drones deploy - holographic dashboards everywhere.');
+      lines.push('+' + gain + ' FOLLOWERS');
+      const n = G.randInt(1, 2);
+      for (let i = 0; i < n; i++) { const l = this.spawnLead(); lines.push('+ LEAD: ' + l.name + ' (AI-sourced)'); }
+      lines.push('2 days of passive AI lead-gen + income now active.');
+    } else if (perk === 'tyler') {
+      s.systemOverride = Math.max(s.systemOverride, 1);
+      lines.push('SYSTEM OVERRIDE! Automations take the wheel tonight.');
+      const r = advanceBest();
+      lines.push(r || 'Systems primed - nothing to advance yet.');
+      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + 8, 0, 100);
+      lines.push('Full auto follow-up + referral engine engaged for the night.');
     }
     G.Audio.ability();
     return { lines };
@@ -1103,9 +1142,19 @@ G.State = {
       else { s.aiOverdrive--; if (s.aiOverdrive === 0) passiveLines.push('AI Overdrive ended. The drones return to the backpack.'); }
     }
 
-    // 3c. TYLER LEWIS: Daily Discipline (scales with tier) + System Override + Open House Engine
-    if (s.tylerTier > 0) {
-      const tier = s.tylerTier;
+    // 3b2. BLAKE (playable): coffee drains; empty = slower next day. Plus network-effect passive.
+    if (this.perk() === 'blake') {
+      s.coffee = Math.max(0, s.coffee - 34);
+      if (s.coffee <= 0) passiveLines.push('COFFEE EMPTY! Blake is dragging - do FOLLOW UP to refuel. (-1 energy until then)');
+      else if (s.coffee <= 34) passiveLines.push('Coffee low (' + s.coffee + '%). Refill soon or slow down.');
+      if (G.chance(0.35)) passiveSpawn(1, null, 'NETWORK EFFECT: %N was introduced through Blake\'s network!');
+      if (G.chance(0.15)) passiveLines.push('Blake lost an hour testing a shiny new AI tool. (Distraction.)');
+    }
+
+    // 3c. TYLER: Daily Discipline (vendor tier + playable passive) + System Override + Open House Engine
+    const disciplineTier = s.tylerTier + this.tylerPassiveTier();
+    if (disciplineTier > 0) {
+      const tier = disciplineTier;
       // auto follow-up: warmth scales with tier
       for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + 5 + tier * 2, 0, 100);
       // organize / remind about neglected clients: reset the most-neglected lead so it won't ghost

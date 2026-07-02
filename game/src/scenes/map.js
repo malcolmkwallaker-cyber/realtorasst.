@@ -576,15 +576,20 @@ G.Engine.register('map', {
       ctx.strokeRect(72.5 + i * 8, 28.5, 5, 5);
     }
 
-    // Active buff badges (Blake / Tyler), blinking
+    // Coffee meter (playing Blake) + active buff badges (Blake / Tyler)
+    let bx = 38;
+    if (G.State.perk() === 'blake') {
+      const c = s.coffee;
+      const col = c <= 0 ? G.C.red : c <= 34 ? G.C.orange : G.C.lime;
+      G.UI.text(ctx, 'CF', 38, 37, { size: 6, color: G.C.gray });
+      G.UI.bar(ctx, 51, 37, 24, 5, c / 100, col);
+      bx = 80;
+    }
     const buffs = G.State.activeBuffs();
-    if (buffs.length) {
-      const blink = Math.floor(this.t * 3) % 2 === 0;
-      let bx = 38;
-      for (const bf of buffs) {
-        G.UI.text(ctx, bf.t, bx, 37, { size: 6, color: blink ? bf.c : G.C.slate });
-        bx += G.UI.measure(ctx, bf.t, 6) + 5;
-      }
+    const blink = Math.floor(this.t * 3) % 2 === 0;
+    for (const bf of buffs) {
+      G.UI.text(ctx, bf.t, bx, 37, { size: 6, color: blink ? bf.c : G.C.slate });
+      bx += G.UI.measure(ctx, bf.t, 6) + 5;
     }
 
     this.menu.render(ctx);
