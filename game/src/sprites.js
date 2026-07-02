@@ -312,6 +312,249 @@ G.makeSprite = (rows, colors) => {
     '...Y...',
     '..YYY..',
   ], { Y: C.yellow });
+
+  // ============ EXPANSION SPRITES ============
+
+  // BRAD NOLAN: blond lending legend, gray suit, gold tie, golden folder
+  S.bradNolan = G.makeSprite([
+    '....YYYYYY....',
+    '...YYYYYYYY...',
+    '...YSSSSSSY...',
+    '...YSKSSKSY...',
+    '....SSSSSS....',
+    '....SSWWSS....',
+    '....SSSSSS....',
+    '....GGGGGG....',
+    '...GGWTWGGG...',
+    '...GGWTWGGG...',
+    '..S.GWTWGG.FF.',
+    '....GGGGGG.FF.',
+    '....GGGGGG....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '...KK....KK...',
+  ], { Y: '#e6c86e', S: '#f0c9a0', K: C.ink, W: C.white, G: C.gray, T: C.yellow, D: C.dusk, F: C.yellow });
+
+  // JEFF NOBLEZA: sharp charcoal blazer, glasses, blueprints in hand
+  S.jeffNobleza = G.makeSprite([
+    '....KKKKKK....',
+    '...KKKKKKKK...',
+    '...KSSSSSSK...',
+    '...KCCSSCCK...',
+    '....SSSSSS....',
+    '....SSWWSS....',
+    '....SSSSSS....',
+    '....BBBBBB....',
+    '...BBWWWWBB...',
+    '...BBWWWWBB...',
+    '..S.BWWWWB.PP.',
+    '....BBBBBB.PP.',
+    '....BBBBBB....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '...KK....KK...',
+  ], { K: C.ink, S: '#d4a06a', C: C.cyan, W: C.white, B: C.dusk, D: '#3a3f52', P: C.sky });
+
+  // GRANDPA REALTOR: white hair, red suspenders, cardigan
+  S.grandpa = G.makeSprite([
+    '....WWWWWW....',
+    '...W.WWWW.W...',
+    '...WSSSSSSW...',
+    '...WSKSSKSW...',
+    '....SSSSSS....',
+    '....SWWWWS....',
+    '....SSSSSS....',
+    '....EEEEEE....',
+    '...EEBWWBEE...',
+    '...EEBWWBEE...',
+    '..S.EBWWBE.S..',
+    '....EEEEEE....',
+    '....EEEEEE....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '...KK....KK...',
+  ], { W: C.white, S: '#f0c9a0', K: C.ink, E: '#7a5c3e', B: C.red, D: C.slate });
+
+  // THE INFLUENCER: bright hair, ring light glow, phone always out
+  S.influencer = G.makeSprite([
+    '....PPPPPP....',
+    '...PPPPPPPP...',
+    '...PSSSSSSP...',
+    '...PSKSSKSP...',
+    '..RPSSSSSSP...',
+    '..R.SSWWSS....',
+    '..R.SSSSSS....',
+    '..R.MMMMMM....',
+    '..RMMMMMMMM...',
+    '..MMMWWMMMM...',
+    '..S.MMWWMM.S..',
+    '....MMMMMM....',
+    '....MMMMMM....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '...KK....KK...',
+  ], { P: '#c2478f', S: '#e8b796', K: C.ink, W: C.cyan, M: C.purple, R: C.cyan, D: C.dusk });
+
+  // THE VETERAN: silver hair, tan blazer, gold watch
+  S.veteran = G.makeSprite([
+    '....GGGGGG....',
+    '...GGGGGGGG...',
+    '...GSSSSSSG...',
+    '...GSKSSKSG...',
+    '....SSSSSS....',
+    '....SSWWSS....',
+    '....SSSSSS....',
+    '....TTTTTT....',
+    '...TTWNWTTT...',
+    '...TTWNWTTT...',
+    '..Y.TWNWTT.S..',
+    '....TTTTTT....',
+    '....TTTTTT....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '...KK....KK...',
+  ], { G: C.gray, S: '#e8b796', K: C.ink, W: C.white, N: C.teal, T: '#a08858', Y: C.yellow, D: C.dusk });
+
+  // THE ROOKIE: backwards cap, lime polo, big dreams
+  S.rookie = G.makeSprite([
+    '....OOOOOO.O..',
+    '...OOOOOOOOO..',
+    '...OSSSSSSO...',
+    '...OSKSSKSO...',
+    '....SSSSSS....',
+    '....SSWWSS....',
+    '....SSSSSS....',
+    '....LLLLLL....',
+    '...LLLWLLLL...',
+    '...LLLWLLLL...',
+    '..S.LLWLLL.S..',
+    '....LLLLLL....',
+    '....LLLLLL....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '...KK....KK...',
+  ], { O: C.orange, S: '#e8b796', K: C.ink, W: C.white, L: C.lime, D: C.dusk });
+
+  // BOSS: THE ZILLOW MONSTER - a blob of internet leads
+  S.bossZillow = G.makeSprite([
+    '....BBBBBB....',
+    '..BBBBBBBBBB..',
+    '.BBBWWBBWWBB..',
+    '.BBBWKBBWKBB..',
+    'BBBBBBBBBBBBB.',
+    'BBKKKKKKKKKBB.',
+    'BBBBBBBBBBBBB.',
+    '.BBCBBCBBCBB..',
+    '.BBBBBBBBBBB..',
+    'BBBBBBBBBBBBB.',
+    'BB.BBBBBBB.BB.',
+    '.B..BBBBB..B..',
+    '....BB.BB.....',
+    '...BBB.BBB....',
+  ], { B: C.blue, W: C.white, K: C.ink, C: C.cyan });
+
+  // BOSS: THE LUXURY KING - crown, velvet, disdain
+  S.bossLux = G.makeSprite([
+    '..Y.YY.YY.Y...',
+    '..YYYYYYYYY...',
+    '...KSSSSSSK...',
+    '...KSKSSKSK...',
+    '....SSSSSS....',
+    '....SKKKKS....',
+    '....SSSSSS....',
+    '....PPPPPP....',
+    '...PPWYWPPP...',
+    '...PPWYWPPP...',
+    '..S.PWYWPP.S..',
+    '....PPPPPP....',
+    '....PPPPPP....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '...KK....KK...',
+  ], { Y: C.yellow, K: '#3a2a1a', S: '#f0c9a0', P: C.purple, W: C.white, D: C.dusk });
+
+  // BOSS: THE INVESTOR - all cash, sunglasses, no soul
+  S.bossInvestor = G.makeSprite([
+    '....GGGGGG....',
+    '...GGGGGGGG...',
+    '...GSSSSSSG...',
+    '...GKKSSKKG...',
+    '....SSSSSS....',
+    '....SSKKSS....',
+    '....SSSSSS....',
+    '....NNNNNN....',
+    '...NNWMWNNN...',
+    '...NNWMWNNN...',
+    '..M.NWMWNN.M..',
+    '....NNNNNN....',
+    '....NNNNNN....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '...KK....KK...',
+  ], { G: '#3a3f52', S: '#e8b796', K: C.ink, W: C.white, M: C.green, N: C.ink, D: C.dusk });
+
+  // BOSS: THE FSBO MASTER - flannel, hand-painted sign energy
+  S.bossFsbo = G.makeSprite([
+    '....HHHHHH....',
+    '...HHHHHHHH...',
+    '...HSSSSSSH...',
+    '...HSKSSKSH...',
+    '....SSSSSS....',
+    '....SSWWSS....',
+    '....SSSSSS....',
+    '....RFRFRF....',
+    '...RFRFRFRF...',
+    '...FRFRFRFR...',
+    '..S.RFRFRF.WW.',
+    '....FRFRFR.WW.',
+    '....RFRFRF....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '...KK....KK...',
+  ], { H: '#6b4226', S: '#e8b796', K: C.ink, W: C.white, R: C.red, F: '#7a2020', D: C.dusk });
+
+  // BIGFOOT: blurry, of course
+  S.bigfoot = G.makeSprite([
+    '..EEEE..',
+    '.EEEEEE.',
+    '.EKEEKE.',
+    '.EEEEEE.',
+    'EEEEEEEE',
+    'EEEEEEEE',
+    'E.EEEE.E',
+    '..EE.EE.',
+    '..EE.EE.',
+    '.EE...EE',
+  ], { E: '#5a4632', K: C.ink });
+
+  // Bank: columns + gold trim
+  S.bank = G.makeSprite([
+    '..YYYYYYYYYY..',
+    '.YYYYYYYYYYYY.',
+    '..WWWWWWWWWW..',
+    '..W.WW.WW.WW..',
+    '..W.WW.WW.WW..',
+    '..W.WW.WW.WW..',
+    '..WWWWDDWWWW..',
+    '..WWWWDDWWWW..',
+  ], { Y: C.yellow, W: C.gray, D: '#6b4226' });
+
+  // Commercial plaza: wide storefront, big windows
+  S.plaza = G.makeSprite([
+    'PPPPPPPPPPPPPPPP',
+    'PWWWWWWWWWWWWWWP',
+    'PPPPPPPPPPPPPPPP',
+    'PBBBPBBBPBBBPBBP',
+    'PBBBPBBBPBBBPBBP',
+    'PPPPPDDPPPPPPPPP',
+    'PPPPPDDPPPPPPPPP',
+  ], { P: C.slate, W: C.cyan, B: C.sky, D: C.ink });
 })();
 
 // Draw a sprite scaled (integer scale keeps it crisp)

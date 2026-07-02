@@ -82,6 +82,7 @@ G.Engine = {
     }
 
     this.shake = Math.max(0, this.shake - dt * 30);
+    G.Toast.update(dt);
 
     // popups eat input
     if (G.Popup.update(dt)) return;
@@ -105,6 +106,7 @@ G.Engine = {
     ctx.restore();
 
     G.Popup.render(ctx);
+    G.Toast.render(ctx);
 
     // mute indicator
     if (G.Audio.muted) {

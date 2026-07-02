@@ -1,7 +1,7 @@
 // ============================================================
 // scenes/boss.js - month-end boss showdown vs a top local agent
 // Best-of-N skill clashes: stop the needle in the green zone.
-// Your stats & upgrades widen the zone per skill.
+// Your stats & upgrades widen the zone; boss gimmicks fight back.
 // ============================================================
 'use strict';
 
@@ -32,13 +32,13 @@ G.Engine.register('boss', {
     switch (skill) {
       case 'PROSPECTING':
         if (has('crm')) b += 0.05;
-        if (has('website')) b += 0.03;
+        if (has('website') || has('seo')) b += 0.03;
         b += Math.min(0.05, s.stats.leadsReceived / 400);
         break;
       case 'MARKETING':
         if (has('camera')) b += 0.03;
-        if (has('social')) b += 0.04;
-        if (has('marketing')) b += 0.04;
+        if (has('social') || has('tiktok')) b += 0.04;
+        if (has('marketing') || has('marketingdir')) b += 0.04;
         b += Math.min(0.04, s.stats.followers / 30000);
         break;
       case 'NEGOTIATION':
@@ -48,14 +48,15 @@ G.Engine.register('boss', {
       case 'CLIENT SERVICE':
         b += s.stats.happiness / 1200;
         b += Math.min(0.03, s.stats.reviews / 300);
+        b += s.stats.reputation / 2000;
         break;
       case 'SPEED':
-        if (has('vehicle')) b += 0.04;
+        if (has('vehicle') || has('luxsuv')) b += 0.04;
         if (has('ai')) b += 0.04;
         if (has('assistant')) b += 0.03;
         break;
       case 'STRATEGY':
-        b += Object.keys(s.upgrades).length * 0.012;
+        b += Object.keys(s.upgrades).length * 0.008;
         break;
     }
     return Math.min(0.14, b);
@@ -63,10 +64,13 @@ G.Engine.register('boss', {
 
   startRound() {
     const skill = this.boss.skills[this.round % this.boss.skills.length];
+    const gim = this.boss.gimmick || {};
     this.skill = skill;
-    const width = Math.max(0.09, 0.30 - this.boss.difficulty * 0.22 + this.skillBonus(skill));
+    let width = Math.max(0.09, 0.30 - this.boss.difficulty * 0.22 + this.skillBonus(skill));
+    if (gim.zone) width *= gim.zone;
+    width = Math.max(0.07, width);
     this.zone = { start: G.rand(0.15, 0.85 - width), width };
-    this.speed = 1.4 + this.boss.difficulty * 1.4 + this.round * 0.22;
+    this.speed = (1.4 + this.boss.difficulty * 1.4 + this.round * 0.22) * (gim.speed || 1);
     this.needle = 0;
     this.dir = 1;
     this.locked = false;
@@ -103,9 +107,14 @@ G.Engine.register('boss', {
           G.Audio.great();
         } else {
           this.bossWins++;
-          this.flash = { text: this.boss.name.split(' ')[0] + ' TAKES ' + this.skill + '!', color: G.C.red, t: 1.1 };
+          this.flash = { text: this.boss.name.split(' ').slice(0, 2).join(' ') + ' TAKES ' + this.skill + '!', color: G.C.red, t: 1.1 };
           G.Engine.shake = 3;
           G.Audio.thud();
+          const gim = this.boss.gimmick || {};
+          if (gim.loseCash) {
+            G.State.s.cash = Math.max(0, G.State.s.cash - gim.loseCash);
+            this.flash.text += ' (-' + G.money(gim.loseCash) + ')';
+          }
         }
         setTimeout(() => {
           this.round++;
@@ -141,7 +150,6 @@ G.Engine.register('boss', {
 
   render(ctx) {
     const b = this.boss;
-    // dramatic backdrop
     ctx.fillStyle = G.C.ink;
     ctx.fillRect(0, 0, G.W, G.H);
     for (let i = 0; i < 14; i++) {
@@ -156,30 +164,28 @@ G.Engine.register('boss', {
     ctx.lineWidth = 1;
 
     if (this.phase === 'intro') {
-      G.UI.text(ctx, b.final ? 'FINAL BOSS' : 'MONTH-END SHOWDOWN', G.W / 2, 20, { align: 'center', size: 12, color: G.C.red, shadow: true });
+      G.UI.text(ctx, b.final ? 'FINAL BOSS' : 'MONTH-END SHOWDOWN', G.W / 2, 16, { align: 'center', size: 12, color: G.C.red, shadow: true });
       const shake = b.final ? Math.sin(this.t * 30) * 1.5 : 0;
-      G.drawSprite(ctx, G.Sprites[b.sprite], G.W / 2 - 28 + shake, 44, 4);
-      G.UI.text(ctx, b.name, G.W / 2, 118, { align: 'center', size: 13, color: G.C.yellow, shadow: true });
-      let y = 140;
+      G.drawSprite(ctx, G.Sprites[b.sprite], G.W / 2 - 28 + shake, 36, 4);
+      G.UI.text(ctx, b.name, G.W / 2, 106, { align: 'center', size: 13, color: G.C.yellow, shadow: true });
+      let y = 126;
       for (const line of b.intro) {
         G.UI.text(ctx, line, G.W / 2, y, { align: 'center', size: 8, color: G.C.gray });
-        y += 11;
+        y += 10;
       }
-      G.UI.text(ctx, '"' + b.taunt + '"', G.W / 2, y + 6, { align: 'center', size: 8, color: G.C.orange });
-      G.UI.text(ctx, 'BEST OF ' + b.rounds + ' SKILL CLASHES. STOP THE NEEDLE IN THE GREEN.', G.W / 2, y + 26, { align: 'center', size: 7, color: G.C.cyan });
+      G.UI.text(ctx, '"' + b.taunt + '"', G.W / 2, y + 5, { align: 'center', size: 8, color: G.C.orange });
+      G.UI.text(ctx, 'BEST OF ' + b.rounds + ' SKILL CLASHES. STOP THE NEEDLE IN THE GREEN.', G.W / 2, y + 22, { align: 'center', size: 7, color: G.C.cyan });
       if (Math.floor(this.t * 2) % 2 === 0) {
-        G.UI.text(ctx, '- PRESS ENTER TO THROW DOWN -', G.W / 2, y + 44, { align: 'center', size: 9, color: G.C.yellow });
+        G.UI.text(ctx, '- PRESS ENTER TO THROW DOWN -', G.W / 2, y + 38, { align: 'center', size: 9, color: G.C.yellow });
       }
       return;
     }
 
-    // fighters
     G.drawSprite(ctx, G.Sprites[G.State.char().sprite], 80, 60, 4);
     G.drawSprite(ctx, G.Sprites[b.sprite], 336, 60, 4);
     G.UI.text(ctx, G.State.char().name, 108, 132, { align: 'center', size: 9, color: G.C.lime });
-    G.UI.text(ctx, b.name.split(' ')[0], 364, 132, { align: 'center', size: 9, color: G.C.red });
+    G.UI.text(ctx, b.name.split(' ').slice(0, 2).join(' '), 364, 132, { align: 'center', size: 8, color: G.C.red });
 
-    // round pips
     for (let i = 0; i < b.rounds; i++) {
       const x = G.W / 2 - b.rounds * 7 + i * 14;
       let col = G.C.dusk;
@@ -220,7 +226,7 @@ G.Engine.register('boss', {
 
     this.particles.render(ctx);
     if (this.flash) {
-      G.UI.text(ctx, this.flash.text, G.W / 2, 106, { align: 'center', size: 12, color: this.flash.color, shadow: true });
+      G.UI.text(ctx, this.flash.text, G.W / 2, 106, { align: 'center', size: 11, color: this.flash.color, shadow: true });
     }
   },
 });

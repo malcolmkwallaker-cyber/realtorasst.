@@ -55,11 +55,27 @@ npm run dist:win    # build an installer .exe
   `NEW → WARM → APPT SET → CLIENT → OFFER IN → PENDING → SOLD`
 - **Shop:** spend commission on 11 upgrades (drone, CRM, AI assistant,
   transaction coordinator, better vehicle...).
-- **Month end:** boss showdown vs a top local agent. Final boss: **The Mega
-  Agent** — beaten with prospecting, marketing, negotiation, client service,
-  speed, and strategy.
-- **Watch out for:** snowstorms, low appraisals, ghosting leads, greedy
-  sellers, deal-sniping rivals... and the occasional deer at a showing.
+- **Legendary power-ups:** visit **Brad Nolan, The Mortgage Wizard** at the
+  bank (Clear to Close — and the rare *Weekend Underwriting* closes every
+  pending deal at once) and **Jeff Nobleza, The Commercial King** at the
+  plaza (Commercial Takeover unlocks apartments, retail, warehouses,
+  portfolios & 1031 exchanges paying 5–20x commissions).
+- **Secret characters:** unlock Grandpa Realtor, The Influencer, The
+  Veteran, and The Rookie through play, each with unique perks & abilities.
+- **Daily weather** (blizzards, fog, heat waves, northern lights...) changes
+  what works each day. Snowmobile owners fear nothing.
+- **Month end:** boss showdowns drawn from a pool — The Zillow Monster, The
+  Luxury King, The Investor, The FSBO Master, plus Dale and Cindy — with
+  **The Mega Team** always waiting as the final boss.
+- **Dynamic rivalry:** trash talk escalates, and head-to-head **Listing
+  Battles** pit both agents pitching the same seller across dialogue,
+  market knowledge, presentation, and negotiation.
+- **16 achievements** (Coffee Addict, Phone Warrior, Million Dollar
+  Monday...) persist across seasons, plus easter eggs: Bigfoot hides in the
+  woods, Paul Bunyan sends referrals, trophy walleye grant +20 charisma.
+- **Watch out for:** snowstorms, raccoons in the attic, failed septics,
+  low appraisals, ghosting leads, greedy sellers, deal-sniping rivals...
+  and the occasional deer, bear, or moose at a showing.
 
 **Controls:** Arrow keys / WASD + Enter/Space, or just click. `M` mutes.
 `Esc` backs out. Progress autosaves each day; finish a season to enter the

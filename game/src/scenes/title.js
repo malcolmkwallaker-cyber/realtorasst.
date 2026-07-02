@@ -19,8 +19,9 @@ G.Engine.register('title', {
     if (G.Save.hasSave()) items.push({ label: 'CONTINUE', id: 'continue' });
     items.push({ label: 'HOW TO PLAY', id: 'howto' });
     items.push({ label: 'LEADERBOARD', id: 'leaderboard' });
+    items.push({ label: 'ACHIEVEMENTS', id: 'achievements' });
     this.menu = new G.Menu(items, {
-      x: G.W / 2 - 60, y: 172, w: 120, rowH: 15,
+      x: G.W / 2 - 60, y: 168, w: 120, rowH: 14,
       onSelect: (it) => {
         if (it.id === 'new') G.Engine.goto('select');
         if (it.id === 'continue') {
@@ -29,6 +30,7 @@ G.Engine.register('title', {
         }
         if (it.id === 'howto') G.Engine.goto('howto');
         if (it.id === 'leaderboard') G.Engine.goto('leaderboard');
+        if (it.id === 'achievements') G.Engine.goto('achievements');
       },
     });
   },

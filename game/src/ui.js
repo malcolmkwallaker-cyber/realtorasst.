@@ -1,5 +1,5 @@
 // ============================================================
-// ui.js - text, panels, menus, popups
+// ui.js - text, panels, menus, popups, toasts
 // ============================================================
 'use strict';
 
@@ -82,7 +82,7 @@ G.UI = {
 };
 
 // ------------------------------------------------------------
-// Keyboard/mouse menu
+// Keyboard/mouse menu with optional scrolling window
 // items: [{label, disabled, note, data}]
 // ------------------------------------------------------------
 G.Menu = class {
@@ -91,6 +91,8 @@ G.Menu = class {
     this.index = 0;
     this.x = opts.x || 0; this.y = opts.y || 0;
     this.w = opts.w || 140; this.rowH = opts.rowH || 13;
+    this.maxVisible = opts.maxVisible || items.length;
+    this.scroll = 0;
     this.onSelect = opts.onSelect || (() => {});
     this.skipDisabled(1);
   }
@@ -100,6 +102,13 @@ G.Menu = class {
     while (this.items[this.index] && this.items[this.index].disabled && guard++ < this.items.length) {
       this.index = (this.index + dir + this.items.length) % this.items.length;
     }
+    this.follow();
+  }
+
+  follow() {
+    if (this.index < this.scroll) this.scroll = this.index;
+    if (this.index >= this.scroll + this.maxVisible) this.scroll = this.index - this.maxVisible + 1;
+    this.scroll = G.clamp(this.scroll, 0, Math.max(0, this.items.length - this.maxVisible));
   }
 
   update() {
@@ -111,9 +120,12 @@ G.Menu = class {
       if (it && !it.disabled) { G.Audio.select(); this.onSelect(it, this.index); }
       else G.Audio.bad();
     }
-    // mouse
-    for (let i = 0; i < this.items.length; i++) {
-      const ry = this.y + i * this.rowH;
+    // mouse (maps visible rows to items via scroll offset)
+    const visCount = Math.min(this.maxVisible, this.items.length);
+    for (let v = 0; v < visCount; v++) {
+      const i = this.scroll + v;
+      if (i >= this.items.length) break;
+      const ry = this.y + v * this.rowH;
       if (I.inRect(this.x, ry, this.w, this.rowH - 1)) {
         if (I.mouse.x !== this._lastMx || I.mouse.y !== this._lastMy) this.index = i;
         if (I.mouse.clicked) {
@@ -127,9 +139,12 @@ G.Menu = class {
   }
 
   render(ctx) {
-    for (let i = 0; i < this.items.length; i++) {
+    const visCount = Math.min(this.maxVisible, this.items.length);
+    for (let v = 0; v < visCount; v++) {
+      const i = this.scroll + v;
+      if (i >= this.items.length) break;
       const it = this.items[i];
-      const ry = this.y + i * this.rowH;
+      const ry = this.y + v * this.rowH;
       const sel = i === this.index;
       if (sel && !it.disabled) {
         ctx.fillStyle = G.C.blue;
@@ -145,12 +160,19 @@ G.Menu = class {
         });
       }
     }
+    // scroll arrows
+    if (this.scroll > 0) {
+      G.UI.text(ctx, '^', this.x + this.w + 3, this.y, { size: 8, color: G.C.yellow });
+    }
+    if (this.scroll + this.maxVisible < this.items.length) {
+      G.UI.text(ctx, 'v', this.x + this.w + 3, this.y + (visCount - 1) * this.rowH, { size: 8, color: G.C.yellow });
+    }
   }
 };
 
 // ------------------------------------------------------------
 // Modal popup with wrapped lines; closes on confirm/click.
-// Use: G.Popup.show({title, lines, color, onClose})
+// Use: G.Popup.show({title, lines, color, sprite, onClose})
 // ------------------------------------------------------------
 G.Popup = {
   active: null,
@@ -182,7 +204,6 @@ G.Popup = {
     ctx.fillRect(0, 0, G.W, G.H);
 
     const w = o.w || 320;
-    // pre-wrap lines
     const wrapped = [];
     for (const line of (o.lines || [])) {
       for (const l of G.UI.wrap(ctx, line, w - 24)) wrapped.push(l);
@@ -209,5 +230,44 @@ G.Popup = {
     if ((this.t || 0) > 0.25 && Math.floor(this.t * 2) % 2 === 0) {
       G.UI.text(ctx, '- PRESS ENTER -', x + w / 2, y + h - 12, { align: 'center', size: 7, color: G.C.yellow });
     }
+  },
+};
+
+// ------------------------------------------------------------
+// Toasts: small banners for achievements & unlocks
+// ------------------------------------------------------------
+G.Toast = {
+  queue: [],
+  current: null,
+  t: 0,
+
+  push(title, sub) {
+    this.queue.push({ title, sub });
+  },
+
+  update(dt) {
+    if (!this.current && this.queue.length) {
+      this.current = this.queue.shift();
+      this.t = 0;
+      G.Audio.great();
+    }
+    if (this.current) {
+      this.t += dt;
+      if (this.t > 3.2) this.current = null;
+    }
+  },
+
+  render(ctx) {
+    if (!this.current) return;
+    const slide = Math.min(1, this.t * 4, (3.2 - this.t) * 4);
+    const y = -30 + slide * 34;
+    const w = 240, x = (G.W - w) / 2;
+    ctx.fillStyle = G.C.ink;
+    ctx.fillRect(x, y, w, 26);
+    ctx.strokeStyle = G.C.yellow;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, 25);
+    G.drawSprite(ctx, G.Sprites.trophy, x + 6, y + 6, 2);
+    G.UI.text(ctx, this.current.title, x + 26, y + 4, { size: 8, color: G.C.yellow });
+    G.UI.text(ctx, this.current.sub || '', x + 26, y + 14, { size: 7, color: G.C.gray });
   },
 };
