@@ -3270,12 +3270,32 @@ G.Engine = {
       last = now;
       dt = Math.min(dt, 0.05);
       this.time += dt;
-      this.update(dt);
-      this.render();
-      G.Input.endFrame();
+      // A thrown error must never kill the animation loop (that = permanent freeze).
+      try {
+        this.update(dt);
+      } catch (e) {
+        this.reportError('update', e);
+      }
+      try {
+        this.render();
+      } catch (e) {
+        this.reportError('render', e);
+      }
+      try { G.Input.endFrame(); } catch (e) {}
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
+  },
+
+  reportError(where, e) {
+    // Log once per unique message, and surface it on-screen instead of freezing.
+    this._errs = this._errs || {};
+    const msg = (e && e.message) || String(e);
+    if (!this._errs[msg]) {
+      this._errs[msg] = true;
+      console.error('[' + where + '] ' + msg, e && e.stack);
+    }
+    this.lastError = msg;
   },
 
   resize() {
@@ -3741,15 +3761,12 @@ G.Engine.register('map', {
       note: s.abilityUsed ? 'USED' : 'FREE',
       desc: ab.desc,
     });
-    items.push({ label: 'SHOP', id: 'shop', kind: 'nav', note: G.money(s.cash), desc: 'Gear, offices, and toys. Spend that commission.' });
-    items.push({ label: 'STATS', id: 'stats', kind: 'nav', desc: 'Your full season stat sheet.' });
-    items.push({ label: 'PIPELINE', id: 'pipeline', kind: 'nav', desc: 'Every lead and where they stand.' });
-    items.push({ label: 'END DAY', id: 'endday', kind: 'nav', note: 'Zz', desc: 'Call it a day. Leads age, rival moves, stuff happens.' });
+    // SHOP / STATS / PIPELINE / END DAY live as fixed buttons below the list
 
     const keepIndex = this.menu ? this.menu.index : 0;
     this.menu = new G.Menu(items, {
-      x: 4, y: 44, w: 142, rowH: 12,
-      maxVisible: 15,
+      x: 4, y: 44, w: 142, rowH: 11,
+      maxVisible: 14,
       onSelect: (it) => this.onMenuPick(it),
     });
     this.menu.index = Math.min(keepIndex, items.length - 1);
@@ -3972,6 +3989,12 @@ G.Engine.register('map', {
       return;
     }
 
+    // hotkeys for the bottom nav
+    if (G.Input.p('p')) { this.mode = 'pipeline'; this.pipeScroll = 0; G.Audio.select(); return; }
+    if (G.Input.p('t')) { this.mode = 'stats'; G.Audio.select(); return; }
+    if (G.Input.p('b')) { G.Engine.goto('shop'); G.Audio.select(); return; }
+    if (G.Input.p('z')) { this.endDay(); return; }
+
     this.menu.update();
   },
 
@@ -4155,10 +4178,16 @@ G.Engine.register('map', {
 
     this.menu.render(ctx);
 
+    // fixed bottom nav: always visible so PIPELINE/STATS/SHOP/END DAY never scroll off
+    if (G.UI.button(ctx, 'SHOP [B]', 4, 202, 70, 13, { size: 7 })) { G.Engine.goto('shop'); G.Audio.select(); }
+    if (G.UI.button(ctx, 'STATS [T]', 77, 202, 69, 13, { size: 7 })) { this.mode = 'stats'; G.Audio.select(); }
+    if (G.UI.button(ctx, 'PIPELINE [P]', 4, 217, 70, 13, { size: 7 })) { this.mode = 'pipeline'; this.pipeScroll = 0; G.Audio.select(); }
+    if (G.UI.button(ctx, 'END DAY [Z]', 77, 217, 69, 13, { size: 7, color: G.C.orange })) { this.endDay(); }
+
     const it = this.menu.items[this.menu.index];
     if (it && it.desc) {
-      const lines = G.UI.wrap(ctx, it.desc, 138, 7);
-      let y = G.H - 8 - lines.length * 8;
+      const lines = G.UI.wrap(ctx, it.desc, 138, 7).slice(0, 4);
+      let y = 236;
       ctx.fillStyle = G.C.dusk;
       ctx.fillRect(2, y - 3, this.MAP_X - 6, lines.length * 8 + 6);
       for (const l of lines) {

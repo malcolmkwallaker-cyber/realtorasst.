@@ -27,12 +27,32 @@ G.Engine = {
       last = now;
       dt = Math.min(dt, 0.05);
       this.time += dt;
-      this.update(dt);
-      this.render();
-      G.Input.endFrame();
+      // A thrown error must never kill the animation loop (that = permanent freeze).
+      try {
+        this.update(dt);
+      } catch (e) {
+        this.reportError('update', e);
+      }
+      try {
+        this.render();
+      } catch (e) {
+        this.reportError('render', e);
+      }
+      try { G.Input.endFrame(); } catch (e) {}
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
+  },
+
+  reportError(where, e) {
+    // Log once per unique message, and surface it on-screen instead of freezing.
+    this._errs = this._errs || {};
+    const msg = (e && e.message) || String(e);
+    if (!this._errs[msg]) {
+      this._errs[msg] = true;
+      console.error('[' + where + '] ' + msg, e && e.stack);
+    }
+    this.lastError = msg;
   },
 
   resize() {
