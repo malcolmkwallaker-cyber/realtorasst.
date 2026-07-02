@@ -552,8 +552,8 @@ G.makeSprite = (rows, colors) => {
     '...HSSSSSSH...',
     '...HSKSSKSH...',
     '..B.SSSSSS.B..',
-    '....SWWWWS....',
-    '....SSSSSS....',
+    '....XWWWWX....',
+    '....SXXXXS....',
     '....QQQQQQ....',
     '...QQQZZQQQ...',
     '..L.QQZZQQ.C..',
@@ -564,7 +564,7 @@ G.makeSprite = (rows, colors) => {
     '....JJ..JJ....',
     '....JJ..JJ....',
     '...NN....NN...',
-  ], { H: '#6b4226', S: '#e8b796', K: C.ink, W: C.white, B: C.cyan, Q: C.teal, Z: C.sky, L: C.gray, C: C.orange, P: C.sky, J: '#3a3f52', N: C.white });
+  ], { H: '#232433', X: '#232433', S: '#e8b796', K: C.ink, W: C.white, B: C.cyan, Q: C.teal, Z: C.sky, L: C.gray, C: C.orange, P: C.sky, J: '#3a3f52', N: C.white });
 
   // Growth Lab: modern glass building with a holo chart
   S.growthlab = G.makeSprite([
