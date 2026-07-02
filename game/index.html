@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Bridger vs. Malcolm: Realtor Rivals</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #1a1c2c;
+    overflow: hidden;
+    font-family: monospace;
+  }
+  #wrap {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background: #1a1c2c;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="game" width="480" height="270"></canvas></div>
+
+<!-- Core -->
+<script src="src/utils.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/input.js"></script>
+<script src="src/sprites.js"></script>
+<script src="src/data.js"></script>
+<script src="src/save.js"></script>
+<script src="src/state.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/engine.js"></script>
+
+<!-- Scenes -->
+<script src="src/scenes/title.js"></script>
+<script src="src/scenes/select.js"></script>
+<script src="src/scenes/howto.js"></script>
+<script src="src/scenes/map.js"></script>
+<script src="src/scenes/shop.js"></script>
+<script src="src/scenes/minigames.js"></script>
+<script src="src/scenes/boss.js"></script>
+<script src="src/scenes/results.js"></script>
+
+<!-- Boot -->
+<script src="src/main.js"></script>
+</body>
+</html>

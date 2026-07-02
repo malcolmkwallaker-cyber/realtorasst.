@@ -1,0 +1,4193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Bridger vs. Malcolm: Realtor Rivals</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #1a1c2c;
+    overflow: hidden;
+    font-family: monospace;
+  }
+  #wrap {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background: #1a1c2c;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="game" width="480" height="270"></canvas></div>
+
+<!-- Core -->
+<script>
+// ============================================================
+// Bridger vs. Malcolm: Realtor Rivals
+// utils.js - global namespace, math helpers, palette
+// ============================================================
+'use strict';
+
+window.G = window.G || {};
+
+// --- SNES-style 16 color palette (Sweetie-16) ---
+G.C = {
+  ink:    '#1a1c2c',
+  purple: '#5d275d',
+  red:    '#b13e53',
+  orange: '#ef7d57',
+  yellow: '#ffcd75',
+  lime:   '#a7f070',
+  green:  '#38b764',
+  teal:   '#257179',
+  navy:   '#29366f',
+  blue:   '#3b5dc9',
+  sky:    '#41a6f6',
+  cyan:   '#73eff7',
+  white:  '#f4f4f4',
+  gray:   '#94b0c2',
+  slate:  '#566c86',
+  dusk:   '#333c57',
+};
+
+G.W = 480;
+G.H = 270;
+
+G.clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+G.lerp = (a, b, t) => a + (b - a) * t;
+G.rand = (lo, hi) => lo + Math.random() * (hi - lo);
+G.randInt = (lo, hi) => Math.floor(G.rand(lo, hi + 1));
+G.chance = (p) => Math.random() < p;
+G.choice = (arr) => arr[Math.floor(Math.random() * arr.length)];
+G.shuffle = (arr) => {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+G.dist = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
+
+// Weighted choice: items = [{weight, ...}]
+G.weightedChoice = (items) => {
+  const total = items.reduce((s, it) => s + (it.weight || 1), 0);
+  let r = Math.random() * total;
+  for (const it of items) {
+    r -= (it.weight || 1);
+    if (r <= 0) return it;
+  }
+  return items[items.length - 1];
+};
+
+// Money formatting: $1.2M / $850K / $6,750
+G.money = (n) => {
+  n = Math.round(n);
+  if (Math.abs(n) >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
+  if (Math.abs(n) >= 10000) return '$' + Math.round(n / 1000) + 'K';
+  return '$' + n.toLocaleString('en-US');
+};
+
+G.pct = (n) => Math.round(n * 100) + '%';
+
+// Simple timer/tween bookkeeping helper
+G.Timer = class {
+  constructor(duration) { this.t = 0; this.d = duration; this.done = false; }
+  update(dt) {
+    if (this.done) return true;
+    this.t += dt;
+    if (this.t >= this.d) { this.done = true; }
+    return this.done;
+  }
+  get progress() { return G.clamp(this.t / this.d, 0, 1); }
+  reset(d) { this.t = 0; this.done = false; if (d !== undefined) this.d = d; }
+};
+
+// Tiny particle system (confetti, cash, snow, sparkles)
+G.Particles = class {
+  constructor() { this.list = []; }
+  spawn(x, y, opts = {}) {
+    const n = opts.count || 8;
+    for (let i = 0; i < n; i++) {
+      this.list.push({
+        x, y,
+        vx: G.rand(opts.vxMin ?? -40, opts.vxMax ?? 40),
+        vy: G.rand(opts.vyMin ?? -70, opts.vyMax ?? -20),
+        g: opts.gravity ?? 120,
+        life: G.rand(0.4, opts.life ?? 1.0),
+        color: opts.colors ? G.choice(opts.colors) : G.C.yellow,
+        size: opts.size ?? 2,
+      });
+    }
+  }
+  update(dt) {
+    for (let i = this.list.length - 1; i >= 0; i--) {
+      const p = this.list[i];
+      p.life -= dt;
+      if (p.life <= 0) { this.list.splice(i, 1); continue; }
+      p.vy += p.g * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+    }
+  }
+  render(ctx) {
+    for (const p of this.list) {
+      ctx.fillStyle = p.color;
+      ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
+    }
+  }
+};
+
+</script>
+<script>
+// ============================================================
+// audio.js - WebAudio chiptune sound effects + tiny music loop
+// ============================================================
+'use strict';
+
+G.Audio = {
+  ctx: null,
+  muted: false,
+  musicOn: true,
+  _musicTimer: null,
+  _musicStep: 0,
+
+  ensure() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) this.ctx = new AC();
+    }
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    return this.ctx;
+  },
+
+  beep(freq, dur = 0.08, type = 'square', vol = 0.12, slide = 0) {
+    if (this.muted) return;
+    const ctx = this.ensure();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    if (slide) osc.frequency.linearRampToValueAtTime(Math.max(30, freq + slide), t + dur);
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.02);
+  },
+
+  seq(notes, step = 0.09, type = 'square', vol = 0.1) {
+    if (this.muted) return;
+    const ctx = this.ensure();
+    if (!ctx) return;
+    notes.forEach((f, i) => {
+      if (!f) return;
+      setTimeout(() => this.beep(f, step * 0.9, type, vol), i * step * 1000);
+    });
+  },
+
+  // ---- Named SFX ----
+  move()    { this.beep(520, 0.04, 'square', 0.06); },
+  select()  { this.seq([660, 880], 0.06); },
+  back()    { this.seq([440, 330], 0.06); },
+  good()    { this.seq([523, 659, 784], 0.07, 'square', 0.1); },
+  great()   { this.seq([523, 659, 784, 1047], 0.07, 'square', 0.12); },
+  bad()     { this.seq([330, 262, 196], 0.09, 'sawtooth', 0.08); },
+  cash()    { this.seq([988, 1319, 988, 1568], 0.05, 'square', 0.12); },
+  ring()    { this.seq([880, 0, 880, 0, 880], 0.07, 'triangle', 0.1); },
+  tick()    { this.beep(1200, 0.03, 'square', 0.05); },
+  thud()    { this.beep(120, 0.12, 'sawtooth', 0.14, -60); },
+  swoosh()  { this.beep(300, 0.15, 'sawtooth', 0.06, 500); },
+  fanfare() { this.seq([523, 523, 523, 659, 784, 0, 784, 1047], 0.11, 'square', 0.12); },
+  sadTromb(){ this.seq([392, 370, 349, 330], 0.22, 'sawtooth', 0.09); },
+  ability() { this.seq([392, 523, 659, 784, 1047, 1319], 0.05, 'triangle', 0.12); },
+  snow()    { this.beep(2000, 0.3, 'triangle', 0.03, -1500); },
+
+  // ---- Tiny background loop (title/map). Two-channel arp + bass. ----
+  MELODY: [
+    523, 0, 659, 0, 784, 659, 523, 0,
+    587, 0, 698, 0, 880, 698, 587, 0,
+    523, 0, 659, 0, 784, 659, 1047, 0,
+    988, 784, 659, 0, 523, 0, 0, 0,
+  ],
+  BASS: [
+    131, 0, 0, 131, 175, 0, 0, 175,
+    147, 0, 0, 147, 196, 0, 0, 196,
+    131, 0, 0, 131, 175, 0, 0, 175,
+    165, 0, 165, 0, 131, 0, 131, 0,
+  ],
+
+  startMusic() {
+    if (this._musicTimer || !this.musicOn) return;
+    const ctx = this.ensure();
+    if (!ctx) return;
+    this._musicStep = 0;
+    this._musicTimer = setInterval(() => {
+      if (this.muted || !this.musicOn) return;
+      const i = this._musicStep % this.MELODY.length;
+      const m = this.MELODY[i], b = this.BASS[i];
+      if (m) this.beep(m, 0.1, 'square', 0.035);
+      if (b) this.beep(b, 0.16, 'triangle', 0.06);
+      this._musicStep++;
+    }, 140);
+  },
+
+  stopMusic() {
+    if (this._musicTimer) { clearInterval(this._musicTimer); this._musicTimer = null; }
+  },
+
+  toggleMute() {
+    this.muted = !this.muted;
+    if (!this.muted) this.select();
+    return this.muted;
+  },
+};
+
+</script>
+<script>
+// ============================================================
+// input.js - keyboard + mouse (scaled to internal resolution)
+// ============================================================
+'use strict';
+
+G.Input = {
+  keys: {},        // currently held
+  pressed: {},     // pressed this frame
+  mouse: { x: -1, y: -1, down: false, clicked: false },
+  anyKeyPressed: false,
+
+  init(canvas) {
+    this.canvas = canvas;
+
+    window.addEventListener('keydown', (e) => {
+      // avoid page scroll on game keys
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Tab'].includes(e.key)) {
+        e.preventDefault();
+      }
+      const k = this.norm(e.key);
+      if (!this.keys[k]) this.pressed[k] = true;
+      this.keys[k] = true;
+      this.anyKeyPressed = true;
+      G.Audio.ensure(); // unlock audio on first gesture
+    });
+
+    window.addEventListener('keyup', (e) => {
+      this.keys[this.norm(e.key)] = false;
+    });
+
+    const toGame = (e) => {
+      const r = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - r.left) / r.width * G.W,
+        y: (e.clientY - r.top) / r.height * G.H,
+      };
+    };
+
+    canvas.addEventListener('mousemove', (e) => {
+      const p = toGame(e);
+      this.mouse.x = p.x; this.mouse.y = p.y;
+    });
+    canvas.addEventListener('mousedown', (e) => {
+      const p = toGame(e);
+      this.mouse.x = p.x; this.mouse.y = p.y;
+      this.mouse.down = true;
+      this.mouse.clicked = true;
+      G.Audio.ensure();
+    });
+    window.addEventListener('mouseup', () => { this.mouse.down = false; });
+
+    // Touch support (mobile web)
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const t = e.touches[0];
+      const p = toGame(t);
+      this.mouse.x = p.x; this.mouse.y = p.y;
+      this.mouse.down = true;
+      this.mouse.clicked = true;
+      G.Audio.ensure();
+    }, { passive: false });
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      const t = e.touches[0];
+      const p = toGame(t);
+      this.mouse.x = p.x; this.mouse.y = p.y;
+    }, { passive: false });
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      this.mouse.down = false;
+    }, { passive: false });
+  },
+
+  norm(key) {
+    if (key.length === 1) return key.toLowerCase();
+    return key;
+  },
+
+  // convenience checks
+  p(k) { return !!this.pressed[k]; },                       // pressed this frame
+  held(k) { return !!this.keys[k]; },
+  up()    { return this.p('ArrowUp') || this.p('w'); },
+  down()  { return this.p('ArrowDown') || this.p('s'); },
+  left()  { return this.p('ArrowLeft') || this.p('a'); },
+  right() { return this.p('ArrowRight') || this.p('d'); },
+  confirm() { return this.p('Enter') || this.p(' '); },
+  cancel()  { return this.p('Escape') || this.p('Backspace'); },
+
+  inRect(x, y, w, h) {
+    return this.mouse.x >= x && this.mouse.x <= x + w &&
+           this.mouse.y >= y && this.mouse.y <= y + h;
+  },
+  clickedRect(x, y, w, h) {
+    return this.mouse.clicked && this.inRect(x, y, w, h);
+  },
+
+  endFrame() {
+    this.pressed = {};
+    this.mouse.clicked = false;
+    this.anyKeyPressed = false;
+  },
+};
+
+</script>
+<script>
+// ============================================================
+// sprites.js - programmatic pixel art from string maps
+// Each sprite: rows of chars; '.' = transparent, letters map to palette
+// ============================================================
+'use strict';
+
+G.Sprites = {};
+
+G.makeSprite = (rows, colors) => {
+  const h = rows.length;
+  const w = rows[0].length;
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const c = cv.getContext('2d');
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const ch = rows[y][x];
+      if (ch === '.' || ch === ' ' || !colors[ch]) continue;
+      c.fillStyle = colors[ch];
+      c.fillRect(x, y, 1, 1);
+    }
+  }
+  return cv;
+};
+
+(function buildSprites() {
+  const C = G.C;
+  const S = G.Sprites;
+
+  // ---- MALCOLM: brown hair, clean-shaven, green hoodie, phone up ----
+  S.malcolm = G.makeSprite([
+    '....HHHHHH....',
+    '...HHHHHHHH...',
+    '...HSSSSSSH...',
+    '...HSKSSKSH...',
+    '..PHSSSSSSH...',
+    '..P.SSWWSS....',
+    '..P.SSSSSS....',
+    '..P.BBBBBB....',
+    '..PBBBBBBBB...',
+    '..BBBBOBBBB...',
+    '..S.BBOBBB.S..',
+    '....BBBBBB....',
+    '....BBBBBB....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '...KK....KK...',
+  ], { H: '#6b4226', S: '#e8b796', K: C.ink, W: C.white, B: C.green, O: C.yellow, D: C.dusk, P: C.sky });
+
+  // ---- BRIDGER: red hair, red beard, sharp navy suit, briefcase ----
+  S.bridger = G.makeSprite([
+    '....RRRRRR....',
+    '...RRRRRRRR...',
+    '...RSSSSSSR...',
+    '...RSKSSKSR...',
+    '....SSSSSS....',
+    '...ESSWWSSE...',
+    '...EESSSSEE...',
+    '....EEEEEE....',
+    '....NNNNNN....',
+    '...NNWTWNNN...',
+    '..S.NWTWNN.S..',
+    '....NNNNNN....',
+    '....NNNNNN....',
+    '....DD..DD..GG',
+    '....DD..DD..GG',
+    '....DD..DD..GG',
+    '...KK....KK...',
+  ], { R: '#c0562f', E: '#a34524', S: '#f0c9a0', K: C.ink, W: C.white, N: C.navy, T: C.red, D: C.dusk, G: '#8a5a2b' });
+
+  // ---- Rival boss sprites ----
+  S.bossShark = G.makeSprite([
+    '....GGGGGG....',
+    '...GGGGGGGG...',
+    '...GSSSSSSG...',
+    '...GSKSSKSG...',
+    '....SSSSSS....',
+    '....SKKKKS....',
+    '....SSSSSS....',
+    '....LLLLLL....',
+    '...LLWWWWLL...',
+    '...LLWYYWLL...',
+    '..S.LWYYWL.S..',
+    '....LLLLLL....',
+    '....LLLLLL....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '...KK....KK...',
+  ], { G: C.gray, S: '#e8b796', K: C.ink, L: C.slate, W: C.white, Y: C.yellow, D: C.dusk });
+
+  S.bossLakes = G.makeSprite([
+    '....YYYYYY....',
+    '...YYYYYYYY...',
+    '...YSSSSSSY...',
+    '...YSKSSKSY...',
+    '...YSSSSSSY...',
+    '....SSWWSS....',
+    '....SSSSSS....',
+    '....PPPPPP....',
+    '...PPPPPPPP...',
+    '...PPWWWWPP...',
+    '..S.PPPPPP.S..',
+    '....PPPPPP....',
+    '....PPPPPP....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '...KK....KK...',
+  ], { Y: C.yellow, S: '#f0c9a0', K: C.ink, W: C.white, P: C.purple, D: C.dusk });
+
+  S.megaAgent = G.makeSprite([
+    '..RRRRRRRRRR..',
+    '..R.RRRRRR.R..',
+    '....KKKKKK....',
+    '...KSSSSSSK...',
+    '...KSRSSRSK...',
+    '....SSSSSS....',
+    '....SKKKKS....',
+    '....SSSSSS....',
+    '...KKKKKKKK...',
+    '..KKKWWWWKKK..',
+    '..KKKWRRWKKK..',
+    '.S.KKWRRWKK.S.',
+    '...KKKKKKKK...',
+    '...KKKKKKKK...',
+    '....DD..DD....',
+    '....DD..DD....',
+    '...KK....KK...',
+  ], { R: C.red, K: C.ink, S: '#e8b796', W: C.white, D: C.dusk });
+
+  // ---- Houses / buildings ----
+  S.houseStarter = G.makeSprite([
+    '....RRRRRR....',
+    '...RRRRRRRR...',
+    '..RRRRRRRRRR..',
+    '.RRRRRRRRRRRR.',
+    '..WWWWWWWWWW..',
+    '..WBBWWWWBBW..',
+    '..WBBWWDDBBW..',
+    '..WWWWWDDWWW..',
+    '..WWWWWDDWWW..',
+  ], { R: C.red, W: C.white, B: C.sky, D: '#6b4226' });
+
+  S.houseLake = G.makeSprite([
+    '......YYYY......',
+    '....YYYYYYYY....',
+    '..YYYYYYYYYYYY..',
+    '.YYYYYYYYYYYYYY.',
+    '..NNNNNNNNNNNN..',
+    '..NBBNNBBNNBBN..',
+    '..NBBNNBBNNBBN..',
+    '..NNNNNNNNNNNN..',
+    '..NNNDDDDNNNNN..',
+    '..NNNDDDDNNNNN..',
+    'WWWWWWWWWWWWWWWW',
+  ], { Y: C.yellow, N: C.navy, B: C.cyan, D: '#6b4226', W: '#8a5a2b' });
+
+  S.cabin = G.makeSprite([
+    '....GGGGGG....',
+    '...GGGGGGGG...',
+    '..GGGGGGGGGG..',
+    '..LLLLLLLLLL..',
+    '..LLBBLLLLLL..',
+    '..LLBBLLDDLL..',
+    '..LLLLLLDDLL..',
+    '..LLLLLLDDLL..',
+  ], { G: C.green, L: '#8a5a2b', B: C.yellow, D: '#5a3a1b' });
+
+  S.office = G.makeSprite([
+    '.WWWWWWWWWWWW.',
+    '.WSSSSSSSSSSW.',
+    '.WWWWWWWWWWWW.',
+    '.WBBWBBWBBWBW.',
+    '.WBBWBBWBBWBW.',
+    '.WWWWWWWWWWWW.',
+    '.WBBWDDDWBBWW.',
+    '.WBBWDDDWBBWW.',
+    '.WWWWDDDWWWWW.',
+  ], { W: C.gray, S: C.sky, B: C.yellow, D: '#6b4226' });
+
+  S.coffee = G.makeSprite([
+    '..MMMMMMMMMM..',
+    '.MMMMMMMMMMMM.',
+    '..BBBBBBBBBB..',
+    '..BWWBCCBWWB..',
+    '..BWWBCCBWWB..',
+    '..BBBBDDBBBB..',
+    '..BBBBDDBBBB..',
+  ], { M: C.orange, B: '#6b4226', W: C.yellow, C: C.white, D: '#4a2a15' });
+
+  S.studio = G.makeSprite([
+    '..PPPPPPPPPP..',
+    '.PPPPPPPPPPPP.',
+    '..KKKKKKKKKK..',
+    '..KWWKRRKWWK..',
+    '..KWWKRRKWWK..',
+    '..KKKKDDKKKK..',
+    '..KKKKDDKKKK..',
+  ], { P: C.purple, K: C.dusk, W: C.cyan, R: C.red, D: C.ink });
+
+  // ---- Map decorations ----
+  S.pine = G.makeSprite([
+    '...G...',
+    '..GGG..',
+    '.GGGGG.',
+    '..GGG..',
+    '.GGGGG.',
+    'GGGGGGG',
+    '...B...',
+    '...B...',
+  ], { G: C.teal, B: '#5a3a1b' });
+
+  S.pine2 = G.makeSprite([
+    '...G...',
+    '..GGG..',
+    '.GGGGG.',
+    'GGGGGGG',
+    '...B...',
+  ], { G: C.green, B: '#5a3a1b' });
+
+  S.car = G.makeSprite([
+    '..RRRR....',
+    '.RRWWRR...',
+    'RRRRRRRRRR',
+    'RKKRRRRKKR',
+    '.KK....KK.',
+  ], { R: C.red, W: C.cyan, K: C.ink });
+
+  S.carFancy = G.makeSprite([
+    '..YYYY....',
+    '.YYWWYY...',
+    'YYYYYYYYYY',
+    'YKKYYYYKKY',
+    '.KK....KK.',
+  ], { Y: C.yellow, W: C.cyan, K: C.ink });
+
+  S.deer = G.makeSprite([
+    'V..V....',
+    '.VV.....',
+    '.BBB....',
+    '.KBB....',
+    '..BBBBB.',
+    '..BBBBBB',
+    '..B..B.B',
+    '..B..B.B',
+  ], { V: '#8a5a2b', B: '#b5793a', K: C.ink });
+
+  S.fish = G.makeSprite([
+    '...OOO..',
+    '..OOOOO.',
+    'O.OKOOO.',
+    'OOOOOOO.',
+    'O..OOO..',
+  ], { O: C.orange, K: C.ink });
+
+  S.soldSign = G.makeSprite([
+    'WWWWWWWW',
+    'WRRRRRRW',
+    'WRWWWWRW',
+    'WRRRRRRW',
+    'WWWWWWWW',
+    '...BB...',
+    '...BB...',
+  ], { W: C.white, R: C.red, B: '#6b4226' });
+
+  S.phone = G.makeSprite([
+    'KKKK',
+    'KCCK',
+    'KCCK',
+    'KCCK',
+    'KKKK',
+  ], { K: C.ink, C: C.cyan });
+
+  S.star = G.makeSprite([
+    '..Y..',
+    '.YYY.',
+    'YYYYY',
+    '.YYY.',
+    '.Y.Y.',
+  ], { Y: C.yellow });
+
+  S.heart = G.makeSprite([
+    '.R.R.',
+    'RRRRR',
+    'RRRRR',
+    '.RRR.',
+    '..R..',
+  ], { R: C.red });
+
+  S.snowflake = G.makeSprite([
+    'W.W.W',
+    '.WWW.',
+    'WWWWW',
+    '.WWW.',
+    'W.W.W',
+  ], { W: C.white });
+
+  S.dollar = G.makeSprite([
+    '.GGG.',
+    'G.Y.G',
+    'G.Y.G',
+    'G.Y.G',
+    '.GGG.',
+  ], { G: C.green, Y: C.yellow });
+
+  S.trophy = G.makeSprite([
+    'YYYYYYY',
+    'Y.YYY.Y',
+    'YYYYYYY',
+    '.YYYYY.',
+    '..YYY..',
+    '...Y...',
+    '..YYY..',
+  ], { Y: C.yellow });
+})();
+
+// Draw a sprite scaled (integer scale keeps it crisp)
+G.drawSprite = (ctx, sprite, x, y, scale = 1, flip = false) => {
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  if (flip) {
+    ctx.translate(Math.round(x) + sprite.width * scale, Math.round(y));
+    ctx.scale(-scale, scale);
+  } else {
+    ctx.translate(Math.round(x), Math.round(y));
+    ctx.scale(scale, scale);
+  }
+  ctx.drawImage(sprite, 0, 0);
+  ctx.restore();
+};
+
+</script>
+<script>
+// ============================================================
+// data.js - characters, leads, upgrades, events, bosses, map
+// ============================================================
+'use strict';
+
+G.Data = {};
+
+// ------------------------------------------------------------
+// Season structure: 3 months, 8 working days each, boss at month end
+// ------------------------------------------------------------
+G.Data.SEASON = {
+  months: ['APRIL', 'MAY', 'JUNE'],
+  daysPerMonth: 8,
+  baseEnergy: 3,
+};
+
+// ------------------------------------------------------------
+// Characters
+// ------------------------------------------------------------
+G.Data.CHARACTERS = {
+  malcolm: {
+    id: 'malcolm',
+    name: 'MALCOLM',
+    title: 'The Lake Life Hype Man',
+    color: G.C.green,
+    accent: G.C.sky,
+    sprite: 'malcolm',
+    bio: [
+      'Social media wizard. Video marketing machine.',
+      'Builds relationships one dock chat at a time.',
+      'Lake home specialist. Never met a pontoon',
+      'he did not like.',
+    ],
+    strengths: ['VIDEO +25%', 'OPEN HOUSE +15%', 'LAKE LEADS x2'],
+    ability: {
+      name: 'VIRAL VIDEO',
+      desc: 'Post a ridiculous real estate video. Extra leads + followers pour in. Once per day.',
+    },
+    // gameplay modifiers
+    videoBonus: 0.25,       // video minigame score bonus
+    openHouseBonus: 0.15,   // open house minigame bonus
+    lakeLeadWeight: 2,      // lake/cabin leads twice as likely
+    negotiateBonus: 0,
+    listingBonus: 0,
+    luxuryValueBonus: 0,
+  },
+  bridger: {
+    id: 'bridger',
+    name: 'BRIDGER',
+    title: 'The Closer',
+    color: G.C.navy,
+    accent: G.C.yellow,
+    sprite: 'bridger',
+    bio: [
+      'Ruthless negotiator. Luxury client whisperer.',
+      'His listing presentations have made grown',
+      'sellers weep with joy. Runs on referrals,',
+      'black coffee, and that mighty red beard.',
+    ],
+    strengths: ['NEGOTIATE +25%', 'LISTING PITCH +15%', 'LUXURY VALUE +20%'],
+    ability: {
+      name: 'POWER CLOSE',
+      desc: 'Win a tough appointment or negotiation instantly. Your best lead jumps a stage. Once per day.',
+    },
+    videoBonus: 0,
+    openHouseBonus: 0,
+    lakeLeadWeight: 1,
+    negotiateBonus: 0.25,
+    listingBonus: 0.15,
+    luxuryValueBonus: 0.2,
+  },
+};
+
+// ------------------------------------------------------------
+// Lead types
+// ------------------------------------------------------------
+G.Data.LEAD_TYPES = [
+  { id: 'facebook',   label: 'FACEBOOK LEAD',    seller: false, value: [140000, 320000], warmth: 25, weight: 3 },
+  { id: 'zestimate',  label: 'ZESTIMATE LEAD',   seller: false, value: [160000, 380000], warmth: 30, weight: 3 },
+  { id: 'referral',   label: 'REFERRAL',         seller: false, value: [180000, 450000], warmth: 65, weight: 2 },
+  { id: 'pastclient', label: 'PAST CLIENT',      seller: true,  value: [200000, 420000], warmth: 70, weight: 1.5 },
+  { id: 'signcall',   label: 'SIGN CALL',        seller: false, value: [150000, 350000], warmth: 45, weight: 2 },
+  { id: 'openhouse',  label: 'OPEN HOUSE GUEST', seller: false, value: [140000, 330000], warmth: 40, weight: 2 },
+  { id: 'relo',       label: 'RELOCATION BUYER', seller: false, value: [220000, 480000], warmth: 55, weight: 1.5 },
+  { id: 'lakehome',   label: 'LAKE HOME BUYER',  seller: false, value: [400000, 900000], warmth: 45, weight: 1.2, lake: true },
+  { id: 'cabin',      label: 'CABIN BUYER',      seller: false, value: [180000, 380000], warmth: 50, weight: 1.5, lake: true },
+  { id: 'firsttime',  label: 'FIRST-TIME BUYER', seller: false, value: [120000, 240000], warmth: 50, weight: 2.5 },
+  { id: 'luxury',     label: 'LUXURY SELLER',    seller: true,  value: [600000, 1400000], warmth: 35, weight: 0.8, luxury: true },
+  { id: 'investor',   label: 'INVESTOR',         seller: false, value: [130000, 300000], warmth: 40, weight: 1.5 },
+  { id: 'expired',    label: 'EXPIRED LISTING',  seller: true,  value: [180000, 400000], warmth: 20, weight: 1.5 },
+  { id: 'fsbo',       label: 'FSBO SELLER',      seller: true,  value: [170000, 380000], warmth: 15, weight: 1.5 },
+];
+
+G.Data.LEAD_NAMES = [
+  'THE OLSONS', 'DALE & DEB', 'THE JOHNSONS', 'GARY LUNDGREN', 'THE ANDERSONS',
+  'SVEN & LENA', 'THE PETERSONS', 'BOB PASTUSZEK', 'THE NELSONS', 'CAROL HAUGEN',
+  'THE LARSONS', 'RANDY & TAMMY', 'THE CARLSONS', 'THE BERGSTROMS', 'DOUG SORENSON',
+  'THE LINDQUISTS', 'MARGE & VERN', 'THE DAHLS', 'KENNY MOE', 'THE HALVORSONS',
+  'THE SETHERS', 'PAT & PAT', 'THE GUSTAFSONS', 'WANDA SCHMIDT', 'THE THORSONS',
+  'BIG MIKE', 'THE RUUDS', 'DARLENE & CHUCK', 'THE OSTLUNDS', 'LITTLE MIKE',
+];
+
+// Pipeline stages
+G.Data.STAGES = ['new', 'hot', 'appt', 'active', 'offer', 'pending', 'closed'];
+G.Data.STAGE_LABELS = {
+  new: 'NEW', hot: 'WARM', appt: 'APPT SET', active: 'CLIENT',
+  offer: 'OFFER IN', pending: 'PENDING', closed: 'SOLD',
+};
+G.Data.STAGE_COLORS = {
+  new: G.C.gray, hot: G.C.orange, appt: G.C.yellow, active: G.C.sky,
+  offer: G.C.cyan, pending: G.C.lime, closed: G.C.green,
+};
+
+// ------------------------------------------------------------
+// Day actions
+// ------------------------------------------------------------
+G.Data.ACTIONS = [
+  { id: 'call',      label: 'CALL LEADS',     energy: 1, loc: 'office',   desc: 'Dial for dollars. Warm up leads, set appointments.', minigame: 'callGame' },
+  { id: 'text',      label: 'TEXT LEADS',     energy: 1, loc: 'office',   desc: 'Thumbs of fury. Quick replies keep leads warm.', minigame: 'textGame' },
+  { id: 'followup',  label: 'FOLLOW UP',      energy: 1, loc: 'coffee',   desc: 'Coffee + check-ins. Warms your whole pipeline a bit.', minigame: null },
+  { id: 'openhouse', label: 'OPEN HOUSE',     energy: 2, loc: 'openhouse', desc: 'Cookies, sign-in sheets, fresh leads.', minigame: 'openHouseGame' },
+  { id: 'video',     label: 'MAKE VIDEO',     energy: 1, loc: 'studio',   desc: 'Lights, camera, listings. Followers become leads.', minigame: 'videoGame' },
+  { id: 'listing',   label: 'LISTING APPT',   energy: 1, loc: 'cabin',    desc: 'Pitch a seller. Nail it and take the listing.', minigame: 'listingGame' },
+  { id: 'show',      label: 'SHOW HOMES',     energy: 1, loc: 'lakehome', desc: 'Tour homes with a buyer. Find "the one".', minigame: 'showGame' },
+  { id: 'offer',     label: 'WRITE OFFERS',   energy: 1, loc: 'office',   desc: 'Paperwork power hour. Client goes under offer.', minigame: null },
+  { id: 'negotiate', label: 'NEGOTIATE',      energy: 1, loc: 'office',   desc: 'Go to battle over price, closing dates, and the fish house.', minigame: 'negotiateGame' },
+  { id: 'inspect',   label: 'INSPECTION',     energy: 1, loc: 'starter',  desc: 'Fix inspection issues before they kill the deal.', minigame: 'inspectGame' },
+  { id: 'close',     label: 'CLOSE SALES',    energy: 1, loc: 'title',    desc: 'Sign here. And here. And here. Get paid!', minigame: null },
+];
+
+// ------------------------------------------------------------
+// Upgrades
+// ------------------------------------------------------------
+G.Data.UPGRADES = [
+  { id: 'vehicle',      name: 'BETTER VEHICLE',      cost: 12000, desc: 'Heated seats + 4WD. Open houses cost 1 energy instead of 2.' },
+  { id: 'camera',       name: 'CAMERA GEAR',         cost: 6000,  desc: 'Crispy footage. +15% video scores, +50% follower gains.' },
+  { id: 'drone',        name: 'DRONE',               cost: 9000,  desc: 'Sweet aerial lake shots. +15% listing pitch, +10% listing value.' },
+  { id: 'crm',          name: 'CRM SYSTEM',          cost: 8000,  desc: 'Leads never go cold or ghost you. Auto follow-up daily.' },
+  { id: 'ai',           name: 'AI ASSISTANT',        cost: 15000, desc: 'Handles the busywork. +1 ENERGY every day.' },
+  { id: 'tc',           name: 'TRANSACTION COORD.',  cost: 12000, desc: 'Closings run themselves. 50% chance inspections auto-clear.' },
+  { id: 'marketing',    name: 'MARKETING BUDGET',    cost: 10000, desc: 'Ads everywhere. Extra lead chance daily, +1 open house lead.' },
+  { id: 'website',      name: 'WEBSITE',             cost: 7000,  desc: 'You exist on the internet now. Chance of a free web lead daily.' },
+  { id: 'social',       name: 'SOCIAL MEDIA BOOST',  cost: 9000,  desc: 'The algorithm loves you. Follower gains x2, videos convert better.' },
+  { id: 'photographer', name: 'PHOTOGRAPHER',        cost: 8000,  desc: 'No more phone pics of toilets. Listings attract offers faster.' },
+  { id: 'assistant',    name: 'SHOWING ASSISTANT',   cost: 14000, desc: 'They handle tours too. Showings can advance 2 buyers at once.' },
+];
+
+// ------------------------------------------------------------
+// Random obstacles (bad-ish) - fire at day end
+// ------------------------------------------------------------
+G.Data.OBSTACLES = [
+  { id: 'inspection', text: 'INSPECTION ISSUE! The inspector found "significant moisture concerns." A pending deal needs repairs.', fx: 'inspectionIssue' },
+  { id: 'appraisal',  text: 'LOW APPRAISAL! The appraiser used a comp from 2009. A deal loses 10% of its value.', fx: 'lowAppraisal' },
+  { id: 'financing',  text: 'FINANCING PROBLEM! The buyer financed a new ice castle last week. A pending deal is delayed.', fx: 'financeDelay' },
+  { id: 'snowstorm',  text: 'SNOWSTORM! 14 inches in April. Classic Minnesota. Tomorrow you lose 1 energy shoveling.', fx: 'snowstorm' },
+  { id: 'badreview',  text: 'BAD REVIEW! "Agent was 4 minutes late. One star." Ouch. -1 review, -5 happiness.', fx: 'badReview' },
+  { id: 'ghost',      text: 'GHOSTED! A lead vanished like a walleye at noon. They are gone.', fx: 'ghostLead' },
+  { id: 'stolen',     text: 'DEAL SNIPED! A competing agent swooped in with cookies and a lower commission. You lose a lead in offer stage.', fx: 'stolenDeal' },
+  { id: 'rates',      text: 'INTEREST RATE JUMP! The Fed did a thing. All your buyer deals lose 5% value.', fx: 'rateJump' },
+  { id: 'coldfeet',   text: 'COLD FEET! A buyer wants to "sleep on it, maybe till fall." A pending deal drops back to offer stage.', fx: 'coldFeet' },
+  { id: 'greedy',     text: 'SELLER WANTS DOUBLE! "The Zillow says..." A seller overprices their listing. It will be slower to sell.', fx: 'greedySeller' },
+];
+
+// ------------------------------------------------------------
+// Funny events (good-ish flavor) - fire at day end
+// ------------------------------------------------------------
+G.Data.FUNNY_EVENTS = [
+  { id: 'garage',   text: 'A client toured a 4-bed lakefront home and only asked about the garage. "But can it fit the boat AND the wheeler?" +5 happiness when you said yes.', fx: 'happy5' },
+  { id: 'hottub',   text: 'A buyer fell head-over-heels for a hot tub. The house? Irrelevant. They want to write an offer TONIGHT.', fx: 'hotTub' },
+  { id: 'double',   text: 'A seller thinks their house is worth double because they "redid the trim." You nodded politely for 45 minutes. +1 listing lead anyway.', fx: 'sellerLead' },
+  { id: 'deer',     text: 'A DEER walked through your showing. The buyers loved it. You got it on video. +followers!', fx: 'deerVideo' },
+  { id: 'fish',     text: 'At a lake showing, the buyer only asked: "So... are the fish biting?" You said "oh you betcha." +warmth on all lake leads.', fx: 'fishBiting' },
+  { id: 'wrongviral', text: 'Your video went viral for the WRONG reason (you said "lake-adjacent" about a drainage pond). Huge followers, small shame.', fx: 'wrongViral' },
+  { id: 'sawvideo', text: 'The phone rings: "I saw your video and HAD to call." A hot lead appears!', fx: 'videoLead' },
+  { id: 'lutefisk', text: 'You sponsored the lutefisk feed at the community center. Everyone knows your name now. +referral!', fx: 'referralLead' },
+  { id: 'hotdish',  text: 'A past client dropped off a thank-you hotdish. Morale through the roof. +10 happiness.', fx: 'happy10' },
+];
+
+// ------------------------------------------------------------
+// Bosses - month-end showdowns
+// ------------------------------------------------------------
+G.Data.BOSSES = [
+  {
+    id: 'shark', name: 'DALE "THE SHARK" SWANSON', sprite: 'bossShark',
+    intro: ['Dale has sold homes here since 1987.', 'His face is on 14 bus benches.', 'He smells like Old Spice and victory.'],
+    taunt: 'Kid, I was door-knocking before you were born.',
+    rounds: 3, difficulty: 0.45, reward: { cash: 5000, leads: 2, followers: 100 },
+    skills: ['PROSPECTING', 'SPEED', 'CLIENT SERVICE'],
+  },
+  {
+    id: 'lakes', name: 'CINDY "LAKESHORE" LARSEN', sprite: 'bossLakes',
+    intro: ['Cindy owns the luxury lake market.', 'Her drone fleet blocks out the sun.', 'Her open houses have charcuterie.'],
+    taunt: 'Oh sweetie. That lake is barely swimmable.',
+    rounds: 4, difficulty: 0.6, reward: { cash: 9000, leads: 3, followers: 250 },
+    skills: ['MARKETING', 'NEGOTIATION', 'STRATEGY', 'SPEED'],
+  },
+  {
+    id: 'mega', name: 'THE MEGA AGENT', sprite: 'megaAgent',
+    intro: ['They have 74 agents. A helicopter.', 'A jingle you cannot unhear.', 'They ARE the market... until today.'],
+    taunt: 'We close a home every 12 minutes. You are a rounding error.',
+    rounds: 6, difficulty: 0.72, reward: { cash: 20000, leads: 4, followers: 1000 },
+    skills: ['PROSPECTING', 'MARKETING', 'NEGOTIATION', 'CLIENT SERVICE', 'SPEED', 'STRATEGY'],
+    final: true,
+  },
+];
+
+// ------------------------------------------------------------
+// Map of Northern Minnesota (positions in 480x270 space,
+// map area is roughly x:150..470 y:40..250)
+// ------------------------------------------------------------
+G.Data.MAP = {
+  lakes: [
+    { x: 205, y: 70,  w: 60, h: 34, name: 'LAKE BEMIDJI' },
+    { x: 330, y: 95,  w: 88, h: 48, name: 'LEECH LAKE' },
+    { x: 255, y: 185, w: 64, h: 36, name: 'GULL LAKE' },
+    { x: 405, y: 200, w: 44, h: 26, name: 'MILLE LACS' },
+  ],
+  towns: [
+    { id: 'bemidji',  name: 'BEMIDJI',      x: 185, y: 112 },
+    { id: 'walker',   name: 'WALKER',       x: 318, y: 150 },
+    { id: 'nisswa',   name: 'NISSWA',       x: 300, y: 205 },
+    { id: 'brainerd', name: 'BRAINERD',     x: 355, y: 232 },
+    { id: 'grandrapids', name: 'GRAND RAPIDS', x: 415, y: 78 },
+    { id: 'parkrapids', name: 'PARK RAPIDS', x: 205, y: 175 },
+  ],
+  // where the car drives for each action location
+  locations: {
+    office:    { x: 362, y: 226, sprite: 'office',       label: 'THE OFFICE' },
+    coffee:    { x: 310, y: 198, sprite: 'coffee',       label: 'MUGS & PLUGS CAFE' },
+    openhouse: { x: 230, y: 160, sprite: 'houseStarter', label: 'OPEN HOUSE' },
+    studio:    { x: 190, y: 120, sprite: 'studio',       label: 'VIDEO STUDIO' },
+    cabin:     { x: 402, y: 128, sprite: 'cabin',        label: 'SELLER CABIN' },
+    lakehome:  { x: 290, y: 118, sprite: 'houseLake',    label: 'LAKE HOME' },
+    starter:   { x: 424, y: 95,  sprite: 'houseStarter', label: 'INSPECTION' },
+    title:     { x: 340, y: 240, sprite: 'office',       label: 'TITLE CO.' },
+  },
+};
+
+// Flavor lines for instant actions
+G.Data.FLAVOR = {
+  followup: [
+    'You sent 12 "just checking in!" texts with exactly the right number of exclamation points.',
+    'You remembered a lead\'s dog\'s name (Duke). They were deeply moved.',
+    'You dropped off pumpkin bars. This is how deals get done up north.',
+    'You commented "GORGEOUS!" on 34 posts. Relationship building, baby.',
+  ],
+  offer: [
+    'You wrote an offer so clean the lender framed it.',
+    'Escalation clause? Inspection contingency? You know all the words.',
+    'Your buyer offered asking price plus one (1) box of smoked whitefish.',
+    'The offer is in! Now we wait. And refresh email. And wait.',
+  ],
+  close: [
+    'The pen ran out of ink halfway through. A backup pen appeared. Legend.',
+    'Keys handed over. Tears. Hugs. A firm Minnesotan handshake.',
+    'The title lady had cookies. Best closing ever.',
+    'SOLD! You did the thing! Commission hits different up north.',
+  ],
+  ghostReasons: [
+    'moved to Arizona', 'decided to "wait till spring"', 'bought a houseboat instead',
+    'their cousin got a real estate license', 'found the house on their own, sorry',
+  ],
+};
+
+</script>
+<script>
+// ============================================================
+// save.js - localStorage save/load + leaderboard
+// ============================================================
+'use strict';
+
+G.Save = {
+  KEY: 'realtorRivals.save.v1',
+  LB_KEY: 'realtorRivals.leaderboard.v1',
+
+  hasSave() {
+    try { return !!localStorage.getItem(this.KEY); } catch (e) { return false; }
+  },
+
+  save(state) {
+    try {
+      localStorage.setItem(this.KEY, JSON.stringify({ v: 1, ts: Date.now(), state }));
+      return true;
+    } catch (e) { return false; }
+  },
+
+  load() {
+    try {
+      const raw = localStorage.getItem(this.KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      return data.state || null;
+    } catch (e) { return null; }
+  },
+
+  clear() {
+    try { localStorage.removeItem(this.KEY); } catch (e) {}
+  },
+
+  // ---- Leaderboard ----
+  getLeaderboard() {
+    try {
+      const raw = localStorage.getItem(this.LB_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  },
+
+  addLeaderboardEntry(entry) {
+    const lb = this.getLeaderboard();
+    lb.push(entry);
+    lb.sort((a, b) => b.score - a.score);
+    const top = lb.slice(0, 10);
+    try { localStorage.setItem(this.LB_KEY, JSON.stringify(top)); } catch (e) {}
+    return top;
+  },
+};
+
+</script>
+<script>
+// ============================================================
+// state.js - game state, lead pipeline, action resolution,
+//            rival AI, day/season progression
+// ============================================================
+'use strict';
+
+G.State = {
+  s: null, // current game state
+
+  // ----------------------------------------------------------
+  newGame(charId) {
+    this.s = {
+      charId,
+      month: 0,        // 0..2
+      dayOfMonth: 1,   // 1..daysPerMonth
+      energy: G.Data.SEASON.baseEnergy,
+      cash: 0,
+      abilityUsed: false,
+      leadSeq: 0,
+      pendingBoss: false,
+      bossIndex: 0,
+      seasonOver: false,
+      effects: { snowTomorrow: false },
+      stats: {
+        homesSold: 0, commission: 0, listings: 0, buyers: 0,
+        referrals: 0, reviews: 5, followers: 120, happiness: 70,
+        leadsReceived: 0, bossWins: 0,
+      },
+      rival: { homesSold: 0, commission: 0, followers: 150 },
+      leads: [],
+      upgrades: {},
+      log: [],
+    };
+    // starting pipeline
+    this.spawnLead('facebook');
+    this.spawnLead('firsttime');
+    this.spawnLead('signcall');
+    this.spawnLead(this.char().id === 'malcolm' ? 'lakehome' : 'luxury');
+    this.pushLog('Season started. Go get \'em!');
+    return this.s;
+  },
+
+  loadGame() {
+    const st = G.Save.load();
+    if (st) this.s = st;
+    return st;
+  },
+
+  autosave() { if (this.s && !this.s.seasonOver) G.Save.save(this.s); },
+
+  // ----------------------------------------------------------
+  char() { return G.Data.CHARACTERS[this.s.charId]; },
+  rivalChar() { return G.Data.CHARACTERS[this.s.charId === 'malcolm' ? 'bridger' : 'malcolm']; },
+  has(up) { return !!this.s.upgrades[up]; },
+  maxEnergy() { return G.Data.SEASON.baseEnergy + (this.has('ai') ? 1 : 0); },
+  totalDay() { return this.s.month * G.Data.SEASON.daysPerMonth + this.s.dayOfMonth; },
+  totalDays() { return G.Data.SEASON.months.length * G.Data.SEASON.daysPerMonth; },
+  monthName() { return G.Data.SEASON.months[this.s.month]; },
+
+  pushLog(msg) {
+    this.s.log.unshift(msg);
+    if (this.s.log.length > 40) this.s.log.pop();
+  },
+
+  conversionRate() {
+    const st = this.s.stats;
+    return st.leadsReceived > 0 ? st.homesSold / st.leadsReceived : 0;
+  },
+
+  followerGainMult() {
+    let m = 1;
+    if (this.has('camera')) m *= 1.5;
+    if (this.has('social')) m *= 2;
+    return m;
+  },
+
+  // ----------------------------------------------------------
+  // Leads
+  // ----------------------------------------------------------
+  spawnLead(typeId, opts = {}) {
+    const s = this.s;
+    let type;
+    if (typeId) {
+      type = G.Data.LEAD_TYPES.find(t => t.id === typeId);
+    } else {
+      const ch = this.char();
+      const weighted = G.Data.LEAD_TYPES.map(t => ({
+        ...t,
+        weight: (t.weight || 1) * (t.lake ? ch.lakeLeadWeight : 1),
+      }));
+      type = G.weightedChoice(weighted);
+    }
+    let value = G.randInt(type.value[0], type.value[1]);
+    if (type.luxury && this.char().luxuryValueBonus) {
+      value = Math.round(value * (1 + this.char().luxuryValueBonus));
+    }
+    const lead = {
+      id: ++s.leadSeq,
+      name: G.choice(G.Data.LEAD_NAMES),
+      type: type.id,
+      label: type.label,
+      seller: !!type.seller,
+      lake: !!type.lake,
+      luxury: !!type.luxury,
+      value,
+      warmth: G.clamp(type.warmth + G.randInt(-10, 10), 5, 95),
+      stage: opts.stage || 'new',
+      daysInStage: 0,
+      issue: false,
+      delay: 0,
+      overpriced: false,
+    };
+    s.leads.push(lead);
+    s.stats.leadsReceived++;
+    return lead;
+  },
+
+  leadsInStage(...stages) {
+    return this.s.leads.filter(l => stages.includes(l.stage));
+  },
+
+  // Most advanced lead first, warm ones preferred
+  bestLead(leads) {
+    const order = G.Data.STAGES;
+    return leads.slice().sort((a, b) =>
+      (order.indexOf(b.stage) - order.indexOf(a.stage)) || (b.warmth - a.warmth)
+    )[0];
+  },
+
+  advance(lead, toStage) {
+    lead.stage = toStage;
+    lead.daysInStage = 0;
+    if (toStage === 'active') {
+      if (lead.seller) this.s.stats.listings++;
+      else this.s.stats.buyers++;
+    }
+  },
+
+  removeLead(lead) {
+    const i = this.s.leads.indexOf(lead);
+    if (i >= 0) this.s.leads.splice(i, 1);
+  },
+
+  // ----------------------------------------------------------
+  // Action availability (so the menu can grey out useless picks)
+  // ----------------------------------------------------------
+  actionAvailable(id) {
+    const s = this.s;
+    const cost = this.actionCost(id);
+    if (s.energy < cost) return { ok: false, reason: 'NO ENERGY' };
+    switch (id) {
+      case 'call': case 'text':
+        return this.leadsInStage('new', 'hot').length
+          ? { ok: true } : { ok: false, reason: 'NO NEW/WARM LEADS' };
+      case 'followup':
+        return this.leadsInStage('new', 'hot', 'appt').length
+          ? { ok: true } : { ok: false, reason: 'NOBODY TO NUDGE' };
+      case 'listing':
+        return this.leadsInStage('appt').some(l => l.seller)
+          ? { ok: true } : { ok: false, reason: 'NO SELLER APPTS' };
+      case 'show':
+        return this.leadsInStage('appt', 'active').some(l => !l.seller)
+          ? { ok: true } : { ok: false, reason: 'NO BUYERS READY' };
+      case 'offer':
+        return this.offerReadyLeads().length
+          ? { ok: true } : { ok: false, reason: 'NO CLIENTS READY' };
+      case 'negotiate':
+        return this.leadsInStage('offer').length
+          ? { ok: true } : { ok: false, reason: 'NO OFFERS OUT' };
+      case 'inspect':
+        return this.leadsInStage('pending').some(l => l.issue)
+          ? { ok: true } : { ok: false, reason: 'NO ISSUES FOUND' };
+      case 'close':
+        return this.closableLeads().length
+          ? { ok: true } : { ok: false, reason: 'NOTHING TO CLOSE' };
+      default:
+        return { ok: true };
+    }
+  },
+
+  actionCost(id) {
+    const a = G.Data.ACTIONS.find(x => x.id === id);
+    let cost = a ? a.energy : 1;
+    if (id === 'openhouse' && this.has('vehicle')) cost = 1;
+    return cost;
+  },
+
+  offerReadyLeads() {
+    // buyers who found "the one" (active + toured a bit) or listings with buyer interest
+    return this.leadsInStage('active').filter(l => {
+      if (l.seller) {
+        const wait = this.has('photographer') ? 0 : 1;
+        return l.daysInStage >= wait + (l.overpriced ? 2 : 0);
+      }
+      return true;
+    });
+  },
+
+  closableLeads() {
+    return this.leadsInStage('pending').filter(l => !l.issue && l.delay <= 0 && l.daysInStage >= 1);
+  },
+
+  // ----------------------------------------------------------
+  // Perform an action. score: 0..1 from a minigame (or null for instant)
+  // Returns { lines: [], sold: n } for the results popup.
+  // ----------------------------------------------------------
+  performAction(id, score) {
+    const s = this.s;
+    const ch = this.char();
+    s.energy -= this.actionCost(id);
+    const lines = [];
+    let sold = 0;
+
+    const grade = (sc) => sc >= 0.85 ? 'PERFECT!' : sc >= 0.6 ? 'GREAT!' : sc >= 0.35 ? 'OKAY.' : 'ROUGH...';
+
+    switch (id) {
+      case 'call': {
+        const targets = this.leadsInStage('new', 'hot');
+        const n = Math.min(targets.length, Math.round(score * 3.4));
+        lines.push(grade(score) + ' You worked the phones.');
+        const picked = G.shuffle(targets).slice(0, Math.max(n, 0));
+        for (const l of picked) {
+          l.warmth = G.clamp(l.warmth + 20, 0, 100);
+          if (l.stage === 'new') { this.advance(l, 'hot'); lines.push(l.name + ' warmed up! (' + l.label + ')'); }
+          else { this.advance(l, 'appt'); lines.push(l.name + ' booked an appointment!'); }
+        }
+        if (!picked.length) lines.push('Straight to voicemail. All of them. Brutal.');
+        break;
+      }
+
+      case 'text': {
+        const targets = this.leadsInStage('new', 'hot');
+        for (const l of targets) l.warmth = G.clamp(l.warmth + Math.round(15 * score), 0, 100);
+        const n = Math.min(targets.length, score >= 0.8 ? 2 : score >= 0.45 ? 1 : 0);
+        lines.push(grade(score) + ' Thumbs of fury engaged.');
+        const picked = G.shuffle(targets).slice(0, n);
+        for (const l of picked) {
+          if (l.stage === 'new') { this.advance(l, 'hot'); lines.push(l.name + ' replied with 3 emojis. Warm!'); }
+          else { this.advance(l, 'appt'); lines.push(l.name + ' set an appointment by text!'); }
+        }
+        break;
+      }
+
+      case 'followup': {
+        const targets = this.leadsInStage('new', 'hot', 'appt');
+        for (const l of targets) l.warmth = G.clamp(l.warmth + 10, 0, 100);
+        s.stats.happiness = G.clamp(s.stats.happiness + 2, 0, 100);
+        lines.push(G.choice(G.Data.FLAVOR.followup));
+        lines.push('Your whole pipeline feels appreciated. (+warmth)');
+        const hot = this.leadsInStage('hot');
+        if (hot.length && G.chance(0.3 + (this.has('crm') ? 0.2 : 0))) {
+          const l = this.bestLead(hot);
+          this.advance(l, 'appt');
+          lines.push(l.name + ' says "ope, yeah, let\'s meet!"');
+        }
+        break;
+      }
+
+      case 'openhouse': {
+        let count = Math.round(score * 4) + (this.has('marketing') ? 1 : 0);
+        count = G.clamp(count, 0, 6);
+        lines.push(grade(score) + ' The open house wrapped up.');
+        for (let i = 0; i < count; i++) {
+          const l = this.spawnLead(G.chance(0.7) ? 'openhouse' : null);
+          lines.push('+ NEW LEAD: ' + l.name + ' (' + l.label + ')');
+        }
+        if (!count) lines.push('Only visitor was a neighbor who "just loves floor plans."');
+        s.stats.followers += Math.round(20 * score * this.followerGainMult());
+        // buyer interest in your listings
+        const listings = this.leadsInStage('active').filter(l => l.seller);
+        if (listings.length && score > 0.5 && G.chance(0.5)) {
+          const l = this.bestLead(listings);
+          this.advance(l, 'offer');
+          lines.push('An open house guest wrote an offer on ' + l.name + '\'s place!');
+        }
+        break;
+      }
+
+      case 'video': {
+        const gain = Math.round((80 + 420 * score) * this.followerGainMult());
+        s.stats.followers += gain;
+        lines.push(grade(score) + ' Video posted: "' + G.choice([
+          'TOP 5 LAKES THAT SLAP', 'THIS CABIN HAS A SECRET...', 'POV: YOU OWN A DOCK',
+          'WE FOUND THE CHEAPEST HOUSE IN TOWN', 'ICE FISHING HOUSE TOUR (YES REALLY)',
+        ]) + '"');
+        lines.push('+' + gain + ' FOLLOWERS');
+        const leadChance = score * (this.has('social') ? 0.9 : 0.6);
+        if (G.chance(leadChance)) {
+          const l = this.spawnLead(G.chance(0.5) ? 'facebook' : null);
+          lines.push('+ NEW LEAD: ' + l.name + ' saw the video!');
+        }
+        if (score >= 0.9 && G.chance(0.5)) {
+          const extra = Math.round(600 * this.followerGainMult());
+          s.stats.followers += extra;
+          lines.push('IT\'S TRENDING LOCALLY! +' + extra + ' bonus followers!');
+        }
+        break;
+      }
+
+      case 'listing': {
+        const sellers = this.leadsInStage('appt').filter(l => l.seller);
+        const l = this.bestLead(sellers);
+        const bonus = ch.listingBonus + (this.has('drone') ? 0.15 : 0);
+        if (score + bonus >= 0.5) {
+          this.advance(l, 'active');
+          if (this.has('drone')) l.value = Math.round(l.value * 1.1);
+          lines.push(grade(G.clamp(score + bonus, 0, 1)) + ' LISTING TAKEN!');
+          lines.push(l.name + ' listed at ' + G.money(l.value) + '.');
+          lines.push('They loved the ' + G.choice(['drone footage', 'comp analysis', 'firm handshake', 'laminated flyers']) + '.');
+        } else {
+          l.warmth = G.clamp(l.warmth - 10, 0, 100);
+          lines.push('ROUGH... ' + l.name + ' said they "wanna think about it."');
+          lines.push('(Try again - they\'re still at appointment stage.)');
+        }
+        break;
+      }
+
+      case 'show': {
+        let buyers = this.leadsInStage('active', 'appt').filter(l => !l.seller);
+        buyers.sort((a, b) => (a.stage === 'active' ? -1 : 1) - (b.stage === 'active' ? -1 : 1));
+        const howMany = this.has('assistant') ? 2 : 1;
+        const picked = buyers.slice(0, howMany);
+        lines.push(grade(score) + ' Tour day!');
+        for (const l of picked) {
+          if (l.stage === 'appt') {
+            if (score >= 0.35) {
+              this.advance(l, 'active');
+              lines.push(l.name + ' is now YOUR buyer client!');
+            } else {
+              lines.push(l.name + ' "didn\'t vibe with the carpet." Still at appt.');
+            }
+          } else if (score >= 0.55) {
+            this.advance(l, 'offer');
+            lines.push(l.name + ' FOUND THE ONE! (' + G.choice([
+              'It was the hot tub.', 'The garage fits the boat AND the wheeler.',
+              'A bald eagle flew by during the tour. Done deal.', 'Granite. Countertops.',
+            ]) + ')');
+          } else {
+            l.warmth = G.clamp(l.warmth + 5, 0, 100);
+            lines.push(l.name + ' wants to see "just a few more."');
+          }
+        }
+        break;
+      }
+
+      case 'offer': {
+        const ready = this.offerReadyLeads();
+        const l = this.bestLead(ready);
+        this.advance(l, 'offer');
+        lines.push(G.choice(G.Data.FLAVOR.offer));
+        lines.push(l.name + ' (' + G.money(l.value) + ') is now UNDER OFFER.');
+        break;
+      }
+
+      case 'negotiate': {
+        const offers = this.leadsInStage('offer');
+        const l = this.bestLead(offers);
+        const power = G.clamp(score + ch.negotiateBonus, 0, 1);
+        if (power >= 0.45) {
+          this.advance(l, 'pending');
+          if (power >= 0.8) {
+            l.value = Math.round(l.value * 1.05);
+            lines.push('MASTERCLASS. Deal agreed ABOVE asking: ' + G.money(l.value) + '!');
+          } else {
+            lines.push('Deal agreed! ' + l.name + ' at ' + G.money(l.value) + ' is PENDING.');
+          }
+          const issueChance = l.overpriced ? 0.5 : 0.3;
+          if (G.chance(issueChance) && !(this.has('tc') && G.chance(0.5))) {
+            l.issue = true;
+            lines.push('...but the inspection flagged ' + G.choice([
+              'a mystery switch that does nothing', 'squirrels with a lease',
+              'a roof "older than disco"', '"moisture concerns" (it\'s Minnesota)',
+            ]) + '. Fix it before closing!');
+          }
+        } else {
+          l.warmth = G.clamp(l.warmth - 5, 0, 100);
+          lines.push('The other side didn\'t budge. Deal still at OFFER stage.');
+          lines.push(G.choice(['They countered with "no."', 'Their agent quoted a podcast.', 'They want the fish house excluded. Bold.']));
+        }
+        break;
+      }
+
+      case 'inspect': {
+        const issues = this.leadsInStage('pending').filter(l => l.issue);
+        const l = this.bestLead(issues);
+        if (score >= 0.4) {
+          l.issue = false;
+          lines.push(grade(score) + ' Issues fixed on ' + l.name + '\'s deal!');
+          lines.push('The inspector nodded approvingly. High praise.');
+        } else {
+          lines.push('The repair guy "can maybe swing by Thursday." Issue remains.');
+        }
+        break;
+      }
+
+      case 'close': {
+        const list = this.closableLeads();
+        const howMany = this.has('tc') ? 2 : 1;
+        const toClose = list.slice(0, howMany);
+        for (const l of toClose) {
+          this.advance(l, 'closed');
+          const comm = Math.round(l.value * 0.027);
+          s.stats.homesSold++;
+          s.stats.commission += comm;
+          s.cash += comm;
+          sold++;
+          lines.push('SOLD! ' + l.name + ' - ' + G.money(l.value) + ' (+' + G.money(comm) + ' commission)');
+          s.stats.happiness = G.clamp(s.stats.happiness + 4, 0, 100);
+          if (G.chance(0.5)) { s.stats.reviews++; lines.push('+ 5-STAR REVIEW: "' + G.choice([
+            'Sold our place in a weekend, dontcha know!', 'Best agent north of Brainerd.',
+            'They brought bars to closing. BARS.', '10/10 would house again.',
+          ]) + '"'); }
+          if (G.chance(0.35 + s.stats.happiness / 400)) {
+            const r = this.spawnLead('referral');
+            s.stats.referrals++;
+            lines.push('+ REFERRAL: they told ' + r.name + ' about you!');
+          }
+          this.removeLead(l); // keep list tidy; stats carry the record
+        }
+        lines.unshift(G.choice(G.Data.FLAVOR.close));
+        break;
+      }
+    }
+
+    return { lines, sold };
+  },
+
+  // ----------------------------------------------------------
+  // Special ability (once per day)
+  // ----------------------------------------------------------
+  useAbility() {
+    const s = this.s;
+    if (s.abilityUsed) return null;
+    s.abilityUsed = true;
+    const lines = [];
+    if (s.charId === 'malcolm') {
+      const gain = Math.round(G.randInt(300, 800) * this.followerGainMult());
+      s.stats.followers += gain;
+      const n = G.randInt(2, 4);
+      lines.push('VIRAL VIDEO! "' + G.choice([
+        'AGENT RATES EVERY LAKE (PART 7)', 'I SLEPT IN AN ICE HOUSE FOR A LISTING',
+        'THE LOON CALL CHALLENGE', 'SELLING A HOUSE IN -30 (GONE WRONG)',
+      ]) + '"');
+      lines.push('+' + gain + ' FOLLOWERS!');
+      for (let i = 0; i < n; i++) {
+        const l = this.spawnLead(G.chance(0.4) ? 'lakehome' : 'facebook');
+        lines.push('+ LEAD: ' + l.name + ' - "saw your video, had to call!"');
+      }
+    } else {
+      // Bridger: advance the best advanceable lead one stage
+      const pick =
+        this.bestLead(this.leadsInStage('pending').filter(l => l.issue)) ||
+        this.bestLead(this.leadsInStage('offer')) ||
+        this.bestLead(this.offerReadyLeads()) ||
+        this.bestLead(this.leadsInStage('appt')) ||
+        this.bestLead(this.leadsInStage('hot')) ||
+        this.bestLead(this.leadsInStage('new'));
+      lines.push('POWER CLOSE! Bridger straightens his tie...');
+      if (!pick) {
+        lines.push('...but there was nobody to close. He closed a car door, powerfully.');
+      } else if (pick.stage === 'pending' && pick.issue) {
+        pick.issue = false;
+        lines.push('He talked the buyer PAST the inspection report. Issue waived!');
+      } else {
+        const next = { new: 'hot', hot: 'appt', appt: 'active', active: 'offer', offer: 'pending' }[pick.stage];
+        this.advance(pick, next);
+        lines.push(pick.name + ' never stood a chance. Now: ' + G.Data.STAGE_LABELS[next] + '.');
+      }
+    }
+    G.Audio.ability();
+    return { lines };
+  },
+
+  // ----------------------------------------------------------
+  // Upgrades
+  // ----------------------------------------------------------
+  buyUpgrade(id) {
+    const up = G.Data.UPGRADES.find(u => u.id === id);
+    if (!up || this.has(id) || this.s.cash < up.cost) return false;
+    this.s.cash -= up.cost;
+    this.s.upgrades[id] = true;
+    if (id === 'ai') this.s.energy = Math.min(this.s.energy + 1, this.maxEnergy());
+    this.pushLog('Bought ' + up.name + '!');
+    return true;
+  },
+
+  // ----------------------------------------------------------
+  // End of day: aging, passive leads, rival AI, random events
+  // Returns { eventText, eventGood, rivalLines, passiveLines, bossTime, seasonOver }
+  // ----------------------------------------------------------
+  endDay() {
+    const s = this.s;
+    const passiveLines = [];
+
+    // 1. age leads, ghosting
+    for (const l of s.leads.slice()) {
+      l.daysInStage++;
+      if (l.delay > 0) l.delay--;
+      if (!this.has('crm') && (l.stage === 'new' || l.stage === 'hot') && l.daysInStage > 3 && G.chance(0.35)) {
+        this.removeLead(l);
+        passiveLines.push(l.name + ' ghosted you (they ' + G.choice(G.Data.FLAVOR.ghostReasons) + ').');
+      }
+    }
+    if (this.has('crm')) {
+      for (const l of this.leadsInStage('new', 'hot')) l.warmth = G.clamp(l.warmth + 5, 0, 100);
+    }
+
+    // 2. passive lead sources
+    if (this.has('website') && G.chance(0.35)) {
+      const l = this.spawnLead('zestimate');
+      passiveLines.push('WEBSITE LEAD: ' + l.name + ' filled out your contact form!');
+    }
+    if (this.has('marketing') && G.chance(0.35)) {
+      const l = this.spawnLead();
+      passiveLines.push('AD LEAD: ' + l.name + ' saw your billboard by the DQ!');
+    }
+    if (G.chance(0.2 + s.stats.followers / 20000)) {
+      const l = this.spawnLead();
+      passiveLines.push('NEW LEAD: ' + l.name + ' (' + l.label + ') reached out!');
+    }
+
+    // 3. photographer: listings attract offers passively
+    if (this.has('photographer')) {
+      for (const l of this.leadsInStage('active').filter(x => x.seller && x.daysInStage >= 2)) {
+        if (G.chance(0.4)) {
+          this.advance(l, 'offer');
+          passiveLines.push('Those pro photos worked: an offer came in on ' + l.name + '\'s place!');
+        }
+      }
+    }
+
+    // 4. rival AI
+    const rivalLines = [];
+    const rc = this.rivalChar();
+    const closeChance = 0.42 + s.month * 0.1;
+    let rivalCloses = G.chance(closeChance) ? 1 : 0;
+    if (G.chance(0.08)) rivalCloses++;
+    for (let i = 0; i < rivalCloses; i++) {
+      const val = G.randInt(150000, s.month === 2 ? 600000 : 420000);
+      s.rival.homesSold++;
+      s.rival.commission += Math.round(val * 0.027);
+      rivalLines.push(rc.name + ' closed a ' + G.money(val) + ' sale' + G.choice([
+        '. Ugh.', ' and posted about it. Twice.', '. The nerve.', ' with a SOLD selfie.', '.',
+      ]));
+    }
+    s.rival.followers += G.randInt(20, 120);
+    if (!rivalCloses && G.chance(0.5)) {
+      rivalLines.push(rc.name + ' ' + G.choice([
+        'spent all day arguing in a Facebook group.', 'got a flat tire on the logging road.',
+        'is "rebranding." Again.', 'held an open house. One guy came for the cookies.',
+        'left a voicemail 4 minutes long.',
+      ]));
+    }
+
+    // 5. random event
+    let eventText = null, eventGood = null;
+    if (G.chance(0.6)) {
+      if (G.chance(0.5)) {
+        const ev = G.choice(G.Data.OBSTACLES);
+        const extra = this.applyEventFx(ev.fx);
+        if (extra !== false) { eventText = ev.text + (extra ? ' ' + extra : ''); eventGood = false; }
+      } else {
+        const ev = G.choice(G.Data.FUNNY_EVENTS);
+        const extra = this.applyEventFx(ev.fx);
+        if (extra !== false) { eventText = ev.text + (extra ? ' ' + extra : ''); eventGood = true; }
+      }
+    }
+
+    // 6. advance calendar
+    let bossTime = false;
+    s.dayOfMonth++;
+    if (s.dayOfMonth > G.Data.SEASON.daysPerMonth) {
+      bossTime = true;
+      s.pendingBoss = true;
+    }
+
+    // 7. reset energy
+    s.energy = this.maxEnergy() - (s.effects.snowTomorrow ? 1 : 0);
+    if (s.effects.snowTomorrow) passiveLines.push('You lost an hour shoveling the driveway. (-1 energy)');
+    s.effects.snowTomorrow = false;
+    s.abilityUsed = false;
+
+    this.autosave();
+    return { eventText, eventGood, rivalLines, passiveLines, bossTime };
+  },
+
+  // Returns extra text ('' ok), or false if the event fizzled (no valid target)
+  applyEventFx(fx) {
+    const s = this.s;
+    switch (fx) {
+      case 'inspectionIssue': {
+        const t = this.leadsInStage('pending').filter(l => !l.issue);
+        if (!t.length) return false;
+        G.choice(t).issue = true;
+        return '';
+      }
+      case 'lowAppraisal': {
+        const t = this.leadsInStage('offer', 'pending');
+        if (!t.length) return false;
+        const l = G.choice(t);
+        l.value = Math.round(l.value * 0.9);
+        return '(' + l.name + ' now ' + G.money(l.value) + ')';
+      }
+      case 'financeDelay': {
+        const t = this.leadsInStage('pending');
+        if (!t.length) return false;
+        G.choice(t).delay = 2;
+        return '';
+      }
+      case 'snowstorm':
+        s.effects.snowTomorrow = true;
+        return '';
+      case 'badReview':
+        s.stats.reviews = Math.max(0, s.stats.reviews - 1);
+        s.stats.happiness = G.clamp(s.stats.happiness - 5, 0, 100);
+        return '';
+      case 'ghostLead': {
+        const t = this.leadsInStage('new', 'hot', 'appt');
+        if (!t.length) return false;
+        const l = G.choice(t);
+        this.removeLead(l);
+        return '(RIP ' + l.name + ')';
+      }
+      case 'stolenDeal': {
+        const t = this.leadsInStage('offer');
+        if (!t.length) return false;
+        const l = G.choice(t);
+        this.removeLead(l);
+        s.rival.homesSold++;
+        s.rival.commission += Math.round(l.value * 0.027);
+        return '(' + l.name + ' - gone!)';
+      }
+      case 'rateJump':
+        for (const l of s.leads) if (!l.seller && l.stage !== 'closed') l.value = Math.round(l.value * 0.95);
+        return '';
+      case 'coldFeet': {
+        const t = this.leadsInStage('pending');
+        if (!t.length) return false;
+        const l = G.choice(t);
+        this.advance(l, 'offer');
+        return '(' + l.name + ' back to offer stage)';
+      }
+      case 'greedySeller': {
+        const t = this.leadsInStage('active').filter(l => l.seller && !l.overpriced);
+        if (!t.length) return false;
+        const l = G.choice(t);
+        l.overpriced = true;
+        l.value = Math.round(l.value * 1.2);
+        return '(' + l.name + ' at ' + G.money(l.value) + ' now. Good luck.)';
+      }
+      // funny (good) events
+      case 'happy5': s.stats.happiness = G.clamp(s.stats.happiness + 5, 0, 100); return '';
+      case 'happy10': s.stats.happiness = G.clamp(s.stats.happiness + 10, 0, 100); return '';
+      case 'hotTub': {
+        const t = this.leadsInStage('active', 'appt').filter(l => !l.seller);
+        if (!t.length) return false;
+        const l = this.bestLead(t);
+        if (l.stage === 'appt') this.advance(l, 'active');
+        this.advance(l, 'offer');
+        return '(' + l.name + ' jumped to OFFER!)';
+      }
+      case 'sellerLead': this.spawnLead(G.chance(0.5) ? 'fsbo' : 'expired'); return '';
+      case 'deerVideo': {
+        const gain = Math.round(200 * this.followerGainMult());
+        s.stats.followers += gain;
+        return '(+' + gain + ' followers)';
+      }
+      case 'fishBiting':
+        for (const l of s.leads) if (l.lake) l.warmth = G.clamp(l.warmth + 15, 0, 100);
+        return '';
+      case 'wrongViral': {
+        const gain = Math.round(400 * this.followerGainMult());
+        s.stats.followers += gain;
+        s.stats.reviews = Math.max(0, s.stats.reviews - 1);
+        return '(+' + gain + ' followers, -1 review)';
+      }
+      case 'videoLead': {
+        const l = this.spawnLead('facebook');
+        l.warmth = 80;
+        l.stage = 'hot';
+        return '(' + l.name + ' is HOT)';
+      }
+      case 'referralLead': {
+        this.spawnLead('referral');
+        s.stats.referrals++;
+        return '';
+      }
+    }
+    return '';
+  },
+
+  // ----------------------------------------------------------
+  // Boss resolution
+  // ----------------------------------------------------------
+  currentBoss() { return G.Data.BOSSES[Math.min(this.s.bossIndex, G.Data.BOSSES.length - 1)]; },
+
+  resolveBoss(won) {
+    const s = this.s;
+    const boss = this.currentBoss();
+    const lines = [];
+    if (won) {
+      s.stats.bossWins++;
+      s.cash += boss.reward.cash;
+      s.stats.commission += boss.reward.cash;
+      s.stats.followers += Math.round(boss.reward.followers * this.followerGainMult());
+      for (let i = 0; i < boss.reward.leads; i++) this.spawnLead();
+      s.stats.happiness = G.clamp(s.stats.happiness + 8, 0, 100);
+      lines.push('YOU BEAT ' + boss.name + '!');
+      lines.push('+' + G.money(boss.reward.cash) + ' bonus, +' + boss.reward.leads + ' leads, +followers!');
+    } else {
+      s.rival.homesSold++;
+      s.stats.happiness = G.clamp(s.stats.happiness - 6, 0, 100);
+      lines.push(boss.name + ' takes the round...');
+      lines.push('They win a listing you wanted. It stings.');
+    }
+    // advance month
+    s.pendingBoss = false;
+    s.bossIndex++;
+    s.month++;
+    s.dayOfMonth = 1;
+    if (s.month >= G.Data.SEASON.months.length) {
+      s.seasonOver = true;
+      G.Save.clear();
+    } else {
+      this.autosave();
+    }
+    return { lines, seasonOver: s.seasonOver };
+  },
+
+  // ----------------------------------------------------------
+  // Scoring
+  // ----------------------------------------------------------
+  seasonScore() {
+    const st = this.s.stats;
+    return Math.round(
+      st.homesSold * 1000 +
+      st.commission / 100 +
+      st.reviews * 50 +
+      st.followers / 10 +
+      st.happiness * 10 +
+      st.bossWins * 750 +
+      st.referrals * 100
+    );
+  },
+
+  playerWon() { return this.s.stats.homesSold > this.s.rival.homesSold; },
+  tied() { return this.s.stats.homesSold === this.s.rival.homesSold; },
+};
+
+</script>
+<script>
+// ============================================================
+// ui.js - text, panels, menus, popups
+// ============================================================
+'use strict';
+
+G.UI = {
+  // Crisp-ish retro text
+  text(ctx, str, x, y, opts = {}) {
+    const size = opts.size || 8;
+    ctx.font = (opts.bold === false ? '' : 'bold ') + size + 'px monospace';
+    ctx.textAlign = opts.align || 'left';
+    ctx.textBaseline = opts.baseline || 'top';
+    if (opts.shadow) {
+      ctx.fillStyle = opts.shadow === true ? G.C.ink : opts.shadow;
+      ctx.fillText(str, Math.round(x) + 1, Math.round(y) + 1);
+    }
+    ctx.fillStyle = opts.color || G.C.white;
+    ctx.fillText(str, Math.round(x), Math.round(y));
+  },
+
+  measure(ctx, str, size = 8, bold = true) {
+    ctx.font = (bold ? 'bold ' : '') + size + 'px monospace';
+    return ctx.measureText(str).width;
+  },
+
+  // Word-wrap text into lines that fit maxWidth
+  wrap(ctx, str, maxWidth, size = 8) {
+    ctx.font = 'bold ' + size + 'px monospace';
+    const words = String(str).split(' ');
+    const lines = [];
+    let cur = '';
+    for (const w of words) {
+      const test = cur ? cur + ' ' + w : w;
+      if (ctx.measureText(test).width > maxWidth && cur) {
+        lines.push(cur);
+        cur = w;
+      } else {
+        cur = test;
+      }
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  },
+
+  panel(ctx, x, y, w, h, opts = {}) {
+    ctx.fillStyle = opts.bg || G.C.navy;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = opts.border || G.C.white;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    if (opts.title) {
+      ctx.fillStyle = opts.titleBg || G.C.blue;
+      ctx.fillRect(x + 1, y + 1, w - 2, 11);
+      this.text(ctx, opts.title, x + w / 2, y + 3, { align: 'center', color: opts.titleColor || G.C.white });
+    }
+  },
+
+  // Progress/stat bar
+  bar(ctx, x, y, w, h, pct, color, bg) {
+    ctx.fillStyle = bg || G.C.dusk;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = color || G.C.green;
+    ctx.fillRect(x, y, Math.round(w * G.clamp(pct, 0, 1)), h);
+    ctx.strokeStyle = G.C.ink;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  },
+
+  button(ctx, label, x, y, w, h, opts = {}) {
+    const hover = G.Input.inRect(x, y, w, h);
+    const active = opts.selected || hover;
+    ctx.fillStyle = opts.disabled ? G.C.dusk : (active ? (opts.hoverBg || G.C.blue) : (opts.bg || G.C.navy));
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = active && !opts.disabled ? G.C.yellow : G.C.slate;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    this.text(ctx, label, x + w / 2, y + (h - (opts.size || 8)) / 2, {
+      align: 'center',
+      size: opts.size || 8,
+      color: opts.disabled ? G.C.slate : (active ? G.C.white : (opts.color || G.C.gray)),
+    });
+    return !opts.disabled && G.Input.clickedRect(x, y, w, h);
+  },
+};
+
+// ------------------------------------------------------------
+// Keyboard/mouse menu
+// items: [{label, disabled, note, data}]
+// ------------------------------------------------------------
+G.Menu = class {
+  constructor(items, opts = {}) {
+    this.items = items;
+    this.index = 0;
+    this.x = opts.x || 0; this.y = opts.y || 0;
+    this.w = opts.w || 140; this.rowH = opts.rowH || 13;
+    this.onSelect = opts.onSelect || (() => {});
+    this.skipDisabled(1);
+  }
+
+  skipDisabled(dir) {
+    let guard = 0;
+    while (this.items[this.index] && this.items[this.index].disabled && guard++ < this.items.length) {
+      this.index = (this.index + dir + this.items.length) % this.items.length;
+    }
+  }
+
+  update() {
+    const I = G.Input;
+    if (I.up())   { this.index = (this.index - 1 + this.items.length) % this.items.length; this.skipDisabled(-1); G.Audio.move(); }
+    if (I.down()) { this.index = (this.index + 1) % this.items.length; this.skipDisabled(1); G.Audio.move(); }
+    if (I.confirm()) {
+      const it = this.items[this.index];
+      if (it && !it.disabled) { G.Audio.select(); this.onSelect(it, this.index); }
+      else G.Audio.bad();
+    }
+    // mouse
+    for (let i = 0; i < this.items.length; i++) {
+      const ry = this.y + i * this.rowH;
+      if (I.inRect(this.x, ry, this.w, this.rowH - 1)) {
+        if (I.mouse.x !== this._lastMx || I.mouse.y !== this._lastMy) this.index = i;
+        if (I.mouse.clicked) {
+          const it = this.items[i];
+          if (it && !it.disabled) { this.index = i; G.Audio.select(); this.onSelect(it, i); }
+          else G.Audio.bad();
+        }
+      }
+    }
+    this._lastMx = I.mouse.x; this._lastMy = I.mouse.y;
+  }
+
+  render(ctx) {
+    for (let i = 0; i < this.items.length; i++) {
+      const it = this.items[i];
+      const ry = this.y + i * this.rowH;
+      const sel = i === this.index;
+      if (sel && !it.disabled) {
+        ctx.fillStyle = G.C.blue;
+        ctx.fillRect(this.x, ry, this.w, this.rowH - 1);
+      }
+      G.UI.text(ctx, (sel ? '>' : ' ') + it.label, this.x + 3, ry + 2, {
+        color: it.disabled ? G.C.slate : (sel ? G.C.white : G.C.gray),
+      });
+      if (it.note) {
+        G.UI.text(ctx, it.note, this.x + this.w - 3, ry + 2, {
+          align: 'right', size: 7,
+          color: it.disabled ? G.C.slate : G.C.yellow,
+        });
+      }
+    }
+  }
+};
+
+// ------------------------------------------------------------
+// Modal popup with wrapped lines; closes on confirm/click.
+// Use: G.Popup.show({title, lines, color, onClose})
+// ------------------------------------------------------------
+G.Popup = {
+  active: null,
+  queue: [],
+
+  show(opts) {
+    if (this.active) { this.queue.push(opts); return; }
+    this.active = opts;
+    this.t = 0;
+  },
+
+  update(dt) {
+    if (!this.active) return false;
+    this.t = (this.t || 0) + dt;
+    if (this.t > 0.25 && (G.Input.confirm() || G.Input.cancel() || G.Input.mouse.clicked)) {
+      const closed = this.active;
+      this.active = null;
+      G.Audio.select();
+      if (closed.onClose) closed.onClose();
+      if (this.queue.length) this.show(this.queue.shift());
+    }
+    return true; // popup consumed input this frame
+  },
+
+  render(ctx) {
+    if (!this.active) return;
+    const o = this.active;
+    ctx.fillStyle = 'rgba(26,28,44,0.75)';
+    ctx.fillRect(0, 0, G.W, G.H);
+
+    const w = o.w || 320;
+    // pre-wrap lines
+    const wrapped = [];
+    for (const line of (o.lines || [])) {
+      for (const l of G.UI.wrap(ctx, line, w - 24)) wrapped.push(l);
+    }
+    const h = 40 + wrapped.length * 10 + (o.sprite ? 40 : 0);
+    const x = (G.W - w) / 2;
+    const y = G.clamp((G.H - h) / 2, 8, G.H);
+
+    G.UI.panel(ctx, x, y, w, h, {
+      title: o.title || 'NOTICE',
+      titleBg: o.color || G.C.blue,
+      bg: G.C.ink,
+    });
+
+    let ty = y + 18;
+    if (o.sprite && G.Sprites[o.sprite]) {
+      G.drawSprite(ctx, G.Sprites[o.sprite], x + w / 2 - 16, ty, 2);
+      ty += 38;
+    }
+    for (const l of wrapped) {
+      G.UI.text(ctx, l, x + 12, ty, { color: o.textColor || G.C.white });
+      ty += 10;
+    }
+    if ((this.t || 0) > 0.25 && Math.floor(this.t * 2) % 2 === 0) {
+      G.UI.text(ctx, '- PRESS ENTER -', x + w / 2, y + h - 12, { align: 'center', size: 7, color: G.C.yellow });
+    }
+  },
+};
+
+</script>
+<script>
+// ============================================================
+// engine.js - game loop, scene manager, transitions
+// ============================================================
+'use strict';
+
+G.Engine = {
+  scenes: {},
+  current: null,
+  currentName: '',
+  fade: 0,          // 1 = black
+  fadeDir: 0,       // -1 fading in, +1 fading out
+  pendingScene: null,
+  shake: 0,
+  time: 0,
+
+  init(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.ctx.imageSmoothingEnabled = false;
+    G.Input.init(canvas);
+    this.resize();
+    window.addEventListener('resize', () => this.resize());
+
+    let last = performance.now();
+    const frame = (now) => {
+      let dt = (now - last) / 1000;
+      last = now;
+      dt = Math.min(dt, 0.05);
+      this.time += dt;
+      this.update(dt);
+      this.render();
+      G.Input.endFrame();
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  },
+
+  resize() {
+    const scale = Math.max(1, Math.floor(Math.min(
+      window.innerWidth / G.W, window.innerHeight / G.H
+    )));
+    this.canvas.style.width = (G.W * scale) + 'px';
+    this.canvas.style.height = (G.H * scale) + 'px';
+  },
+
+  register(name, scene) { this.scenes[name] = scene; },
+
+  // Fade out, switch, fade in
+  goto(name, params) {
+    if (this.pendingScene) return;
+    this.pendingScene = { name, params };
+    this.fadeDir = 1;
+  },
+
+  // Instant switch (used at boot)
+  set(name, params) {
+    if (this.current && this.current.exit) this.current.exit();
+    this.current = this.scenes[name];
+    this.currentName = name;
+    if (this.current.enter) this.current.enter(params);
+    this.fade = 1;
+    this.fadeDir = -1;
+  },
+
+  update(dt) {
+    // global keys
+    if (G.Input.p('m')) {
+      const muted = G.Audio.toggleMute();
+      if (muted) G.Audio.stopMusic(); else G.Audio.startMusic();
+    }
+
+    // fade transitions
+    if (this.fadeDir !== 0) {
+      this.fade = G.clamp(this.fade + this.fadeDir * dt * 4, 0, 1);
+      if (this.fade >= 1 && this.pendingScene) {
+        const p = this.pendingScene;
+        this.pendingScene = null;
+        this.set(p.name, p.params);
+      } else if (this.fade <= 0) {
+        this.fadeDir = 0;
+      }
+    }
+
+    this.shake = Math.max(0, this.shake - dt * 30);
+
+    // popups eat input
+    if (G.Popup.update(dt)) return;
+
+    if (this.current && this.current.update && this.fadeDir === 0) {
+      this.current.update(dt);
+    }
+  },
+
+  render() {
+    const ctx = this.ctx;
+    ctx.save();
+    if (this.shake > 0) {
+      ctx.translate(G.randInt(-2, 2), G.randInt(-2, 2));
+    }
+    ctx.fillStyle = G.C.ink;
+    ctx.fillRect(-4, -4, G.W + 8, G.H + 8);
+
+    if (this.current && this.current.render) this.current.render(ctx);
+
+    ctx.restore();
+
+    G.Popup.render(ctx);
+
+    // mute indicator
+    if (G.Audio.muted) {
+      G.UI.text(ctx, 'MUTED [M]', G.W - 4, G.H - 10, { align: 'right', size: 7, color: G.C.slate });
+    }
+
+    if (this.fade > 0) {
+      ctx.fillStyle = 'rgba(26,28,44,' + this.fade + ')';
+      ctx.fillRect(0, 0, G.W, G.H);
+    }
+  },
+};
+
+</script>
+
+<!-- Scenes -->
+<script>
+// ============================================================
+// scenes/title.js - title screen with menu
+// ============================================================
+'use strict';
+
+G.Engine.register('title', {
+  enter() {
+    this.t = 0;
+    this.snow = [];
+    for (let i = 0; i < 40; i++) {
+      this.snow.push({ x: G.rand(0, G.W), y: G.rand(0, G.H), v: G.rand(8, 25), drift: G.rand(-6, 6) });
+    }
+    this.buildMenu();
+    G.Audio.startMusic();
+  },
+
+  buildMenu() {
+    const items = [{ label: 'NEW SEASON', id: 'new' }];
+    if (G.Save.hasSave()) items.push({ label: 'CONTINUE', id: 'continue' });
+    items.push({ label: 'HOW TO PLAY', id: 'howto' });
+    items.push({ label: 'LEADERBOARD', id: 'leaderboard' });
+    this.menu = new G.Menu(items, {
+      x: G.W / 2 - 60, y: 172, w: 120, rowH: 15,
+      onSelect: (it) => {
+        if (it.id === 'new') G.Engine.goto('select');
+        if (it.id === 'continue') {
+          if (G.State.loadGame()) G.Engine.goto('map');
+          else { G.Audio.bad(); this.buildMenu(); }
+        }
+        if (it.id === 'howto') G.Engine.goto('howto');
+        if (it.id === 'leaderboard') G.Engine.goto('leaderboard');
+      },
+    });
+  },
+
+  update(dt) {
+    this.t += dt;
+    for (const s of this.snow) {
+      s.y += s.v * dt;
+      s.x += s.drift * dt;
+      if (s.y > G.H) { s.y = -2; s.x = G.rand(0, G.W); }
+    }
+    this.menu.update();
+  },
+
+  render(ctx) {
+    // night sky gradient bands
+    ctx.fillStyle = G.C.ink; ctx.fillRect(0, 0, G.W, 120);
+    ctx.fillStyle = G.C.navy; ctx.fillRect(0, 120, G.W, 60);
+    ctx.fillStyle = G.C.dusk; ctx.fillRect(0, 180, G.W, G.H - 180);
+
+    // stars
+    for (let i = 0; i < 30; i++) {
+      const sx = (i * 97) % G.W, sy = (i * 41) % 100;
+      ctx.fillStyle = (i + Math.floor(this.t * 2)) % 5 === 0 ? G.C.white : G.C.slate;
+      ctx.fillRect(sx, sy, 1, 1);
+    }
+
+    // northern lights
+    for (let x = 0; x < G.W; x += 4) {
+      const h = 22 + Math.sin(x * 0.03 + this.t * 1.2) * 10;
+      const y = 18 + Math.sin(x * 0.015 + this.t * 0.7) * 8;
+      ctx.fillStyle = 'rgba(56,183,100,0.16)';
+      ctx.fillRect(x, y, 4, h);
+      ctx.fillStyle = 'rgba(115,239,247,0.10)';
+      ctx.fillRect(x, y + h * 0.4, 4, h * 0.5);
+    }
+
+    // treeline
+    for (let x = -4; x < G.W; x += 14) {
+      G.drawSprite(ctx, G.Sprites.pine, x, 158, 2);
+    }
+
+    // title
+    const bounce = Math.sin(this.t * 2) * 2;
+    G.UI.text(ctx, 'BRIDGER', G.W / 2 - 64, 48 + bounce, { align: 'center', size: 22, color: '#c0562f', shadow: true });
+    G.UI.text(ctx, 'vs', G.W / 2, 56 + bounce, { align: 'center', size: 12, color: G.C.yellow, shadow: true });
+    G.UI.text(ctx, 'MALCOLM', G.W / 2 + 66, 48 + bounce, { align: 'center', size: 22, color: G.C.lime, shadow: true });
+    G.UI.text(ctx, '- REALTOR RIVALS -', G.W / 2, 80, { align: 'center', size: 12, color: G.C.white, shadow: true });
+    G.UI.text(ctx, 'A NORTHERN MINNESOTA SALES SHOWDOWN', G.W / 2, 98, { align: 'center', size: 7, color: G.C.gray });
+
+    // characters flanking the menu
+    const hop = Math.abs(Math.sin(this.t * 3)) * 3;
+    G.drawSprite(ctx, G.Sprites.bridger, 120, 190 - hop, 3);
+    G.drawSprite(ctx, G.Sprites.malcolm, 318, 190 - (3 - hop), 3, true);
+    G.drawSprite(ctx, G.Sprites.soldSign, 90, 216, 2);
+    G.drawSprite(ctx, G.Sprites.soldSign, 372, 216, 2);
+
+    this.menu.render(ctx);
+
+    // snow on top
+    ctx.fillStyle = G.C.white;
+    for (const s of this.snow) ctx.fillRect(Math.round(s.x), Math.round(s.y), 1, 1);
+
+    G.UI.text(ctx, 'ARROWS/WASD + ENTER  -  OR JUST CLICK  -  [M] MUTE', G.W / 2, G.H - 10, { align: 'center', size: 7, color: G.C.slate });
+  },
+});
+
+</script>
+<script>
+// ============================================================
+// scenes/select.js - character selection
+// ============================================================
+'use strict';
+
+G.Engine.register('select', {
+  enter() {
+    this.t = 0;
+    this.index = 0; // 0 = bridger, 1 = malcolm
+    this.chars = [G.Data.CHARACTERS.bridger, G.Data.CHARACTERS.malcolm];
+  },
+
+  update(dt) {
+    this.t += dt;
+    const I = G.Input;
+    if (I.left() || I.right()) { this.index = 1 - this.index; G.Audio.move(); }
+
+    // mouse hover/click on cards
+    for (let i = 0; i < 2; i++) {
+      const x = 24 + i * 236;
+      if (I.inRect(x, 40, 196, 190)) {
+        if (I.mouse.x !== this._mx || I.mouse.y !== this._my) this.index = i;
+        if (I.mouse.clicked) this.pick();
+      }
+    }
+    this._mx = I.mouse.x; this._my = I.mouse.y;
+
+    if (I.confirm()) this.pick();
+    if (I.cancel()) G.Engine.goto('title');
+  },
+
+  pick() {
+    G.Audio.fanfare();
+    const ch = this.chars[this.index];
+    G.State.newGame(ch.id);
+    G.State.autosave();
+    G.Engine.goto('map', { newDay: true });
+  },
+
+  render(ctx) {
+    ctx.fillStyle = G.C.dusk;
+    ctx.fillRect(0, 0, G.W, G.H);
+
+    G.UI.text(ctx, 'CHOOSE YOUR AGENT', G.W / 2, 12, { align: 'center', size: 14, color: G.C.yellow, shadow: true });
+
+    for (let i = 0; i < 2; i++) {
+      const ch = this.chars[i];
+      const x = 24 + i * 236;
+      const sel = this.index === i;
+      G.UI.panel(ctx, x, 40, 196, 190, {
+        bg: sel ? G.C.navy : G.C.ink,
+        border: sel ? G.C.yellow : G.C.slate,
+        title: ch.name + ' - ' + ch.title,
+        titleBg: ch.color,
+      });
+
+      const hop = sel ? Math.abs(Math.sin(this.t * 4)) * 3 : 0;
+      G.drawSprite(ctx, G.Sprites[ch.sprite], x + 14, 62 - hop, 3);
+
+      let ty = 58;
+      for (const line of G.UI.wrap(ctx, ch.bio.join(' '), 122, 6)) {
+        G.UI.text(ctx, line, x + 66, ty, { size: 6, color: G.C.gray });
+        ty += 7;
+      }
+
+      ty = 106;
+      G.UI.text(ctx, 'STRENGTHS:', x + 66, ty, { size: 7, color: G.C.cyan }); ty += 9;
+      for (const s of ch.strengths) {
+        G.UI.text(ctx, '* ' + s, x + 70, ty, { size: 7, color: G.C.lime });
+        ty += 9;
+      }
+
+      ty += 4;
+      G.UI.text(ctx, 'SPECIAL: ' + ch.ability.name, x + 10, ty, { size: 8, color: G.C.yellow }); ty += 10;
+      for (const l of G.UI.wrap(ctx, ch.ability.desc, 176, 7)) {
+        G.UI.text(ctx, l, x + 10, ty, { size: 7, color: G.C.white });
+        ty += 8;
+      }
+
+      if (sel && Math.floor(this.t * 2) % 2 === 0) {
+        G.UI.text(ctx, 'PRESS ENTER!', x + 98, 218, { align: 'center', size: 8, color: G.C.yellow });
+      }
+    }
+
+    G.UI.text(ctx, 'YOUR RIVAL PLAYS THE OTHER AGENT. MOST HOMES SOLD BY END OF JUNE WINS.', G.W / 2, 244, { align: 'center', size: 7, color: G.C.gray });
+    G.UI.text(ctx, '[ESC] BACK', G.W / 2, 256, { align: 'center', size: 7, color: G.C.slate });
+  },
+});
+
+</script>
+<script>
+// ============================================================
+// scenes/howto.js - instructions
+// ============================================================
+'use strict';
+
+G.Engine.register('howto', {
+  enter() { this.t = 0; },
+
+  update(dt) {
+    this.t += dt;
+    if (G.Input.confirm() || G.Input.cancel() || G.Input.mouse.clicked) {
+      G.Audio.back();
+      G.Engine.goto('title');
+    }
+  },
+
+  render(ctx) {
+    ctx.fillStyle = G.C.ink;
+    ctx.fillRect(0, 0, G.W, G.H);
+    G.UI.panel(ctx, 16, 8, G.W - 32, G.H - 16, { title: 'HOW TO PLAY', titleBg: G.C.teal });
+
+    const L = [
+      ['GOAL', G.C.yellow],
+      ['Sell more homes than your rival by the end of the season (3 months).', G.C.white],
+      ['', 0],
+      ['EACH DAY', G.C.yellow],
+      ['Spend ENERGY on actions: call & text leads, host open houses, film', G.C.white],
+      ['videos, pitch listings, show homes, write offers, negotiate, fix', G.C.white],
+      ['inspections, and CLOSE. Most actions launch a quick mini-game -', G.C.white],
+      ['play well and your leads move down the pipeline.', G.C.white],
+      ['', 0],
+      ['THE PIPELINE', G.C.yellow],
+      ['NEW > WARM > APPT SET > CLIENT > OFFER IN > PENDING > SOLD', G.C.cyan],
+      ['', 0],
+      ['TIPS', G.C.yellow],
+      ['* Leads go cold if ignored (a CRM fixes that). Spend commission', G.C.gray],
+      ['  in the SHOP on upgrades. Use your SPECIAL ability daily - it is free!', G.C.gray],
+      ['* Month-end: BOSS SHOWDOWN vs a top local agent. Stop the needle', G.C.gray],
+      ['  in the green zone. Win for big bonuses.', G.C.gray],
+      ['', 0],
+      ['CONTROLS: ARROWS/WASD + ENTER, or mouse. [M] mute. [ESC] back.', G.C.lime],
+    ];
+
+    let y = 26;
+    for (const [text, color] of L) {
+      if (text) G.UI.text(ctx, text, 28, y, { size: 8, color });
+      y += 12;
+    }
+
+    if (Math.floor(this.t * 2) % 2 === 0) {
+      G.UI.text(ctx, '- PRESS ENTER -', G.W / 2, G.H - 22, { align: 'center', size: 8, color: G.C.yellow });
+    }
+  },
+});
+
+</script>
+<script>
+// ============================================================
+// scenes/map.js - the day hub: Northern MN map + action menu
+// ============================================================
+'use strict';
+
+G.Engine.register('map', {
+  MAP_X: 150,
+
+  enter(params = {}) {
+    this.t = 0;
+    this.mode = 'menu';           // menu | drive | stats | pipeline
+    this.pipeScroll = 0;
+    this.particles = new G.Particles();
+    this.banner = null;
+    this.deer = { x: G.rand(200, 440), y: G.rand(60, 230), vx: 6, show: G.chance(0.5) };
+
+    const s = G.State.s;
+    if (!s) { G.Engine.goto('title'); return; }
+
+    const loc = G.Data.MAP.locations.office;
+    if (this.carX === undefined) { this.carX = loc.x; this.carY = loc.y; }
+    this.carTarget = null;
+    this.pendingAction = null;
+
+    this.buildMenu();
+    G.Audio.startMusic();
+
+    if (params.newDay) {
+      const d = Math.min(s.dayOfMonth, G.Data.SEASON.daysPerMonth);
+      this.banner = { text: G.State.monthName() + ' - DAY ' + d + ' OF ' + G.Data.SEASON.daysPerMonth, t: 2.2 };
+    }
+
+    // returning from a minigame with a result
+    if (params.result) {
+      const { actionId, score } = params.result;
+      this.resolveAction(actionId, score);
+    }
+  },
+
+  buildMenu() {
+    const items = [];
+    for (const a of G.Data.ACTIONS) {
+      const avail = G.State.actionAvailable(a.id);
+      items.push({
+        label: a.label,
+        id: a.id,
+        kind: 'action',
+        disabled: !avail.ok,
+        note: avail.ok ? '-' + G.State.actionCost(a.id) + 'E' : avail.reason,
+        desc: a.desc,
+      });
+    }
+    const ab = G.State.char().ability;
+    items.push({
+      label: '* ' + ab.name, id: 'ability', kind: 'ability',
+      disabled: G.State.s.abilityUsed,
+      note: G.State.s.abilityUsed ? 'USED' : 'FREE',
+      desc: ab.desc,
+    });
+    items.push({ label: 'SHOP', id: 'shop', kind: 'nav', note: G.money(G.State.s.cash), desc: 'Spend commission on business upgrades.' });
+    items.push({ label: 'STATS', id: 'stats', kind: 'nav', desc: 'Your full season stat sheet.' });
+    items.push({ label: 'PIPELINE', id: 'pipeline', kind: 'nav', desc: 'Every lead and where they stand.' });
+    items.push({ label: 'END DAY', id: 'endday', kind: 'nav', note: 'Zz', desc: 'Call it a day. Leads age, rival moves, stuff happens.' });
+
+    const keepIndex = this.menu ? this.menu.index : 0;
+    this.menu = new G.Menu(items, {
+      x: 4, y: 44, w: 142, rowH: 12,
+      onSelect: (it) => this.onMenuPick(it),
+    });
+    this.menu.index = Math.min(keepIndex, items.length - 1);
+    this.menu.skipDisabled(1);
+  },
+
+  onMenuPick(it) {
+    const s = G.State.s;
+    if (it.kind === 'action') {
+      const a = G.Data.ACTIONS.find(x => x.id === it.id);
+      const loc = G.Data.MAP.locations[a.loc];
+      this.pendingAction = a;
+      this.carTarget = { x: loc.x, y: loc.y + 12 };
+      this.mode = 'drive';
+      G.Audio.swoosh();
+    } else if (it.id === 'ability') {
+      const res = G.State.useAbility();
+      if (res) {
+        this.particles.spawn(74, 140, { count: 20, colors: [G.C.yellow, G.C.cyan, G.C.lime] });
+        G.Popup.show({
+          title: G.State.char().ability.name, lines: res.lines,
+          color: G.C.purple, onClose: () => this.buildMenu(),
+        });
+      }
+    } else if (it.id === 'shop') {
+      G.Engine.goto('shop');
+    } else if (it.id === 'stats') {
+      this.mode = 'stats';
+    } else if (it.id === 'pipeline') {
+      this.mode = 'pipeline'; this.pipeScroll = 0;
+    } else if (it.id === 'endday') {
+      this.endDay();
+    }
+  },
+
+  // ----------------------------------------------------------
+  resolveAction(actionId, score) {
+    const res = G.State.performAction(actionId, score);
+    const a = G.Data.ACTIONS.find(x => x.id === actionId);
+    if (res.sold > 0) {
+      G.Audio.cash();
+      G.Engine.shake = 4;
+      this.particles.spawn(G.W / 2, G.H / 2, { count: 40, colors: [G.C.yellow, G.C.green, G.C.lime, G.C.white], life: 1.4 });
+    }
+    G.Popup.show({
+      title: a.label + ' - RESULTS',
+      lines: res.lines,
+      color: res.sold > 0 ? G.C.green : G.C.blue,
+      onClose: () => {
+        this.buildMenu();
+        if (G.State.s.energy <= 0) {
+          G.Popup.show({
+            title: 'OUT OF ENERGY',
+            lines: ['You are running on fumes and gas station coffee.', 'Time to end the day.'],
+            color: G.C.slate,
+            onClose: () => this.endDay(),
+          });
+        }
+      },
+    });
+  },
+
+  // ----------------------------------------------------------
+  endDay() {
+    const s = G.State.s;
+    const r = G.State.endDay();
+    const lines = [];
+    if (r.passiveLines.length) lines.push(...r.passiveLines, '');
+    if (r.rivalLines.length) {
+      lines.push('MEANWHILE...', ...r.rivalLines);
+    } else {
+      lines.push('Your rival was suspiciously quiet today.');
+    }
+    lines.push('', 'SCORE: YOU ' + s.stats.homesSold + ' - RIVAL ' + s.rival.homesSold);
+
+    G.Popup.show({
+      title: 'END OF DAY', lines, color: G.C.navy,
+      onClose: () => {
+        const proceed = () => {
+          if (r.bossTime) G.Engine.goto('boss');
+          else G.Engine.goto('map', { newDay: true });
+        };
+        if (r.eventText) {
+          G.Audio[r.eventGood ? 'good' : 'thud']();
+          G.Popup.show({
+            title: r.eventGood ? 'PLOT TWIST!' : 'UFF DA...',
+            lines: [r.eventText],
+            color: r.eventGood ? G.C.green : G.C.red,
+            onClose: proceed,
+          });
+        } else proceed();
+      },
+    });
+  },
+
+  // ----------------------------------------------------------
+  update(dt) {
+    this.t += dt;
+    this.particles.update(dt);
+    if (this.banner) { this.banner.t -= dt; if (this.banner.t <= 0) this.banner = null; }
+
+    // wandering deer
+    if (this.deer.show) {
+      this.deer.x += this.deer.vx * dt;
+      if (this.deer.x > 460) this.deer.vx = -6;
+      if (this.deer.x < 160) this.deer.vx = 6;
+    }
+
+    if (this.mode === 'drive') {
+      const tgt = this.carTarget;
+      const d = G.dist(this.carX, this.carY, tgt.x, tgt.y);
+      if (d < 3) {
+        this.mode = 'menu';
+        const a = this.pendingAction;
+        this.pendingAction = null;
+        if (a.minigame) {
+          G.Engine.goto(a.minigame, { actionId: a.id });
+        } else {
+          this.resolveAction(a.id, null);
+        }
+      } else {
+        const sp = 130 * dt;
+        this.carX += (tgt.x - this.carX) / d * sp;
+        this.carY += (tgt.y - this.carY) / d * sp;
+      }
+      return;
+    }
+
+    if (this.mode === 'stats' || this.mode === 'pipeline') {
+      if (G.Input.cancel() || G.Input.confirm() || G.Input.mouse.clicked) {
+        if (this.mode === 'pipeline') {
+          // allow scrolling before closing on click
+        }
+        if (G.Input.cancel() || G.Input.confirm()) { this.mode = 'menu'; G.Audio.back(); return; }
+        if (G.Input.mouse.clicked) { this.mode = 'menu'; G.Audio.back(); return; }
+      }
+      if (this.mode === 'pipeline') {
+        if (G.Input.up()) this.pipeScroll = Math.max(0, this.pipeScroll - 1);
+        if (G.Input.down()) this.pipeScroll++;
+      }
+      return;
+    }
+
+    this.menu.update();
+  },
+
+  // ----------------------------------------------------------
+  render(ctx) {
+    const s = G.State.s;
+    if (!s) return;
+
+    this.renderMap(ctx);
+    this.renderSidebar(ctx);
+    this.renderHud(ctx);
+    this.particles.render(ctx);
+
+    if (this.mode === 'stats') this.renderStats(ctx);
+    if (this.mode === 'pipeline') this.renderPipeline(ctx);
+
+    if (this.banner) {
+      const a = Math.min(1, this.banner.t);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = G.C.ink;
+      ctx.fillRect(0, 110, G.W, 34);
+      G.UI.text(ctx, this.banner.text, G.W / 2, 122, { align: 'center', size: 13, color: G.C.yellow });
+      ctx.globalAlpha = 1;
+    }
+  },
+
+  renderMap(ctx) {
+    const s = G.State.s;
+    const MX = this.MAP_X;
+
+    // land
+    ctx.fillStyle = s.month === 0 ? '#3d5a45' : s.month === 1 ? '#38b76422' : '#38b764';
+    ctx.fillStyle = ['#41684d', '#4a7c59', '#529960'][s.month];
+    ctx.fillRect(MX, 0, G.W - MX, G.H);
+
+    // texture patches
+    for (let i = 0; i < 60; i++) {
+      const px = MX + ((i * 53) % (G.W - MX));
+      const py = (i * 37) % G.H;
+      ctx.fillStyle = i % 3 ? 'rgba(26,28,44,0.12)' : 'rgba(255,255,255,0.05)';
+      ctx.fillRect(px, py, 3, 2);
+    }
+    // April snow patches
+    if (s.month === 0) {
+      for (let i = 0; i < 24; i++) {
+        ctx.fillStyle = 'rgba(244,244,244,0.5)';
+        ctx.fillRect(MX + ((i * 89) % (G.W - MX - 10)), (i * 61) % (G.H - 8), 6, 3);
+      }
+    }
+
+    // roads between towns
+    ctx.strokeStyle = '#6b6f82';
+    ctx.lineWidth = 2;
+    const T = G.Data.MAP.towns;
+    ctx.beginPath();
+    for (let i = 0; i < T.length - 1; i++) {
+      ctx.moveTo(T[i].x, T[i].y);
+      ctx.lineTo(T[i + 1].x, T[i + 1].y);
+    }
+    ctx.stroke();
+
+    // lakes
+    for (const lake of G.Data.MAP.lakes) {
+      ctx.fillStyle = G.C.blue;
+      ctx.beginPath();
+      ctx.ellipse(lake.x + lake.w / 2, lake.y + lake.h / 2, lake.w / 2, lake.h / 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // shimmer
+      ctx.fillStyle = G.C.sky;
+      for (let i = 0; i < 5; i++) {
+        const wx = lake.x + 8 + ((i * 31 + Math.floor(this.t * 8)) % (lake.w - 16));
+        ctx.fillRect(wx, lake.y + 6 + (i * 7) % (lake.h - 12), 4, 1);
+      }
+      G.UI.text(ctx, lake.name, lake.x + lake.w / 2, lake.y + lake.h / 2 - 3, { align: 'center', size: 6, color: G.C.cyan });
+    }
+
+    // pines
+    for (let i = 0; i < 26; i++) {
+      const px = MX + 6 + ((i * 47) % (G.W - MX - 16));
+      const py = 4 + ((i * 71) % (G.H - 30));
+      const onLake = G.Data.MAP.lakes.some(l =>
+        px > l.x - 6 && px < l.x + l.w + 2 && py > l.y - 8 && py < l.y + l.h + 2);
+      if (!onLake) G.drawSprite(ctx, i % 2 ? G.Sprites.pine : G.Sprites.pine2, px, py, 1);
+    }
+
+    // towns
+    for (const t of T) {
+      ctx.fillStyle = G.C.gray;
+      ctx.fillRect(t.x - 3, t.y - 2, 6, 4);
+      G.UI.text(ctx, t.name, t.x, t.y + 5, { align: 'center', size: 6, color: G.C.white, shadow: true });
+    }
+
+    // action locations
+    const selected = this.menu && this.menu.items[this.menu.index];
+    const selLoc = selected && selected.kind === 'action'
+      ? G.Data.ACTIONS.find(a => a.id === selected.id).loc : null;
+    for (const [key, loc] of Object.entries(G.Data.MAP.locations)) {
+      const sp = G.Sprites[loc.sprite];
+      G.drawSprite(ctx, sp, loc.x - sp.width / 2, loc.y - sp.height, 1);
+      if (key === selLoc) {
+        const bob = Math.sin(this.t * 6) * 2;
+        ctx.fillStyle = G.C.yellow;
+        ctx.beginPath();
+        ctx.moveTo(loc.x, loc.y - sp.height - 4 + bob);
+        ctx.lineTo(loc.x - 4, loc.y - sp.height - 10 + bob);
+        ctx.lineTo(loc.x + 4, loc.y - sp.height - 10 + bob);
+        ctx.fill();
+        G.UI.text(ctx, loc.label, loc.x, loc.y - sp.height - 19 + bob, { align: 'center', size: 6, color: G.C.yellow, shadow: true });
+      }
+    }
+
+    // deer
+    if (this.deer.show) {
+      G.drawSprite(ctx, G.Sprites.deer, this.deer.x, this.deer.y, 1, this.deer.vx < 0);
+    }
+
+    // the car
+    const carSprite = G.State.has('vehicle') ? G.Sprites.carFancy : G.Sprites.car;
+    G.drawSprite(ctx, carSprite, this.carX - 5, this.carY - 4, 1, this.carTarget && this.carTarget.x < this.carX);
+
+    // compass + label
+    G.UI.text(ctx, 'NORTHERN MINNESOTA', G.W - 6, G.H - 10, { align: 'right', size: 6, color: 'rgba(244,244,244,0.5)' });
+  },
+
+  renderSidebar(ctx) {
+    const s = G.State.s;
+    ctx.fillStyle = G.C.ink;
+    ctx.fillRect(0, 0, this.MAP_X, G.H);
+    ctx.strokeStyle = G.C.slate;
+    ctx.beginPath(); ctx.moveTo(this.MAP_X - 0.5, 0); ctx.lineTo(this.MAP_X - 0.5, G.H); ctx.stroke();
+
+    const ch = G.State.char();
+    G.drawSprite(ctx, G.Sprites[ch.sprite], 4, 4, 2);
+    G.UI.text(ctx, ch.name, 38, 6, { size: 9, color: ch.id === 'bridger' ? '#c0562f' : G.C.lime });
+    G.UI.text(ctx, G.money(s.cash), 38, 17, { size: 8, color: G.C.yellow });
+
+    // energy pips
+    G.UI.text(ctx, 'ENERGY', 38, 28, { size: 6, color: G.C.gray });
+    for (let i = 0; i < G.State.maxEnergy(); i++) {
+      ctx.fillStyle = i < s.energy ? G.C.lime : G.C.dusk;
+      ctx.fillRect(72 + i * 8, 28, 6, 6);
+      ctx.strokeStyle = G.C.slate;
+      ctx.strokeRect(72.5 + i * 8, 28.5, 5, 5);
+    }
+
+    this.menu.render(ctx);
+
+    // hovered action description
+    const it = this.menu.items[this.menu.index];
+    if (it && it.desc) {
+      const lines = G.UI.wrap(ctx, it.desc, 138, 7);
+      let y = G.H - 8 - lines.length * 8;
+      ctx.fillStyle = G.C.dusk;
+      ctx.fillRect(2, y - 3, this.MAP_X - 6, lines.length * 8 + 6);
+      for (const l of lines) {
+        G.UI.text(ctx, l, 6, y, { size: 7, color: G.C.cyan });
+        y += 8;
+      }
+    }
+  },
+
+  renderHud(ctx) {
+    const s = G.State.s;
+    // top-right scoreboard strip
+    const w = 180, x = G.W - w - 4, y = 3;
+    ctx.fillStyle = 'rgba(26,28,44,0.85)';
+    ctx.fillRect(x, y, w, 22);
+    ctx.strokeStyle = G.C.slate;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, 21);
+    G.UI.text(ctx, G.State.monthName() + ' D' + s.dayOfMonth + '/' + G.Data.SEASON.daysPerMonth, x + 5, y + 3, { size: 7, color: G.C.white });
+    G.UI.text(ctx, 'YOU ' + s.stats.homesSold, x + 5, y + 12, { size: 7, color: G.C.lime });
+    G.UI.text(ctx, 'RIVAL ' + s.rival.homesSold, x + 50, y + 12, { size: 7, color: G.C.red });
+    G.UI.text(ctx, 'FOLLOWERS ' + s.stats.followers, x + w - 5, y + 3, { align: 'right', size: 7, color: G.C.sky });
+    G.UI.text(ctx, 'LEADS ' + s.leads.length, x + w - 5, y + 12, { align: 'right', size: 7, color: G.C.yellow });
+  },
+
+  renderStats(ctx) {
+    const s = G.State.s;
+    ctx.fillStyle = 'rgba(26,28,44,0.85)';
+    ctx.fillRect(0, 0, G.W, G.H);
+    G.UI.panel(ctx, 90, 24, 300, 222, { title: 'SEASON STAT SHEET', titleBg: G.C.teal, bg: G.C.ink });
+
+    const rows = [
+      ['HOMES SOLD', s.stats.homesSold, G.C.lime],
+      ['COMMISSION EARNED', G.money(s.stats.commission), G.C.yellow],
+      ['LISTINGS TAKEN', s.stats.listings, G.C.white],
+      ['BUYER CLIENTS', s.stats.buyers, G.C.white],
+      ['REFERRALS', s.stats.referrals, G.C.white],
+      ['ONLINE REVIEWS', s.stats.reviews + ' (5-STAR)', G.C.cyan],
+      ['SOCIAL FOLLOWERS', s.stats.followers, G.C.sky],
+      ['CLIENT HAPPINESS', s.stats.happiness + '/100', G.C.orange],
+      ['LEADS RECEIVED', s.stats.leadsReceived, G.C.gray],
+      ['CONVERSION RATE', G.pct(G.State.conversionRate()), G.C.lime],
+      ['BOSS WINS', s.stats.bossWins, G.C.purple],
+      ['CASH ON HAND', G.money(s.cash), G.C.yellow],
+    ];
+    let y = 44;
+    for (const [label, val, color] of rows) {
+      G.UI.text(ctx, label, 104, y, { size: 8, color: G.C.gray });
+      G.UI.text(ctx, String(val), 376, y, { align: 'right', size: 8, color });
+      y += 14;
+    }
+    G.UI.text(ctx, 'HAPPINESS BOOSTS REFERRALS. FOLLOWERS BRING LEADS.', G.W / 2, y + 6, { align: 'center', size: 6, color: G.C.slate });
+    G.UI.text(ctx, '[ESC] CLOSE', G.W / 2, 234, { align: 'center', size: 7, color: G.C.yellow });
+  },
+
+  renderPipeline(ctx) {
+    const s = G.State.s;
+    ctx.fillStyle = 'rgba(26,28,44,0.85)';
+    ctx.fillRect(0, 0, G.W, G.H);
+    G.UI.panel(ctx, 60, 16, 360, 238, { title: 'LEAD PIPELINE (' + s.leads.length + ')', titleBg: G.C.blue, bg: G.C.ink });
+
+    const order = G.Data.STAGES;
+    const leads = s.leads.slice().sort((a, b) => order.indexOf(b.stage) - order.indexOf(a.stage));
+    const perPage = 13;
+    const maxScroll = Math.max(0, leads.length - perPage);
+    this.pipeScroll = G.clamp(this.pipeScroll, 0, maxScroll);
+    const visible = leads.slice(this.pipeScroll, this.pipeScroll + perPage);
+
+    let y = 36;
+    if (!leads.length) {
+      G.UI.text(ctx, 'NO LEADS. GO MAKE A VIDEO OR HOST AN OPEN HOUSE!', G.W / 2, 120, { align: 'center', size: 8, color: G.C.gray });
+    }
+    for (const l of visible) {
+      G.UI.text(ctx, l.name, 70, y, { size: 7, color: G.C.white });
+      G.UI.text(ctx, l.label, 165, y, { size: 7, color: l.lake ? G.C.cyan : l.luxury ? G.C.yellow : G.C.gray });
+      G.UI.text(ctx, G.money(l.value), 300, y, { size: 7, color: G.C.yellow });
+      const sc = G.Data.STAGE_COLORS[l.stage];
+      ctx.fillStyle = sc;
+      ctx.fillRect(340, y, 4, 6);
+      G.UI.text(ctx, G.Data.STAGE_LABELS[l.stage] + (l.issue ? '!' : ''), 348, y, { size: 7, color: l.issue ? G.C.red : sc });
+      y += 15;
+    }
+    if (maxScroll > 0) {
+      G.UI.text(ctx, 'UP/DOWN TO SCROLL (' + (this.pipeScroll + 1) + '-' + Math.min(leads.length, this.pipeScroll + perPage) + ')', G.W / 2, 236, { align: 'center', size: 6, color: G.C.slate });
+    }
+    G.UI.text(ctx, '[ESC] CLOSE', G.W / 2, 245, { align: 'center', size: 7, color: G.C.yellow });
+  },
+});
+
+</script>
+<script>
+// ============================================================
+// scenes/shop.js - business upgrades
+// ============================================================
+'use strict';
+
+G.Engine.register('shop', {
+  enter() {
+    this.t = 0;
+    this.buildMenu();
+  },
+
+  buildMenu() {
+    const s = G.State.s;
+    const items = G.Data.UPGRADES.map(u => {
+      const owned = G.State.has(u.id);
+      const afford = s.cash >= u.cost;
+      return {
+        label: u.name,
+        id: u.id,
+        disabled: owned || !afford,
+        note: owned ? 'OWNED' : G.money(u.cost),
+        desc: u.desc,
+      };
+    });
+    items.push({ label: 'BACK TO MAP', id: 'back', note: '', desc: 'Return to the grind.' });
+
+    const keep = this.menu ? this.menu.index : 0;
+    this.menu = new G.Menu(items, {
+      x: 12, y: 40, w: 210, rowH: 15,
+      onSelect: (it) => {
+        if (it.id === 'back') { G.Engine.goto('map'); return; }
+        if (G.State.buyUpgrade(it.id)) {
+          G.Audio.cash();
+          this.buildMenu();
+        } else {
+          G.Audio.bad();
+        }
+      },
+    });
+    this.menu.index = Math.min(keep, items.length - 1);
+  },
+
+  update(dt) {
+    this.t += dt;
+    if (G.Input.cancel()) { G.Audio.back(); G.Engine.goto('map'); return; }
+    this.menu.update();
+  },
+
+  render(ctx) {
+    const s = G.State.s;
+    ctx.fillStyle = G.C.dusk;
+    ctx.fillRect(0, 0, G.W, G.H);
+
+    G.UI.panel(ctx, 4, 4, G.W - 8, G.H - 8, { title: 'PRO SHOP - GROW YOUR BUSINESS', titleBg: G.C.purple, bg: G.C.ink });
+    G.UI.text(ctx, 'CASH: ' + G.money(s.cash), G.W - 16, 22, { align: 'right', size: 10, color: G.C.yellow });
+
+    this.menu.render(ctx);
+
+    // detail card for the highlighted upgrade
+    const it = this.menu.items[this.menu.index];
+    G.UI.panel(ctx, 236, 40, 230, 150, { title: it.label, titleBg: G.C.blue, bg: G.C.navy });
+    let y = 60;
+    for (const l of G.UI.wrap(ctx, it.desc || '', 206, 8)) {
+      G.UI.text(ctx, l, 246, y, { size: 8, color: G.C.white });
+      y += 11;
+    }
+    if (it.id !== 'back') {
+      const owned = G.State.has(it.id);
+      G.UI.text(ctx, owned ? 'ALREADY OWNED' : 'COST: ' + it.note, 246, 170, {
+        size: 9, color: owned ? G.C.lime : (s.cash >= (G.Data.UPGRADES.find(u => u.id === it.id) || {}).cost ? G.C.yellow : G.C.red),
+      });
+    }
+
+    // owned list
+    const owned = G.Data.UPGRADES.filter(u => G.State.has(u.id));
+    G.UI.text(ctx, 'OWNED: ' + (owned.length ? owned.map(u => u.name).join(', ') : 'NOTHING YET'), 12, G.H - 30, { size: 6, color: G.C.gray });
+    G.UI.text(ctx, '[ESC] BACK', G.W / 2, G.H - 18, { align: 'center', size: 7, color: G.C.slate });
+  },
+});
+
+</script>
+<script>
+// ============================================================
+// scenes/minigames.js - the 8 action mini-games
+// All share a frame: INTRO -> PLAY -> RESULT -> back to map.
+// Each finishes with a score 0..1 that state.js turns into results.
+// ============================================================
+'use strict';
+
+// ------------------------------------------------------------
+// Shared minigame scaffolding
+// def: { title, subtitle, howto:[], duration, init(), play(dt), draw(ctx), bonus() }
+// ------------------------------------------------------------
+G.makeMinigame = (name, def) => {
+  const scene = {
+    enter(params) {
+      this.actionId = params.actionId;
+      this.phase = 'intro';
+      this.t = 0;
+      this.playT = 0;
+      this.score = 0;
+      this.flash = null; // {text, color, t}
+      this.particles = new G.Particles();
+      def.init.call(this);
+      G.Audio.stopMusic();
+    },
+
+    exit() { G.Audio.startMusic(); },
+
+    finish(rawScore) {
+      if (this.phase === 'done') return;
+      let sc = G.clamp(rawScore, 0, 1);
+      if (def.bonus) sc = G.clamp(sc + def.bonus.call(this), 0, 1);
+      this.score = sc;
+      this.phase = 'done';
+      this.t = 0;
+      if (sc >= 0.6) G.Audio.great(); else if (sc >= 0.35) G.Audio.good(); else G.Audio.sadTromb();
+    },
+
+    pop(text, color) { this.flash = { text, color: color || G.C.yellow, t: 0.7 }; },
+
+    update(dt) {
+      this.t += dt;
+      this.particles.update(dt);
+      if (this.flash) { this.flash.t -= dt; if (this.flash.t <= 0) this.flash = null; }
+
+      if (this.phase === 'intro') {
+        if (this.t > 0.3 && (G.Input.confirm() || G.Input.mouse.clicked)) {
+          this.phase = 'play';
+          this.t = 0;
+          G.Audio.select();
+        }
+        return;
+      }
+      if (this.phase === 'play') {
+        this.playT += dt;
+        def.play.call(this, dt);
+        if (def.duration && this.playT >= def.duration) this.finish(def.timeUp ? def.timeUp.call(this) : this.score);
+        return;
+      }
+      if (this.phase === 'done') {
+        if (this.t > 0.5 && (G.Input.confirm() || G.Input.mouse.clicked)) {
+          G.Engine.goto('map', { result: { actionId: this.actionId, score: this.score } });
+        }
+      }
+    },
+
+    render(ctx) {
+      ctx.fillStyle = def.bg || G.C.dusk;
+      ctx.fillRect(0, 0, G.W, G.H);
+
+      // header
+      ctx.fillStyle = G.C.ink;
+      ctx.fillRect(0, 0, G.W, 24);
+      G.UI.text(ctx, def.title, 8, 5, { size: 11, color: G.C.yellow });
+      G.UI.text(ctx, def.subtitle, G.W - 8, 8, { align: 'right', size: 7, color: G.C.gray });
+
+      if (this.phase === 'intro') {
+        G.UI.panel(ctx, 90, 70, 300, 130, { title: 'GET READY', titleBg: G.C.blue, bg: G.C.ink });
+        let y = 92;
+        for (const line of def.howto) {
+          for (const l of G.UI.wrap(ctx, line, 270, 8)) {
+            G.UI.text(ctx, l, 104, y, { size: 8, color: G.C.white });
+            y += 11;
+          }
+        }
+        if (Math.floor(this.t * 2) % 2 === 0) {
+          G.UI.text(ctx, '- PRESS ENTER TO START -', G.W / 2, 182, { align: 'center', size: 8, color: G.C.yellow });
+        }
+        return;
+      }
+
+      def.draw.call(this, ctx);
+      this.particles.render(ctx);
+
+      // timer bar
+      if (def.duration && this.phase === 'play') {
+        G.UI.bar(ctx, 8, G.H - 12, G.W - 16, 6, 1 - this.playT / def.duration,
+          this.playT / def.duration > 0.75 ? G.C.red : G.C.cyan);
+      }
+
+      // flash text
+      if (this.flash) {
+        G.UI.text(ctx, this.flash.text, G.W / 2, 110, { align: 'center', size: 14, color: this.flash.color, shadow: true });
+      }
+
+      if (this.phase === 'done') {
+        ctx.fillStyle = 'rgba(26,28,44,0.8)';
+        ctx.fillRect(0, 0, G.W, G.H);
+        const grade = this.score >= 0.85 ? 'S' : this.score >= 0.7 ? 'A' : this.score >= 0.5 ? 'B' : this.score >= 0.3 ? 'C' : 'D';
+        const gcol = this.score >= 0.7 ? G.C.lime : this.score >= 0.4 ? G.C.yellow : G.C.red;
+        G.UI.text(ctx, 'RANK', G.W / 2, 82, { align: 'center', size: 10, color: G.C.gray });
+        G.UI.text(ctx, grade, G.W / 2, 98, { align: 'center', size: 44, color: gcol, shadow: true });
+        G.UI.text(ctx, def.gradeLines ? def.gradeLines.call(this) : Math.round(this.score * 100) + '%', G.W / 2, 152, { align: 'center', size: 9, color: G.C.white });
+        if (this.t > 0.5 && Math.floor(this.t * 2) % 2 === 0) {
+          G.UI.text(ctx, '- PRESS ENTER -', G.W / 2, 190, { align: 'center', size: 8, color: G.C.yellow });
+        }
+      }
+    },
+  };
+
+  // expose the definition's helper methods (e.g. newRound) on the scene
+  for (const [k, v] of Object.entries(def)) {
+    if (typeof v === 'function' && !(k in scene)) scene[k] = v;
+  }
+  G.Engine.register(name, scene);
+};
+
+// ------------------------------------------------------------
+// 1. CALL LEADS - stop the needle in the sweet-talk zone (x3)
+// ------------------------------------------------------------
+G.makeMinigame('callGame', {
+  title: 'COLD CALL FRENZY',
+  subtitle: 'STOP THE NEEDLE IN THE GREEN',
+  howto: [
+    'Your lead answers! Hit SPACE/ENTER (or click) when the needle is in the GREEN sweet-talk zone.',
+    '3 calls. Green = appointment. Red = voicemail abyss.',
+  ],
+  bg: G.C.navy,
+
+  init() {
+    this.calls = 0;
+    this.hits = 0;
+    this.needle = 0;
+    this.dir = 1;
+    this.speed = 1.6;
+    this.zone = { start: 0.4, width: 0.2 };
+    this.locked = false;
+    G.Audio.ring();
+  },
+
+  play(dt) {
+    if (this.locked) return;
+    this.needle += this.dir * this.speed * dt;
+    if (this.needle > 1) { this.needle = 1; this.dir = -1; }
+    if (this.needle < 0) { this.needle = 0; this.dir = 1; }
+
+    if (G.Input.confirm() || G.Input.mouse.clicked) {
+      this.locked = true;
+      const inZone = this.needle >= this.zone.start && this.needle <= this.zone.start + this.zone.width;
+      if (inZone) {
+        this.hits++;
+        this.pop(G.choice(['"OH YEAH, LET\'S MEET!"', '"YOU BETCHA!"', '"FINALLY, A REAL AGENT!"']), G.C.lime);
+        G.Audio.good();
+        this.particles.spawn(G.W / 2, 130, { count: 12, colors: [G.C.lime, G.C.cyan] });
+      } else {
+        this.pop(G.choice(['VOICEMAIL...', '"NEW PHONE WHO DIS"', '*DIAL TONE*']), G.C.red);
+        G.Audio.bad();
+      }
+      setTimeout(() => {
+        this.calls++;
+        if (this.calls >= 3) { this.finish(this.hits / 3); return; }
+        this.locked = false;
+        this.speed += 0.55;
+        this.zone.width = Math.max(0.12, this.zone.width - 0.03);
+        this.zone.start = G.rand(0.15, 0.85 - this.zone.width);
+        G.Audio.ring();
+      }, 700);
+    }
+  },
+
+  draw(ctx) {
+    G.UI.text(ctx, 'CALL ' + Math.min(this.calls + 1, 3) + ' OF 3', G.W / 2, 44, { align: 'center', size: 10, color: G.C.white });
+    G.drawSprite(ctx, G.Sprites.phone, G.W / 2 - 40 - Math.sin(this.t * 20) * (this.locked ? 0 : 2), 60, 4);
+    G.drawSprite(ctx, G.Sprites[G.State.char().sprite], G.W / 2 + 20, 52, 3);
+
+    // meter
+    const mx = 90, my = 170, mw = 300, mh = 18;
+    ctx.fillStyle = G.C.ink;
+    ctx.fillRect(mx - 2, my - 2, mw + 4, mh + 4);
+    ctx.fillStyle = G.C.red;
+    ctx.fillRect(mx, my, mw, mh);
+    ctx.fillStyle = G.C.green;
+    ctx.fillRect(mx + this.zone.start * mw, my, this.zone.width * mw, mh);
+    // needle
+    ctx.fillStyle = G.C.white;
+    ctx.fillRect(mx + this.needle * mw - 1, my - 5, 3, mh + 10);
+    G.UI.text(ctx, 'HITS: ' + this.hits, G.W / 2, 200, { align: 'center', size: 9, color: G.C.lime });
+  },
+
+  gradeLines() { return this.hits + ' APPOINTMENT' + (this.hits === 1 ? '' : 'S') + ' FROM 3 CALLS'; },
+});
+
+// ------------------------------------------------------------
+// 2. TEXT LEADS - pick the right reply, fast
+// ------------------------------------------------------------
+G.TEXT_ROUNDS = [
+  { msg: 'Is the house still available??', good: 'Yes! Want to tour it today?', bad: ['Define "available"...', 'It has always been available. Always.'] },
+  { msg: 'What are the sellers like?', good: 'Lovely folks, motivated to sell!', bad: ['Never met em. Nobody has.', 'They live in the walls now.'] },
+  { msg: 'Can we see it at 9pm tonight?', good: 'Absolutely, I will bring flashlights!', bad: ['No. I sleep at 8:30.', 'Only if you buy me dinner first.'] },
+  { msg: 'Is the basement dry?', good: 'Inspection says yes - report attached!', bad: ['Depends how you define "lake".', 'It has a built-in pool (unintentional).'] },
+  { msg: 'We love it but the price...', good: 'Let\'s write a smart offer together!', bad: ['Prices are fake. Money is fake.', 'Have you tried being richer?'] },
+  { msg: 'Do the appliances stay?', good: 'Washer, dryer & fridge all stay!', bad: ['The fridge chooses who stays.', 'Everything must go... including you?'] },
+];
+
+G.makeMinigame('textGame', {
+  title: 'THUMB STORM',
+  subtitle: 'PICK THE PRO REPLY - FAST',
+  howto: [
+    'Leads are texting! Pick the PROFESSIONAL reply with UP/DOWN + ENTER (or click) before the patience meter empties.',
+    '4 messages. Speed earns bonus points.',
+  ],
+  bg: G.C.teal,
+
+  init() {
+    this.rounds = G.shuffle(G.TEXT_ROUNDS).slice(0, 4);
+    this.round = 0;
+    this.points = 0;
+    this.max = 4;
+    this.newRound();
+  },
+
+  newRound() {
+    const r = this.rounds[this.round];
+    const opts = G.shuffle([{ t: r.good, ok: true }, { t: r.bad[0], ok: false }, { t: r.bad[1], ok: false }]);
+    this.opts = opts;
+    this.sel = 0;
+    this.timer = 5;
+    this.answered = false;
+    G.Audio.tick();
+  },
+
+  play(dt) {
+    if (this.answered) return;
+    this.timer -= dt;
+    if (this.timer <= 0) {
+      this.pop('TOO SLOW! LEAD WANDERED OFF', G.C.red);
+      G.Audio.bad();
+      this.nextRound();
+      return;
+    }
+    if (G.Input.up()) { this.sel = (this.sel + 2) % 3; G.Audio.move(); }
+    if (G.Input.down()) { this.sel = (this.sel + 1) % 3; G.Audio.move(); }
+
+    let picked = -1;
+    if (G.Input.confirm()) picked = this.sel;
+    for (let i = 0; i < 3; i++) {
+      if (G.Input.clickedRect(60, 120 + i * 30, 360, 26)) picked = i;
+    }
+
+    if (picked >= 0) {
+      this.sel = picked;
+      if (this.opts[picked].ok) {
+        const speedBonus = this.timer > 3 ? 0.25 : 0;
+        this.points += 0.75 + speedBonus;
+        this.pop(speedBonus ? 'LIGHTNING THUMBS! +BONUS' : 'SMOOTH REPLY!', G.C.lime);
+        G.Audio.good();
+      } else {
+        this.pop('...THEY LEFT YOU ON READ', G.C.red);
+        G.Audio.bad();
+      }
+      this.nextRound();
+    }
+  },
+
+  nextRound() {
+    this.answered = true;
+    setTimeout(() => {
+      this.round++;
+      if (this.round >= 4) { this.finish(this.points / this.max); return; }
+      this.newRound();
+    }, 650);
+  },
+
+  draw(ctx) {
+    const r = this.rounds[Math.min(this.round, 3)];
+    G.UI.text(ctx, 'MSG ' + Math.min(this.round + 1, 4) + '/4', 8, 32, { size: 8, color: G.C.white });
+    // incoming bubble
+    G.UI.panel(ctx, 60, 44, 360, 40, { bg: G.C.ink, border: G.C.gray });
+    G.UI.text(ctx, 'LEAD:', 70, 52, { size: 7, color: G.C.orange });
+    G.UI.text(ctx, r.msg, 70, 64, { size: 9, color: G.C.white });
+    // patience
+    G.UI.text(ctx, 'PATIENCE', 60, 92, { size: 7, color: G.C.gray });
+    G.UI.bar(ctx, 120, 92, 240, 7, this.timer / 5, this.timer < 1.5 ? G.C.red : G.C.orange);
+    // replies
+    for (let i = 0; i < 3; i++) {
+      const y = 120 + i * 30;
+      const sel = this.sel === i;
+      ctx.fillStyle = sel ? G.C.blue : G.C.ink;
+      ctx.fillRect(60, y, 360, 26);
+      ctx.strokeStyle = sel ? G.C.yellow : G.C.slate;
+      ctx.strokeRect(60.5, y + 0.5, 359, 25);
+      G.UI.text(ctx, (sel ? '> ' : '  ') + this.opts[i].t, 68, y + 9, { size: 8, color: sel ? G.C.white : G.C.gray });
+    }
+  },
+
+  gradeLines() { return 'REPLY GAME: ' + Math.round(this.score * 100) + '% SMOOTH'; },
+});
+
+// ------------------------------------------------------------
+// 3. LISTING APPOINTMENT - repeat the pitch (Simon-style)
+// ------------------------------------------------------------
+G.makeMinigame('listingGame', {
+  title: 'PITCH PERFECT',
+  subtitle: 'REPEAT THE WINNING PITCH',
+  howto: [
+    'The seller wants to hear THE PITCH, in exactly the right order.',
+    'Watch the arrow sequence, then repeat it with the ARROW KEYS.',
+    '3 rounds. Each round gets longer. No pressure.',
+  ],
+  bg: G.C.purple,
+
+  init() {
+    this.round = 0;         // 0..2, lengths 3,4,5
+    this.state = 'show';    // show | input | between
+    this.seq = [];
+    this.showIdx = 0;
+    this.showTimer = 0;
+    this.inputIdx = 0;
+    this.done = 0;
+    this.newSeq();
+  },
+
+  newSeq() {
+    const len = 3 + this.round;
+    const dirs = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+    this.seq = Array.from({ length: len }, () => G.choice(dirs));
+    this.state = 'show';
+    this.showIdx = -1;
+    this.showTimer = 0.4;
+    this.inputIdx = 0;
+  },
+
+  play(dt) {
+    const PITCH_WORDS = ['COMPS!', 'STAGING!', 'MARKETING!', 'PRICE!', 'DRONE!', 'TRUST!'];
+
+    if (this.state === 'show') {
+      this.showTimer -= dt;
+      if (this.showTimer <= 0) {
+        this.showIdx++;
+        if (this.showIdx >= this.seq.length) {
+          this.state = 'input';
+          this.pop('YOUR TURN!', G.C.cyan);
+        } else {
+          this.showTimer = 0.55;
+          G.Audio.tick();
+        }
+      }
+      return;
+    }
+
+    if (this.state !== 'input') return;
+
+    const dirs = { ArrowUp: G.Input.up(), ArrowDown: G.Input.down(), ArrowLeft: G.Input.left(), ArrowRight: G.Input.right() };
+    for (const [key, hit] of Object.entries(dirs)) {
+      if (!hit) continue;
+      if (key === this.seq[this.inputIdx]) {
+        G.Audio.move();
+        this.pop(PITCH_WORDS[this.inputIdx % PITCH_WORDS.length], G.C.lime);
+        this.inputIdx++;
+        if (this.inputIdx >= this.seq.length) {
+          this.done++;
+          this.state = 'between';
+          G.Audio.good();
+          this.pop('NAILED IT!', G.C.lime);
+          setTimeout(() => {
+            this.round++;
+            if (this.round >= 3) this.finish(this.done / 3);
+            else this.newSeq();
+          }, 700);
+        }
+      } else {
+        G.Audio.bad();
+        this.pop('"UM, THE ZILLOW SAYS..."', G.C.red);
+        this.state = 'between';
+        setTimeout(() => {
+          this.round++;
+          if (this.round >= 3) this.finish(this.done / 3);
+          else this.newSeq();
+        }, 700);
+      }
+      break;
+    }
+  },
+
+  draw(ctx) {
+    G.UI.text(ctx, 'ROUND ' + Math.min(this.round + 1, 3) + '/3   PITCHES LANDED: ' + this.done, G.W / 2, 34, { align: 'center', size: 9, color: G.C.white });
+    G.drawSprite(ctx, G.Sprites[G.State.char().sprite], 80, 60, 3);
+    G.drawSprite(ctx, G.Sprites.cabin, 340, 66, 3);
+
+    const ARROWS = { ArrowUp: '^', ArrowDown: 'v', ArrowLeft: '<', ArrowRight: '>' };
+    const n = this.seq.length;
+    const startX = G.W / 2 - n * 16;
+    for (let i = 0; i < n; i++) {
+      const x = startX + i * 32;
+      let show = false, litUp = false;
+      if (this.state === 'show') {
+        show = i <= this.showIdx;
+        litUp = i === this.showIdx;
+      } else {
+        show = i < this.inputIdx;
+        litUp = false;
+      }
+      ctx.fillStyle = litUp ? G.C.yellow : show ? G.C.blue : G.C.ink;
+      ctx.fillRect(x, 150, 26, 26);
+      ctx.strokeStyle = G.C.white;
+      ctx.strokeRect(x + 0.5, 150.5, 25, 25);
+      if (show || this.state === 'input') {
+        const label = show ? ARROWS[this.seq[i]] : '?';
+        G.UI.text(ctx, label, x + 13, 156, { align: 'center', size: 13, color: litUp ? G.C.ink : G.C.white });
+      }
+    }
+
+    G.UI.text(ctx, this.state === 'show' ? 'MEMORIZE THE PITCH...' : 'REPEAT IT WITH ARROW KEYS!',
+      G.W / 2, 196, { align: 'center', size: 9, color: this.state === 'show' ? G.C.orange : G.C.cyan });
+  },
+
+  bonus() { return G.State.has('drone') ? 0.05 : 0; },
+  gradeLines() { return this.done + '/3 PITCH ROUNDS LANDED'; },
+});
+
+// ------------------------------------------------------------
+// 4. SHOW HOMES - hit the feature keys as they light up
+// ------------------------------------------------------------
+G.makeMinigame('showGame', {
+  title: 'THE GRAND TOUR',
+  subtitle: 'HYPE THE FEATURES ON CUE',
+  howto: [
+    'You are touring buyers through the house. When a feature lights up, press its KEY before the excitement fades!',
+    'Keys: A S D F. 6 features. Sell that granite.',
+  ],
+  bg: G.C.navy,
+
+  duration: 18,
+
+  init() {
+    this.features = [
+      { key: 'a', label: 'HOT TUB', x: 90, y: 170 },
+      { key: 's', label: 'GARAGE', x: 190, y: 190 },
+      { key: 'd', label: 'GRANITE', x: 290, y: 160 },
+      { key: 'f', label: 'LAKE VIEW', x: 390, y: 150 },
+      { key: 'a', label: 'FIREPLACE', x: 140, y: 120 },
+      { key: 'd', label: 'DOCK', x: 340, y: 210 },
+    ];
+    this.queue = G.shuffle(this.features);
+    this.idx = 0;
+    this.active = null;
+    this.activeT = 0;
+    this.hits = 0;
+    this.misses = 0;
+    this.spawnT = 0.8;
+  },
+
+  play(dt) {
+    if (!this.active) {
+      this.spawnT -= dt;
+      if (this.spawnT <= 0 && this.idx < this.queue.length) {
+        this.active = this.queue[this.idx++];
+        this.activeT = 1.6;
+        G.Audio.tick();
+      } else if (this.idx >= this.queue.length && !this.active) {
+        this.finish(this.hits / this.queue.length);
+      }
+      return;
+    }
+
+    this.activeT -= dt;
+    if (this.activeT <= 0) {
+      this.misses++;
+      this.pop('"...IS THAT WATER DAMAGE?"', G.C.red);
+      G.Audio.bad();
+      this.active = null;
+      this.spawnT = 0.7;
+      return;
+    }
+
+    for (const k of ['a', 's', 'd', 'f']) {
+      if (G.Input.p(k)) {
+        if (k === this.active.key) {
+          this.hits++;
+          this.pop(this.active.label + '! "WOW!"', G.C.lime);
+          this.particles.spawn(this.active.x, this.active.y, { count: 10, colors: [G.C.yellow, G.C.cyan] });
+          G.Audio.good();
+        } else {
+          this.misses++;
+          this.pop('YOU HYPED THE WRONG ROOM', G.C.red);
+          G.Audio.bad();
+        }
+        this.active = null;
+        this.spawnT = 0.7;
+        break;
+      }
+    }
+  },
+
+  timeUp() { return this.hits / this.queue.length; },
+
+  draw(ctx) {
+    // house cross-section
+    ctx.fillStyle = '#6b4226';
+    ctx.fillRect(60, 100, 360, 130);
+    ctx.fillStyle = G.C.red;
+    ctx.beginPath();
+    ctx.moveTo(50, 100); ctx.lineTo(240, 60); ctx.lineTo(430, 100);
+    ctx.fill();
+    ctx.fillStyle = G.C.ink;
+    for (let i = 0; i < 3; i++) ctx.fillRect(100 + i * 110, 115, 60, 100);
+
+    G.UI.text(ctx, 'FEATURES HYPED: ' + this.hits, 8, 32, { size: 8, color: G.C.lime });
+
+    for (const f of this.features) {
+      const on = this.active === f;
+      if (on) {
+        const pulse = Math.abs(Math.sin(this.t * 8)) * 6;
+        ctx.fillStyle = G.C.yellow;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, 10 + pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = G.C.ink;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, 9, 0, Math.PI * 2);
+        ctx.fill();
+        G.UI.text(ctx, f.key.toUpperCase(), f.x, f.y - 4, { align: 'center', size: 9, color: G.C.yellow });
+        G.UI.text(ctx, f.label, f.x, f.y - 24, { align: 'center', size: 8, color: G.C.white, shadow: true });
+        G.UI.bar(ctx, f.x - 15, f.y + 14, 30, 4, this.activeT / 1.6, G.C.orange);
+      } else {
+        ctx.fillStyle = 'rgba(244,244,244,0.25)';
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  },
+
+  bonus() { return G.State.has('photographer') ? 0.08 : 0; },
+  gradeLines() { return this.hits + '/' + this.queue.length + ' FEATURES HYPED'; },
+});
+
+// ------------------------------------------------------------
+// 5. NEGOTIATION BATTLE - talk/listen tug-of-war
+// ------------------------------------------------------------
+G.makeMinigame('negotiateGame', {
+  title: 'DEAL DUEL',
+  subtitle: 'TALK WHEN GREEN. LISTEN WHEN RED.',
+  howto: [
+    'Tug-of-war over the deal! During TALK phases, MASH SPACE to push the bar your way.',
+    'During LISTEN phases, DO NOT press anything - interrupting costs you.',
+    'Get the bar as far right as you can before time runs out.',
+  ],
+  bg: G.C.ink,
+  duration: 15,
+
+  init() {
+    this.bar = 0.35;
+    this.phase2 = 'talk'; // talk | listen
+    this.phaseT = 2.5;
+    this.mash = 0;
+  },
+
+  play(dt) {
+    this.phaseT -= dt;
+    if (this.phaseT <= 0) {
+      this.phase2 = this.phase2 === 'talk' ? 'listen' : 'talk';
+      this.phaseT = this.phase2 === 'talk' ? G.rand(2, 3) : G.rand(1.2, 2);
+      G.Audio[this.phase2 === 'talk' ? 'good' : 'thud']();
+    }
+
+    // opponent pressure
+    this.bar -= 0.045 * dt;
+
+    if (G.Input.p(' ') || G.Input.p('Enter') || G.Input.mouse.clicked) {
+      if (this.phase2 === 'talk') {
+        this.bar += 0.035;
+        G.Audio.tick();
+      } else {
+        this.bar -= 0.06;
+        this.pop('"LET ME FINISH!" -THEM', G.C.red);
+        G.Audio.bad();
+      }
+    }
+    this.bar = G.clamp(this.bar, 0, 1);
+    if (this.bar >= 1) this.finish(1);
+  },
+
+  timeUp() { return this.bar; },
+
+  draw(ctx) {
+    const talk = this.phase2 === 'talk';
+    ctx.fillStyle = talk ? 'rgba(56,183,100,0.15)' : 'rgba(177,62,83,0.2)';
+    ctx.fillRect(0, 24, G.W, G.H - 24);
+
+    G.drawSprite(ctx, G.Sprites[G.State.char().sprite], 90, 64, 3);
+    G.drawSprite(ctx, G.Sprites.bossShark, 340, 64, 3);
+    G.UI.text(ctx, 'YOU', 111, 122, { align: 'center', size: 8, color: G.C.lime });
+    G.UI.text(ctx, 'OTHER AGENT', 361, 122, { align: 'center', size: 8, color: G.C.red });
+
+    G.UI.text(ctx, talk ? '>>> TALK! MASH SPACE! <<<' : '*** LISTEN... DO NOT PRESS ***',
+      G.W / 2, 44, { align: 'center', size: 12, color: talk ? G.C.lime : G.C.red, shadow: true });
+
+    // tug bar
+    const bx = 60, by = 160, bw = 360, bh = 20;
+    ctx.fillStyle = G.C.dusk;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = G.C.red;
+    ctx.fillRect(bx, by, bw * 0.45, bh);
+    ctx.fillStyle = G.C.green;
+    ctx.fillRect(bx + bw * 0.45, by, bw * 0.55, bh);
+    ctx.fillStyle = G.C.white;
+    ctx.fillRect(bx + this.bar * bw - 2, by - 5, 5, bh + 10);
+    G.UI.text(ctx, 'DEAL DIES', bx, by + 26, { size: 7, color: G.C.red });
+    G.UI.text(ctx, 'DEAL SIGNED', bx + bw, by + 26, { align: 'right', size: 7, color: G.C.lime });
+  },
+
+  bonus() { return 0; }, // character bonus handled in state.js
+  gradeLines() { return 'LEVERAGE: ' + Math.round(this.score * 100) + '%'; },
+});
+
+// ------------------------------------------------------------
+// 6. INSPECTION - fix issues by typing their key combos
+// ------------------------------------------------------------
+G.makeMinigame('inspectGame', {
+  title: 'FIX-IT FRENZY',
+  subtitle: 'CLEAR THE INSPECTION REPORT',
+  howto: [
+    'The inspection report is BAD. Fix each issue by pressing its two keys in order.',
+    'Clear as many of the 5 issues as you can before time runs out!',
+  ],
+  bg: G.C.dusk,
+  duration: 16,
+
+  init() {
+    const ISSUES = ['LEAKY FAUCET', 'SQUIRRELS (RUDE)', 'ROOF FROM 1971', 'RADON???', 'MYSTERY SWITCH', 'SPOOKY FURNACE', 'DOOR TO NOWHERE'];
+    const KEYS = 'qwerasdfzxcv'.split('');
+    this.issues = G.shuffle(ISSUES).slice(0, 5).map((label, i) => ({
+      label,
+      combo: [G.choice(KEYS), G.choice(KEYS)],
+      progress: 0,
+      fixed: false,
+    }));
+    this.current = 0;
+  },
+
+  play(dt) {
+    const cur = this.issues[this.current];
+    if (!cur) return;
+
+    for (const k of 'qwerasdfzxcv'.split('')) {
+      if (!G.Input.p(k)) continue;
+      if (k === cur.combo[cur.progress]) {
+        cur.progress++;
+        G.Audio.tick();
+        if (cur.progress >= 2) {
+          cur.fixed = true;
+          this.pop(cur.label + ' - FIXED!', G.C.lime);
+          this.particles.spawn(G.W / 2, 130, { count: 10, colors: [G.C.lime, G.C.white] });
+          G.Audio.good();
+          this.current++;
+          if (this.current >= this.issues.length) this.finish(1);
+        }
+      } else {
+        cur.progress = 0;
+        this.pop('WRONG TOOL!', G.C.red);
+        G.Audio.bad();
+      }
+      break;
+    }
+  },
+
+  timeUp() { return this.issues.filter(i => i.fixed).length / this.issues.length; },
+
+  draw(ctx) {
+    G.drawSprite(ctx, G.Sprites.houseStarter, 30, 50, 3);
+    let y = 44;
+    for (let i = 0; i < this.issues.length; i++) {
+      const iss = this.issues[i];
+      const active = i === this.current;
+      ctx.fillStyle = iss.fixed ? 'rgba(56,183,100,0.25)' : active ? G.C.navy : G.C.ink;
+      ctx.fillRect(150, y, 300, 30);
+      ctx.strokeStyle = active ? G.C.yellow : G.C.slate;
+      ctx.strokeRect(150.5, y + 0.5, 299, 29);
+      G.UI.text(ctx, (iss.fixed ? '[OK] ' : '[!!] ') + iss.label, 158, y + 5, {
+        size: 8, color: iss.fixed ? G.C.lime : active ? G.C.white : G.C.slate,
+      });
+      if (!iss.fixed && active) {
+        for (let c = 0; c < 2; c++) {
+          const done = c < iss.progress;
+          ctx.fillStyle = done ? G.C.lime : G.C.dusk;
+          ctx.fillRect(360 + c * 24, y + 5, 20, 20);
+          ctx.strokeStyle = G.C.white;
+          ctx.strokeRect(360.5 + c * 24, y + 5.5, 19, 19);
+          G.UI.text(ctx, iss.combo[c].toUpperCase(), 370 + c * 24, y + 10, { align: 'center', size: 10, color: done ? G.C.ink : G.C.yellow });
+        }
+      }
+      y += 36;
+    }
+  },
+
+  bonus() { return G.State.has('tc') ? 0.05 : 0; },
+  gradeLines() { return this.issues.filter(i => i.fixed).length + '/5 ISSUES FIXED'; },
+});
+
+// ------------------------------------------------------------
+// 7. MAKE VIDEO - rhythm game, hit notes at the line
+// ------------------------------------------------------------
+G.makeMinigame('videoGame', {
+  title: 'LIGHTS, CAMERA, LISTING!',
+  subtitle: 'HIT THE BEATS - LEFT / DOWN / RIGHT',
+  howto: [
+    'Film the perfect listing video! Notes fall down 3 lanes.',
+    'Press LEFT / DOWN / RIGHT when a note reaches the glowing line.',
+    'Great timing = great content = leads.',
+  ],
+  bg: G.C.purple,
+  duration: 16,
+
+  init() {
+    this.lanes = ['ArrowLeft', 'ArrowDown', 'ArrowRight'];
+    this.notes = [];
+    let t = 1.2;
+    for (let i = 0; i < 14; i++) {
+      this.notes.push({ lane: G.randInt(0, 2), t, hit: false, missed: false });
+      t += G.rand(0.55, 1.0);
+    }
+    this.hits = 0;
+    this.combo = 0;
+    this.FALL = 3.0;   // seconds from top to line
+    this.LINE_Y = 200;
+  },
+
+  play(dt) {
+    const inputs = [G.Input.left(), G.Input.down(), G.Input.right()];
+    for (let lane = 0; lane < 3; lane++) {
+      if (!inputs[lane]) continue;
+      // find nearest unhit note in this lane near the line
+      let best = null, bestD = 1;
+      for (const n of this.notes) {
+        if (n.lane !== lane || n.hit || n.missed) continue;
+        const d = Math.abs(n.t - this.playT);
+        if (d < bestD) { bestD = d; best = n; }
+      }
+      if (best && bestD <= 0.18) {
+        best.hit = true;
+        this.hits++;
+        this.combo++;
+        this.pop(bestD < 0.07 ? 'PERFECT! x' + this.combo : 'NICE! x' + this.combo, bestD < 0.07 ? G.C.cyan : G.C.lime);
+        this.particles.spawn(140 + lane * 100, this.LINE_Y, { count: 8, colors: [G.C.cyan, G.C.yellow] });
+        G.Audio.good();
+      } else {
+        this.combo = 0;
+        this.pop('OFF BEAT!', G.C.red);
+        G.Audio.bad();
+      }
+    }
+    // mark misses
+    for (const n of this.notes) {
+      if (!n.hit && !n.missed && this.playT - n.t > 0.2) {
+        n.missed = true;
+        this.combo = 0;
+      }
+    }
+    if (this.notes.every(n => n.hit || n.missed)) {
+      this.finish(this.hits / this.notes.length);
+    }
+  },
+
+  timeUp() { return this.hits / this.notes.length; },
+
+  draw(ctx) {
+    const laneX = [140, 240, 340];
+    const LABELS = ['<', 'v', '>'];
+    // lanes
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = 'rgba(26,28,44,0.6)';
+      ctx.fillRect(laneX[i] - 18, 24, 36, G.H - 24);
+    }
+    // hit line
+    const pulse = Math.abs(Math.sin(this.t * 4));
+    ctx.fillStyle = 'rgba(115,239,247,' + (0.5 + pulse * 0.5) + ')';
+    ctx.fillRect(110, this.LINE_Y, 260, 3);
+    for (let i = 0; i < 3; i++) {
+      G.UI.text(ctx, LABELS[i], laneX[i], this.LINE_Y + 10, { align: 'center', size: 12, color: G.C.cyan });
+    }
+    // notes
+    for (const n of this.notes) {
+      if (n.hit) continue;
+      const yProg = 1 - (n.t - this.playT) / this.FALL;
+      if (yProg < 0 || yProg > 1.15) continue;
+      const y = 24 + yProg * (this.LINE_Y - 24);
+      ctx.fillStyle = n.missed ? G.C.slate : [G.C.orange, G.C.lime, G.C.sky][n.lane];
+      ctx.fillRect(laneX[n.lane] - 10, y - 5, 20, 10);
+      ctx.strokeStyle = G.C.white;
+      ctx.strokeRect(laneX[n.lane] - 10.5, y - 5.5, 21, 11);
+    }
+    // camera guy
+    G.drawSprite(ctx, G.Sprites[G.State.char().sprite], 40, 100, 3);
+    G.UI.text(ctx, 'HITS ' + this.hits + '/' + this.notes.length, G.W - 12, 32, { align: 'right', size: 9, color: G.C.white });
+    if (this.combo >= 3) {
+      G.UI.text(ctx, 'COMBO x' + this.combo + '!', G.W - 12, 46, { align: 'right', size: 9, color: G.C.yellow });
+    }
+  },
+
+  bonus() {
+    let b = G.State.char().videoBonus || 0;
+    if (G.State.has('camera')) b += 0.15;
+    return b;
+  },
+  gradeLines() { return this.hits + '/' + this.notes.length + ' BEATS HIT'; },
+});
+
+// ------------------------------------------------------------
+// 8. OPEN HOUSE - catch guests, dodge tire kickers
+// ------------------------------------------------------------
+G.makeMinigame('openHouseGame', {
+  title: 'OPEN HOUSE RUSH',
+  subtitle: 'CATCH LEADS - DODGE TIRE KICKERS',
+  howto: [
+    'Guests are flooding in! Move your SIGN-IN SHEET with LEFT/RIGHT to catch falling guests.',
+    'YELLOW STARS are hot leads (+2). WHITE guests are leads (+1).',
+    'RED tire kickers just want free cookies (-1). Avoid!',
+  ],
+  bg: G.C.teal,
+  duration: 20,
+
+  init() {
+    this.px = G.W / 2;
+    this.items = [];
+    this.spawnT = 0;
+    this.points = 0;
+    this.MAX = 14;
+  },
+
+  play(dt) {
+    // move
+    const sp = 220 * dt;
+    if (G.Input.held('ArrowLeft') || G.Input.held('a')) this.px -= sp;
+    if (G.Input.held('ArrowRight') || G.Input.held('d')) this.px += sp;
+    if (G.Input.mouse.x > 0) {
+      // gentle mouse-follow if the mouse is being used
+      if (Math.abs(G.Input.mouse.x - this.px) > 8 && G.Input.mouse.down) {
+        this.px += Math.sign(G.Input.mouse.x - this.px) * sp;
+      }
+    }
+    this.px = G.clamp(this.px, 40, G.W - 40);
+
+    // spawn
+    this.spawnT -= dt;
+    if (this.spawnT <= 0) {
+      this.spawnT = G.rand(0.45, 0.85);
+      const roll = Math.random();
+      this.items.push({
+        x: G.rand(50, G.W - 50),
+        y: 20,
+        v: G.rand(60, 110) + this.playT * 3,
+        kind: roll < 0.15 ? 'star' : roll < 0.62 ? 'guest' : 'kicker',
+      });
+    }
+
+    // fall + catch
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const it = this.items[i];
+      it.y += it.v * dt;
+      if (it.y > 228 && it.y < 248 && Math.abs(it.x - this.px) < 30) {
+        if (it.kind === 'star') { this.points += 2; this.pop('HOT LEAD! +2', G.C.yellow); G.Audio.great(); }
+        else if (it.kind === 'guest') { this.points += 1; this.pop('SIGNED IN! +1', G.C.lime); G.Audio.good(); }
+        else { this.points = Math.max(0, this.points - 1); this.pop('"JUST LOOKING" -1', G.C.red); G.Audio.bad(); }
+        this.items.splice(i, 1);
+      } else if (it.y > G.H) {
+        this.items.splice(i, 1);
+      }
+    }
+  },
+
+  timeUp() { return this.points / this.MAX; },
+
+  draw(ctx) {
+    // house backdrop
+    ctx.fillStyle = 'rgba(26,28,44,0.3)';
+    ctx.fillRect(0, 24, G.W, G.H - 24);
+    G.drawSprite(ctx, G.Sprites.houseStarter, G.W / 2 - 21, 26, 3);
+    G.UI.text(ctx, 'SIGN-INS: ' + this.points, 8, 32, { size: 9, color: G.C.lime });
+
+    for (const it of this.items) {
+      if (it.kind === 'star') {
+        G.drawSprite(ctx, G.Sprites.star, it.x - 5, it.y - 5, 2);
+      } else {
+        ctx.fillStyle = it.kind === 'guest' ? G.C.white : G.C.red;
+        ctx.fillRect(it.x - 3, it.y - 8, 6, 6);      // head
+        ctx.fillRect(it.x - 4, it.y - 1, 8, 8);      // body
+      }
+    }
+
+    // player + clipboard
+    G.drawSprite(ctx, G.Sprites[G.State.char().sprite], this.px - 14, 224, 2);
+    ctx.fillStyle = G.C.yellow;
+    ctx.fillRect(this.px - 30, 236, 60, 5);
+    G.UI.text(ctx, 'SIGN-IN', this.px, 243, { align: 'center', size: 6, color: G.C.ink });
+  },
+
+  bonus() { return G.State.char().openHouseBonus || 0; },
+  gradeLines() { return this.points + ' SIGN-INS COLLECTED'; },
+});
+
+</script>
+<script>
+// ============================================================
+// scenes/boss.js - month-end boss showdown vs a top local agent
+// Best-of-N skill clashes: stop the needle in the green zone.
+// Your stats & upgrades widen the zone per skill.
+// ============================================================
+'use strict';
+
+G.Engine.register('boss', {
+  enter() {
+    this.t = 0;
+    this.boss = G.State.currentBoss();
+    this.phase = 'intro';
+    this.round = 0;
+    this.playerWins = 0;
+    this.bossWins = 0;
+    this.flash = null;
+    this.particles = new G.Particles();
+    this.needle = 0;
+    this.dir = 1;
+    this.locked = false;
+    G.Audio.stopMusic();
+    G.Audio.thud();
+  },
+
+  exit() { G.Audio.startMusic(); },
+
+  // How much a skill widens your green zone (0..~0.14)
+  skillBonus(skill) {
+    const s = G.State.s;
+    const has = (u) => G.State.has(u);
+    let b = 0;
+    switch (skill) {
+      case 'PROSPECTING':
+        if (has('crm')) b += 0.05;
+        if (has('website')) b += 0.03;
+        b += Math.min(0.05, s.stats.leadsReceived / 400);
+        break;
+      case 'MARKETING':
+        if (has('camera')) b += 0.03;
+        if (has('social')) b += 0.04;
+        if (has('marketing')) b += 0.04;
+        b += Math.min(0.04, s.stats.followers / 30000);
+        break;
+      case 'NEGOTIATION':
+        b += (G.State.char().negotiateBonus || 0) * 0.4;
+        b += Math.min(0.04, s.stats.homesSold / 250);
+        break;
+      case 'CLIENT SERVICE':
+        b += s.stats.happiness / 1200;
+        b += Math.min(0.03, s.stats.reviews / 300);
+        break;
+      case 'SPEED':
+        if (has('vehicle')) b += 0.04;
+        if (has('ai')) b += 0.04;
+        if (has('assistant')) b += 0.03;
+        break;
+      case 'STRATEGY':
+        b += Object.keys(s.upgrades).length * 0.012;
+        break;
+    }
+    return Math.min(0.14, b);
+  },
+
+  startRound() {
+    const skill = this.boss.skills[this.round % this.boss.skills.length];
+    this.skill = skill;
+    const width = Math.max(0.09, 0.30 - this.boss.difficulty * 0.22 + this.skillBonus(skill));
+    this.zone = { start: G.rand(0.15, 0.85 - width), width };
+    this.speed = 1.4 + this.boss.difficulty * 1.4 + this.round * 0.22;
+    this.needle = 0;
+    this.dir = 1;
+    this.locked = false;
+    this.phase = 'round';
+    G.Audio.ring();
+  },
+
+  update(dt) {
+    this.t += dt;
+    this.particles.update(dt);
+    if (this.flash) { this.flash.t -= dt; if (this.flash.t <= 0) this.flash = null; }
+
+    if (this.phase === 'intro') {
+      if (this.t > 0.5 && (G.Input.confirm() || G.Input.mouse.clicked)) {
+        G.Audio.select();
+        this.startRound();
+      }
+      return;
+    }
+
+    if (this.phase === 'round') {
+      if (this.locked) return;
+      this.needle += this.dir * this.speed * dt;
+      if (this.needle > 1) { this.needle = 1; this.dir = -1; }
+      if (this.needle < 0) { this.needle = 0; this.dir = 1; }
+
+      if (G.Input.confirm() || G.Input.mouse.clicked) {
+        this.locked = true;
+        const hit = this.needle >= this.zone.start && this.needle <= this.zone.start + this.zone.width;
+        if (hit) {
+          this.playerWins++;
+          this.flash = { text: this.skill + ' - YOU WIN THE ROUND!', color: G.C.lime, t: 1.1 };
+          this.particles.spawn(G.W / 2, 130, { count: 20, colors: [G.C.lime, G.C.yellow, G.C.cyan] });
+          G.Audio.great();
+        } else {
+          this.bossWins++;
+          this.flash = { text: this.boss.name.split(' ')[0] + ' TAKES ' + this.skill + '!', color: G.C.red, t: 1.1 };
+          G.Engine.shake = 3;
+          G.Audio.thud();
+        }
+        setTimeout(() => {
+          this.round++;
+          const need = Math.floor(this.boss.rounds / 2) + 1;
+          if (this.playerWins >= need || this.bossWins >= need || this.round >= this.boss.rounds) {
+            this.phase = 'result';
+            this.t = 0;
+            if (this.playerWins > this.bossWins) G.Audio.fanfare(); else G.Audio.sadTromb();
+          } else {
+            this.startRound();
+          }
+        }, 1000);
+      }
+      return;
+    }
+
+    if (this.phase === 'result') {
+      if (this.t > 0.8 && (G.Input.confirm() || G.Input.mouse.clicked)) {
+        const won = this.playerWins > this.bossWins;
+        const res = G.State.resolveBoss(won);
+        G.Popup.show({
+          title: won ? 'SHOWDOWN WON!' : 'SHOWDOWN LOST',
+          lines: res.lines,
+          color: won ? G.C.green : G.C.red,
+          onClose: () => {
+            if (res.seasonOver) G.Engine.goto('seasonEnd');
+            else G.Engine.goto('map', { newDay: true });
+          },
+        });
+      }
+    }
+  },
+
+  render(ctx) {
+    const b = this.boss;
+    // dramatic backdrop
+    ctx.fillStyle = G.C.ink;
+    ctx.fillRect(0, 0, G.W, G.H);
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2 + this.t * 0.4;
+      ctx.strokeStyle = 'rgba(93,39,93,0.5)';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(G.W / 2, 100);
+      ctx.lineTo(G.W / 2 + Math.cos(a) * 400, 100 + Math.sin(a) * 400);
+      ctx.stroke();
+    }
+    ctx.lineWidth = 1;
+
+    if (this.phase === 'intro') {
+      G.UI.text(ctx, b.final ? 'FINAL BOSS' : 'MONTH-END SHOWDOWN', G.W / 2, 20, { align: 'center', size: 12, color: G.C.red, shadow: true });
+      const shake = b.final ? Math.sin(this.t * 30) * 1.5 : 0;
+      G.drawSprite(ctx, G.Sprites[b.sprite], G.W / 2 - 28 + shake, 44, 4);
+      G.UI.text(ctx, b.name, G.W / 2, 118, { align: 'center', size: 13, color: G.C.yellow, shadow: true });
+      let y = 140;
+      for (const line of b.intro) {
+        G.UI.text(ctx, line, G.W / 2, y, { align: 'center', size: 8, color: G.C.gray });
+        y += 11;
+      }
+      G.UI.text(ctx, '"' + b.taunt + '"', G.W / 2, y + 6, { align: 'center', size: 8, color: G.C.orange });
+      G.UI.text(ctx, 'BEST OF ' + b.rounds + ' SKILL CLASHES. STOP THE NEEDLE IN THE GREEN.', G.W / 2, y + 26, { align: 'center', size: 7, color: G.C.cyan });
+      if (Math.floor(this.t * 2) % 2 === 0) {
+        G.UI.text(ctx, '- PRESS ENTER TO THROW DOWN -', G.W / 2, y + 44, { align: 'center', size: 9, color: G.C.yellow });
+      }
+      return;
+    }
+
+    // fighters
+    G.drawSprite(ctx, G.Sprites[G.State.char().sprite], 80, 60, 4);
+    G.drawSprite(ctx, G.Sprites[b.sprite], 336, 60, 4);
+    G.UI.text(ctx, G.State.char().name, 108, 132, { align: 'center', size: 9, color: G.C.lime });
+    G.UI.text(ctx, b.name.split(' ')[0], 364, 132, { align: 'center', size: 9, color: G.C.red });
+
+    // round pips
+    for (let i = 0; i < b.rounds; i++) {
+      const x = G.W / 2 - b.rounds * 7 + i * 14;
+      let col = G.C.dusk;
+      if (i < this.playerWins) col = G.C.lime;
+      else if (i >= b.rounds - this.bossWins) col = G.C.red;
+      ctx.fillStyle = col;
+      ctx.fillRect(x, 26, 10, 10);
+      ctx.strokeStyle = G.C.white;
+      ctx.strokeRect(x + 0.5, 26.5, 9, 9);
+    }
+
+    if (this.phase === 'round') {
+      G.UI.text(ctx, 'ROUND ' + (this.round + 1) + ': ' + this.skill, G.W / 2, 46, { align: 'center', size: 12, color: G.C.cyan, shadow: true });
+
+      const mx = 90, my = 170, mw = 300, mh = 20;
+      ctx.fillStyle = G.C.ink;
+      ctx.fillRect(mx - 3, my - 3, mw + 6, mh + 6);
+      ctx.fillStyle = G.C.red;
+      ctx.fillRect(mx, my, mw, mh);
+      ctx.fillStyle = G.C.green;
+      ctx.fillRect(mx + this.zone.start * mw, my, this.zone.width * mw, mh);
+      ctx.fillStyle = G.C.white;
+      ctx.fillRect(mx + this.needle * mw - 1, my - 6, 3, mh + 12);
+
+      G.UI.text(ctx, 'SPACE / ENTER / CLICK TO STRIKE', G.W / 2, my + 30, { align: 'center', size: 8, color: G.C.gray });
+      G.UI.text(ctx, 'YOUR ' + this.skill + ' SKILL WIDENS THE GREEN ZONE', G.W / 2, my + 44, { align: 'center', size: 6, color: G.C.slate });
+    }
+
+    if (this.phase === 'result') {
+      const won = this.playerWins > this.bossWins;
+      G.UI.text(ctx, won ? 'VICTORY!' : 'DEFEAT...', G.W / 2, 150, { align: 'center', size: 26, color: won ? G.C.lime : G.C.red, shadow: true });
+      G.UI.text(ctx, 'ROUNDS: YOU ' + this.playerWins + ' - ' + this.bossWins + ' THEM', G.W / 2, 186, { align: 'center', size: 10, color: G.C.white });
+      if (won) G.drawSprite(ctx, G.Sprites.trophy, G.W / 2 - 7, 202, 2);
+      if (this.t > 0.8 && Math.floor(this.t * 2) % 2 === 0) {
+        G.UI.text(ctx, '- PRESS ENTER -', G.W / 2, 230, { align: 'center', size: 8, color: G.C.yellow });
+      }
+    }
+
+    this.particles.render(ctx);
+    if (this.flash) {
+      G.UI.text(ctx, this.flash.text, G.W / 2, 106, { align: 'center', size: 12, color: this.flash.color, shadow: true });
+    }
+  },
+});
+
+</script>
+<script>
+// ============================================================
+// scenes/results.js - season end + leaderboard
+// ============================================================
+'use strict';
+
+G.Engine.register('seasonEnd', {
+  enter() {
+    this.t = 0;
+    this.particles = new G.Particles();
+    const s = G.State.s;
+    this.won = G.State.playerWon();
+    this.tied = G.State.tied();
+    this.score = G.State.seasonScore();
+
+    // record on the leaderboard once
+    if (!s.recorded) {
+      s.recorded = true;
+      G.Save.addLeaderboardEntry({
+        name: G.State.char().name,
+        homesSold: s.stats.homesSold,
+        commission: s.stats.commission,
+        score: this.score,
+        won: this.won,
+        date: new Date().toLocaleDateString(),
+      });
+    }
+    if (this.won) G.Audio.fanfare(); else G.Audio.sadTromb();
+  },
+
+  update(dt) {
+    this.t += dt;
+    this.particles.update(dt);
+    if (this.won && Math.random() < 0.2) {
+      this.particles.spawn(G.rand(40, G.W - 40), -4, {
+        count: 3, vyMin: 30, vyMax: 70, vxMin: -15, vxMax: 15, gravity: 10,
+        colors: [G.C.yellow, G.C.lime, G.C.cyan, G.C.orange], life: 3,
+      });
+    }
+    if (this.t > 1 && (G.Input.confirm() || G.Input.mouse.clicked)) {
+      G.Audio.select();
+      G.Engine.goto('leaderboard', { fromSeason: true });
+    }
+  },
+
+  render(ctx) {
+    const s = G.State.s;
+    ctx.fillStyle = G.C.ink;
+    ctx.fillRect(0, 0, G.W, G.H);
+
+    const title = this.tied ? 'DEAD HEAT!' : this.won ? 'REALTOR OF THE SEASON!' : 'SO CLOSE...';
+    const col = this.tied ? G.C.yellow : this.won ? G.C.lime : G.C.red;
+    G.UI.text(ctx, 'SEASON OVER', G.W / 2, 12, { align: 'center', size: 10, color: G.C.gray });
+    G.UI.text(ctx, title, G.W / 2, 26, { align: 'center', size: 16, color: col, shadow: true });
+
+    // podium
+    const ch = G.State.char();
+    const rc = G.State.rivalChar();
+    const meX = this.won || this.tied ? 150 : 290;
+    const themX = this.won || this.tied ? 290 : 150;
+    ctx.fillStyle = G.C.slate;
+    ctx.fillRect(130, 118, 80, this.won ? 26 : 14);
+    ctx.fillRect(270, 118, 80, this.won ? 14 : 26);
+    G.drawSprite(ctx, G.Sprites[ch.sprite], meX, (this.won ? 66 : 78), 3);
+    G.drawSprite(ctx, G.Sprites[rc.sprite], themX, (this.won ? 78 : 66), 3);
+    if (this.won) G.drawSprite(ctx, G.Sprites.trophy, meX + 42, 60, 2);
+    else if (!this.tied) G.drawSprite(ctx, G.Sprites.trophy, themX + 42, 60, 2);
+
+    G.UI.text(ctx, 'YOU: ' + s.stats.homesSold + ' HOMES', 170, 148, { align: 'center', size: 9, color: G.C.lime });
+    G.UI.text(ctx, rc.name + ': ' + s.rival.homesSold + ' HOMES', 310, 148, { align: 'center', size: 9, color: G.C.red });
+
+    // stat strip (3 columns x 3 rows)
+    const rows = [
+      ['COMMISSION', G.money(s.stats.commission)],
+      ['LISTINGS', s.stats.listings],
+      ['BUYERS', s.stats.buyers],
+      ['REFERRALS', s.stats.referrals],
+      ['REVIEWS', s.stats.reviews],
+      ['FOLLOWERS', s.stats.followers],
+      ['HAPPINESS', s.stats.happiness + '/100'],
+      ['CONVERSION', G.pct(G.State.conversionRate())],
+      ['BOSS WINS', s.stats.bossWins],
+    ];
+    for (let i = 0; i < rows.length; i++) {
+      const cx = 40 + (i % 3) * 150;
+      const cy = 168 + Math.floor(i / 3) * 24;
+      G.UI.text(ctx, String(rows[i][0]), cx, cy, { size: 7, color: G.C.gray });
+      G.UI.text(ctx, String(rows[i][1]), cx, cy + 9, { size: 9, color: G.C.white });
+    }
+
+    G.UI.text(ctx, 'FINAL SCORE: ' + this.score.toLocaleString('en-US'), G.W / 2, 244, { align: 'center', size: 11, color: G.C.yellow, shadow: true });
+
+    this.particles.render(ctx);
+    if (this.t > 1 && Math.floor(this.t * 2) % 2 === 0) {
+      G.UI.text(ctx, '- PRESS ENTER FOR LEADERBOARD -', G.W / 2, 258, { align: 'center', size: 7, color: G.C.cyan });
+    }
+  },
+});
+
+// ------------------------------------------------------------
+G.Engine.register('leaderboard', {
+  enter(params = {}) {
+    this.t = 0;
+    this.fromSeason = !!params.fromSeason;
+    this.entries = G.Save.getLeaderboard();
+  },
+
+  update(dt) {
+    this.t += dt;
+    if (this.t > 0.5 && (G.Input.confirm() || G.Input.cancel() || G.Input.mouse.clicked)) {
+      G.Audio.back();
+      G.Engine.goto('title');
+    }
+  },
+
+  render(ctx) {
+    ctx.fillStyle = G.C.ink;
+    ctx.fillRect(0, 0, G.W, G.H);
+    G.UI.panel(ctx, 40, 10, G.W - 80, G.H - 20, { title: 'HALL OF FAME - TOP AGENTS', titleBg: G.C.purple });
+
+    if (!this.entries.length) {
+      G.UI.text(ctx, 'NO SEASONS COMPLETED YET.', G.W / 2, 110, { align: 'center', size: 10, color: G.C.gray });
+      G.UI.text(ctx, 'GO SELL SOME HOUSES!', G.W / 2, 128, { align: 'center', size: 9, color: G.C.yellow });
+    } else {
+      G.UI.text(ctx, '#', 56, 32, { size: 7, color: G.C.slate });
+      G.UI.text(ctx, 'AGENT', 76, 32, { size: 7, color: G.C.slate });
+      G.UI.text(ctx, 'HOMES', 170, 32, { size: 7, color: G.C.slate });
+      G.UI.text(ctx, 'COMMISSION', 220, 32, { size: 7, color: G.C.slate });
+      G.UI.text(ctx, 'SCORE', 330, 32, { size: 7, color: G.C.slate });
+      G.UI.text(ctx, 'W?', 396, 32, { size: 7, color: G.C.slate });
+
+      let y = 46;
+      this.entries.forEach((e, i) => {
+        const rowCol = i === 0 ? G.C.yellow : i === 1 ? G.C.gray : i === 2 ? G.C.orange : G.C.white;
+        G.UI.text(ctx, String(i + 1), 56, y, { size: 8, color: rowCol });
+        G.UI.text(ctx, e.name, 76, y, { size: 8, color: e.name === 'BRIDGER' ? '#c0562f' : G.C.lime });
+        G.UI.text(ctx, String(e.homesSold), 170, y, { size: 8, color: rowCol });
+        G.UI.text(ctx, G.money(e.commission), 220, y, { size: 8, color: G.C.yellow });
+        G.UI.text(ctx, e.score.toLocaleString('en-US'), 330, y, { size: 8, color: rowCol });
+        G.UI.text(ctx, e.won ? 'W' : 'L', 396, y, { size: 8, color: e.won ? G.C.lime : G.C.red });
+        y += 17;
+      });
+    }
+
+    if (Math.floor(this.t * 2) % 2 === 0) {
+      G.UI.text(ctx, '- PRESS ENTER FOR TITLE -', G.W / 2, G.H - 24, { align: 'center', size: 8, color: G.C.cyan });
+    }
+  },
+});
+
+</script>
+
+<!-- Boot -->
+<script>
+// ============================================================
+// main.js - boot
+// ============================================================
+'use strict';
+
+window.addEventListener('DOMContentLoaded', () => {
+  const canvas = document.getElementById('game');
+  G.Engine.init(canvas);
+  G.Engine.set('title');
+});
+
+</script>
+</body>
+</html>
