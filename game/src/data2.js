@@ -58,6 +58,46 @@
     passiveChance: 0.12, // 1031 exchange investor calls
   };
 
+  D.BLAKE = {
+    name: 'BLAKE SUDDATH',
+    title: 'THE GROWTH GURU',
+    sprite: 'blakeSuddath',
+    ability: 'AI OVERDRIVE',
+    ultimate: 'SCALE MODE',
+    scaleChance: 0.22, // chance a visit rolls the ultimate instead
+    intro: [
+      'Mentor. Rival. Power-up vendor. All at 100 mph.',
+      'Laptop in one hand, phone in the other, earbuds in,',
+      'coffee that never empties. Holographic charts orbit him.',
+    ],
+    // AI Overdrive drone flavor
+    drones: [
+      'FOLLOW-UP DRONE nudging your whole pipeline...',
+      'CONTENT CANNON firing viral videos across the map...',
+      'CRM SYNC organizing every old lead...',
+      'SCHEDULER BOT booking appointments...',
+      'COPY BOT writing listing descriptions...',
+      'GEO BOOSTER spawning clients online...',
+    ],
+    lines: [
+      '"Work smarter, not harder."',
+      '"Let\'s automate that."',
+      '"Scale beats hustle."',
+      '"Your next client is already looking for you."',
+      '"If AI can do it, why are you doing it?"',
+    ],
+    coffee: [
+      '*sips the coffee that never empties*',
+      '*already testing a newer AI tool mid-sentence*',
+      '*a holographic funnel chart rotates behind him*',
+    ],
+    scaleLines: [
+      'SCALE MODE ENGAGED!! The backpack of AI gadgets OPENS.',
+      'A swarm of AI agents deploys. Everything speeds up.',
+      'Leads double. Deals close faster. Cooldowns melt.',
+    ],
+  };
+
   // ----------------------------------------------------------
   // Secret characters (unlockable, playable)
   // ----------------------------------------------------------
@@ -326,6 +366,7 @@
     { id: 'aimaster',   name: 'AI MASTER',             desc: 'Own the AI Assistant and close 5 deals with it.', stat: 'aiCloses', goal: 5 },
     { id: 'squatch',    name: 'SQUATCH SPOTTER',       desc: 'Find Bigfoot in the woods. He is shy.' },
     { id: 'megaslayer', name: 'GIANT SLAYER',          desc: 'Defeat the final boss.' },
+    { id: 'scalemode',  name: 'SCALE BEATS HUSTLE',    desc: 'Trigger Blake Suddath\'s Scale Mode ultimate.' },
   ];
 
   // ----------------------------------------------------------
@@ -357,9 +398,10 @@
     ],
   };
 
-  // Map additions: bank + commercial plaza
+  // Map additions: bank + commercial plaza + growth lab
   D.MAP.locations.bank = { x: 434, y: 168, sprite: 'bank', label: 'FIRST NORTHERN BANK' };
   D.MAP.locations.plaza = { x: 222, y: 218, sprite: 'plaza', label: 'NOBLEZA COMMERCIAL PLAZA' };
+  D.MAP.locations.growthlab = { x: 278, y: 250, sprite: 'growthlab', label: 'SUDDATH GROWTH LAB' };
 
   // Hidden actions reached via map visits (not in the sidebar list)
   D.ACTIONS.push(

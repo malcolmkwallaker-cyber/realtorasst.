@@ -905,6 +905,46 @@ G.makeSprite = (rows, colors) => {
     '..WWWWDDWWWW..',
   ], { Y: C.yellow, W: C.gray, D: '#6b4226' });
 
+  // BLAKE SUDDATH: The Growth Guru - quarter-zip, earbuds, laptop, coffee, phone
+  S.blakeSuddath = G.makeSprite([
+    '....HHHHHH....',
+    '...HHHHHHHH...',
+    '...HSSSSSSH...',
+    '...HSKSSKSH...',
+    '..B.SSSSSS.B..',
+    '....SWWWWS....',
+    '....SSSSSS....',
+    '....QQQQQQ....',
+    '...QQQZZQQQ...',
+    '..L.QQZZQQ.C..',
+    '..L.QQQQQQ.P..',
+    '....QQQQQQ....',
+    '....JJJJJJ....',
+    '....JJ..JJ....',
+    '....JJ..JJ....',
+    '....JJ..JJ....',
+    '...NN....NN...',
+  ], { H: '#6b4226', S: '#e8b796', K: C.ink, W: C.white, B: C.cyan, Q: C.teal, Z: C.sky, L: C.gray, C: C.orange, P: C.sky, J: '#3a3f52', N: C.white });
+
+  // Growth Lab: modern glass building with a holo chart
+  S.growthlab = G.makeSprite([
+    '...G..G..G....',
+    '...G.GG.GG....',
+    '..CCCCCCCCCC..',
+    '.CCCCCCCCCCCC.',
+    '..TWWTWWTWWT..',
+    '..TWWTWWTWWT..',
+    '..TTTTDDTTTT..',
+    '..TTTTDDTTTT..',
+  ], { G: C.lime, C: C.cyan, T: C.teal, W: C.sky, D: C.ink });
+
+  // AI drone: tiny hovering helper (for particles / flair)
+  S.aidrone = G.makeSprite([
+    'C.C',
+    'WWW',
+    'CKC',
+  ], { C: C.cyan, W: C.white, K: C.ink });
+
   // Commercial plaza: wide storefront, big windows
   S.plaza = G.makeSprite([
     'PPPPPPPPPPPPPPPP',
@@ -1260,6 +1300,46 @@ G.Data.FLAVOR = {
     passiveChance: 0.12, // 1031 exchange investor calls
   };
 
+  D.BLAKE = {
+    name: 'BLAKE SUDDATH',
+    title: 'THE GROWTH GURU',
+    sprite: 'blakeSuddath',
+    ability: 'AI OVERDRIVE',
+    ultimate: 'SCALE MODE',
+    scaleChance: 0.22, // chance a visit rolls the ultimate instead
+    intro: [
+      'Mentor. Rival. Power-up vendor. All at 100 mph.',
+      'Laptop in one hand, phone in the other, earbuds in,',
+      'coffee that never empties. Holographic charts orbit him.',
+    ],
+    // AI Overdrive drone flavor
+    drones: [
+      'FOLLOW-UP DRONE nudging your whole pipeline...',
+      'CONTENT CANNON firing viral videos across the map...',
+      'CRM SYNC organizing every old lead...',
+      'SCHEDULER BOT booking appointments...',
+      'COPY BOT writing listing descriptions...',
+      'GEO BOOSTER spawning clients online...',
+    ],
+    lines: [
+      '"Work smarter, not harder."',
+      '"Let\'s automate that."',
+      '"Scale beats hustle."',
+      '"Your next client is already looking for you."',
+      '"If AI can do it, why are you doing it?"',
+    ],
+    coffee: [
+      '*sips the coffee that never empties*',
+      '*already testing a newer AI tool mid-sentence*',
+      '*a holographic funnel chart rotates behind him*',
+    ],
+    scaleLines: [
+      'SCALE MODE ENGAGED!! The backpack of AI gadgets OPENS.',
+      'A swarm of AI agents deploys. Everything speeds up.',
+      'Leads double. Deals close faster. Cooldowns melt.',
+    ],
+  };
+
   // ----------------------------------------------------------
   // Secret characters (unlockable, playable)
   // ----------------------------------------------------------
@@ -1528,6 +1608,7 @@ G.Data.FLAVOR = {
     { id: 'aimaster',   name: 'AI MASTER',             desc: 'Own the AI Assistant and close 5 deals with it.', stat: 'aiCloses', goal: 5 },
     { id: 'squatch',    name: 'SQUATCH SPOTTER',       desc: 'Find Bigfoot in the woods. He is shy.' },
     { id: 'megaslayer', name: 'GIANT SLAYER',          desc: 'Defeat the final boss.' },
+    { id: 'scalemode',  name: 'SCALE BEATS HUSTLE',    desc: 'Trigger Blake Suddath\'s Scale Mode ultimate.' },
   ];
 
   // ----------------------------------------------------------
@@ -1559,9 +1640,10 @@ G.Data.FLAVOR = {
     ],
   };
 
-  // Map additions: bank + commercial plaza
+  // Map additions: bank + commercial plaza + growth lab
   D.MAP.locations.bank = { x: 434, y: 168, sprite: 'bank', label: 'FIRST NORTHERN BANK' };
   D.MAP.locations.plaza = { x: 222, y: 218, sprite: 'plaza', label: 'NOBLEZA COMMERCIAL PLAZA' };
+  D.MAP.locations.growthlab = { x: 278, y: 250, sprite: 'growthlab', label: 'SUDDATH GROWTH LAB' };
 
   // Hidden actions reached via map visits (not in the sidebar list)
   D.ACTIONS.push(
@@ -1725,6 +1807,9 @@ G.State = {
       weather: null,
       bradUsed: false,
       jeffCooldown: 0,
+      blakeCooldown: 0,
+      aiOverdrive: 0,
+      scaleMode: 0,
       commercialUnlocked: false,
       rivalry: 0,
       dayVolume: 0,
@@ -1769,6 +1854,9 @@ G.State = {
     st.weather = st.weather || null;
     st.bradUsed = st.bradUsed || false;
     st.jeffCooldown = st.jeffCooldown || 0;
+    st.blakeCooldown = st.blakeCooldown || 0;
+    st.aiOverdrive = st.aiOverdrive || 0;
+    st.scaleMode = st.scaleMode || 0;
     st.commercialUnlocked = st.commercialUnlocked || false;
     st.rivalry = st.rivalry || 0;
     st.dayVolume = st.dayVolume || 0;
@@ -1804,7 +1892,14 @@ G.State = {
     return G.Data.SEASON.baseEnergy
       + (this.has('ai') ? 1 : 0)
       + (this.has('corporateHQ') ? 1 : 0)
+      + (this.s.scaleMode > 0 ? 1 : 0)   // Blake's Scale Mode: everything speeds up
       + Math.min(3, this.rookieLevel());
+  },
+
+  blakeBuff() {
+    if (this.s.scaleMode > 0) return { label: 'SCALE MODE', days: this.s.scaleMode, color: G.C.cyan };
+    if (this.s.aiOverdrive > 0) return { label: 'AI OVERDRIVE', days: this.s.aiOverdrive, color: G.C.lime };
+    return null;
   },
 
   totalDay() { return this.s.month * G.Data.SEASON.daysPerMonth + this.s.dayOfMonth; },
@@ -2048,6 +2143,7 @@ G.State = {
       if (this.has('videographer')) adj += 0.15;
     }
     if ((id === 'negotiate' || id === 'inspect') && this.s.effects.preapproved) adj += 0.15;
+    if (this.s.scaleMode > 0) adj += 0.12;   // Scale Mode: higher close chance, faster tasks
     return adj;
   },
 
@@ -2417,12 +2513,53 @@ G.State = {
   },
 
   // ----------------------------------------------------------
+  // Blake Suddath - The Growth Guru (AI Overdrive / Scale Mode)
+  // ----------------------------------------------------------
+  visitBlake() {
+    const s = this.s;
+    const B = G.Data.BLAKE;
+    if (s.blakeCooldown > 0) {
+      return { lines: ['BLAKE: "Systems are still running - give it ' + s.blakeCooldown + ' day(s)."',
+        G.choice(B.coffee), '"' + G.choice(['Scale beats hustle.', 'Work smarter, not harder.']) + '"'], used: true };
+    }
+    s.blakeCooldown = 3;
+    const lines = [B.name + ' - ' + B.title];
+
+    if (G.chance(B.scaleChance)) {
+      // ULTIMATE: Scale Mode
+      s.scaleMode = Math.max(s.scaleMode, 2);
+      s.energy = Math.min(s.energy + 2, this.maxEnergy());
+      s.abilityUsed = false; // cooldowns melt
+      lines.push(...B.scaleLines);
+      for (let i = 0; i < 2; i++) {
+        const l = this.spawnLead();
+        lines.push('+ LEAD: ' + l.name + ' recruited by the AI swarm!');
+      }
+      lines.push('', 'SCALE MODE active for 2 days: 2x leads, faster closes, +1 energy, free abilities.');
+      G.Profile.award('scalemode');
+    } else {
+      // SPECIAL: AI Overdrive
+      s.aiOverdrive = Math.max(s.aiOverdrive, 3);
+      lines.push(...B.intro);
+      lines.push('', B.ability + ' DEPLOYED:');
+      const twoDrones = G.shuffle(B.drones).slice(0, 2);
+      for (const d of twoDrones) lines.push('* ' + d);
+      const l = this.spawnLead();
+      lines.push('', '+ LEAD: ' + l.name + ' (network effect kicking in)');
+      lines.push(G.choice(B.coffee));
+      lines.push('', 'AI OVERDRIVE active 3 days: passive leads + income, auto follow-up.');
+    }
+    lines.push(G.choice(B.lines));
+    return { lines };
+  },
+
+  // ----------------------------------------------------------
   // Special ability (once per day) - per character
   // ----------------------------------------------------------
   useAbility() {
     const s = this.s;
-    if (s.abilityUsed) return null;
-    s.abilityUsed = true;
+    if (s.abilityUsed && !(s.scaleMode > 0)) return null;
+    if (!(s.scaleMode > 0)) s.abilityUsed = true;
     const lines = [];
     const perk = this.perk();
 
@@ -2583,6 +2720,28 @@ G.State = {
           passiveLines.push('Those pro photos worked: an offer came in on ' + l.name + '\'s place!');
         }
       }
+    }
+
+    // 3b. BLAKE SUDDATH buffs: AI Overdrive / Scale Mode + Network Effect
+    if (s.scaleMode > 0 || s.aiOverdrive > 0) {
+      const scaling = s.scaleMode > 0;
+      const drones = scaling ? 2 : 1;                 // AI-sourced leads
+      for (let i = 0; i < drones; i++) {
+        if (G.chance(scaling ? 0.9 : 0.6)) passiveSpawn(1, null, "BLAKE'S AI SOURCED A LEAD: %N (%T)!");
+      }
+      // auto follow-up (CRM Sync / Daily Discipline style)
+      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + (scaling ? 12 : 8), 0, 100);
+      // passive income (AI drones earning referral fees / marketing)
+      const income = scaling ? 2000 : 800;
+      s.cash += income; s.stats.commission += income;
+      // Network Effect: leads multiply
+      if (G.chance(scaling ? 0.6 : 0.35)) {
+        const r = this.spawnLead('referral'); s.stats.referrals++; G.Profile.bump('referrals');
+        passiveLines.push('NETWORK EFFECT: ' + r.name + ' was introduced by someone Blake connected you with!');
+      }
+      passiveLines.push((scaling ? 'SCALE MODE' : 'AI OVERDRIVE') + ': AI drones worked overnight (+' + G.money(income) + ' passive).');
+      if (scaling) { s.scaleMode--; if (s.scaleMode === 0) passiveLines.push('Scale Mode wound down. The dashboards fade.'); }
+      else { s.aiOverdrive--; if (s.aiOverdrive === 0) passiveLines.push('AI Overdrive ended. The drones return to the backpack.'); }
     }
 
     // 4. rival AI + trash talk scaled by rivalry
@@ -3754,19 +3913,25 @@ G.Engine.register('map', {
       note: !s.commercialUnlocked ? 'MEET' : (s.jeffCooldown > 0 ? s.jeffCooldown + 'D' : '-1E'),
       desc: 'Visit Jeff Nobleza, The Commercial King. Cap rates. Big money.',
     });
+    items.push({
+      label: '> BLAKE (LAB)', id: 'blake', kind: 'visit',
+      disabled: s.blakeCooldown > 0,
+      note: s.blakeCooldown > 0 ? s.blakeCooldown + 'D' : 'FREE',
+      desc: 'Visit Blake Suddath, The Growth Guru. AI OVERDRIVE, or roll SCALE MODE.',
+    });
     const ab = G.State.char().ability;
     items.push({
       label: '* ' + ab.name, id: 'ability', kind: 'ability',
-      disabled: s.abilityUsed,
-      note: s.abilityUsed ? 'USED' : 'FREE',
+      disabled: s.abilityUsed && !(s.scaleMode > 0),
+      note: (s.abilityUsed && !(s.scaleMode > 0)) ? 'USED' : 'FREE',
       desc: ab.desc,
     });
     // SHOP / STATS / PIPELINE / END DAY live as fixed buttons below the list
 
     const keepIndex = this.menu ? this.menu.index : 0;
     this.menu = new G.Menu(items, {
-      x: 4, y: 44, w: 142, rowH: 11,
-      maxVisible: 14,
+      x: 4, y: 44, w: 142, rowH: 10,
+      maxVisible: 15,
       onSelect: (it) => this.onMenuPick(it),
     });
     this.menu.index = Math.min(keepIndex, items.length - 1);
@@ -3791,6 +3956,12 @@ G.Engine.register('map', {
     } else if (it.id === 'jeff') {
       const loc = G.Data.MAP.locations.plaza;
       this.pendingAction = { id: '_jeff', loc: 'plaza' };
+      this.carTarget = { x: loc.x, y: loc.y + 12 };
+      this.mode = 'drive';
+      G.Audio.swoosh();
+    } else if (it.id === 'blake') {
+      const loc = G.Data.MAP.locations.growthlab;
+      this.pendingAction = { id: '_blake', loc: 'growthlab' };
       this.carTarget = { x: loc.x, y: loc.y + 12 };
       this.mode = 'drive';
       G.Audio.swoosh();
@@ -3863,6 +4034,28 @@ G.Engine.register('map', {
         onClose: () => this.buildMenu(),
       });
     }
+  },
+
+  visitBlake() {
+    const res = G.State.visitBlake();
+    const scaling = G.State.s.scaleMode > 0 && !res.used;
+    if (!res.used) {
+      G.Audio[scaling ? 'fanfare' : 'ability']();
+      G.Engine.shake = scaling ? 5 : 3;
+      // AI drones + holographic charts swirl out
+      this.particles.spawn(278, 235, {
+        count: scaling ? 50 : 28,
+        colors: scaling ? [G.C.cyan, G.C.lime, G.C.sky, G.C.white] : [G.C.cyan, G.C.lime, G.C.sky],
+        life: 1.6, vyMin: -110, vyMax: -30,
+      });
+    }
+    G.Popup.show({
+      title: res.used ? 'GROWTH LAB' : (scaling ? 'SCALE MODE!!' : 'AI OVERDRIVE!'),
+      lines: res.lines,
+      sprite: 'blakeSuddath',
+      color: scaling ? G.C.cyan : G.C.lime,
+      onClose: () => this.buildMenu(),
+    });
   },
 
   // ----------------------------------------------------------
@@ -3964,6 +4157,7 @@ G.Engine.register('map', {
         const a = this.pendingAction;
         this.pendingAction = null;
         if (a.id === '_brad') { this.visitBrad(); return; }
+        if (a.id === '_blake') { this.visitBlake(); return; }
         if (a.id === '_jeff') { this.visitJeff(); return; }
         if (a.minigame) {
           G.Engine.goto(a.minigame, { actionId: a.id });
@@ -4087,6 +4281,7 @@ G.Engine.register('map', {
       if (selected.kind === 'action') selLoc = (G.Data.ACTIONS.find(a => a.id === selected.id) || {}).loc;
       if (selected.id === 'brad') selLoc = 'bank';
       if (selected.id === 'jeff') selLoc = 'plaza';
+      if (selected.id === 'blake') selLoc = 'growthlab';
     }
     for (const [key, loc] of Object.entries(G.Data.MAP.locations)) {
       const sp = G.Sprites[loc.sprite];
@@ -4174,6 +4369,14 @@ G.Engine.register('map', {
       ctx.fillRect(72 + i * 8, 28, 6, 6);
       ctx.strokeStyle = G.C.slate;
       ctx.strokeRect(72.5 + i * 8, 28.5, 5, 5);
+    }
+
+    // Blake buff badge (blinks)
+    const buff = G.State.blakeBuff();
+    if (buff && Math.floor(this.t * 3) % 2 === 0) {
+      G.UI.text(ctx, buff.label + ' ' + buff.days + 'D', 38, 37, { size: 6, color: buff.color });
+    } else if (buff) {
+      G.UI.text(ctx, buff.label + ' ' + buff.days + 'D', 38, 37, { size: 6, color: G.C.slate });
     }
 
     this.menu.render(ctx);

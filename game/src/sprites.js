@@ -545,6 +545,46 @@ G.makeSprite = (rows, colors) => {
     '..WWWWDDWWWW..',
   ], { Y: C.yellow, W: C.gray, D: '#6b4226' });
 
+  // BLAKE SUDDATH: The Growth Guru - quarter-zip, earbuds, laptop, coffee, phone
+  S.blakeSuddath = G.makeSprite([
+    '....HHHHHH....',
+    '...HHHHHHHH...',
+    '...HSSSSSSH...',
+    '...HSKSSKSH...',
+    '..B.SSSSSS.B..',
+    '....SWWWWS....',
+    '....SSSSSS....',
+    '....QQQQQQ....',
+    '...QQQZZQQQ...',
+    '..L.QQZZQQ.C..',
+    '..L.QQQQQQ.P..',
+    '....QQQQQQ....',
+    '....JJJJJJ....',
+    '....JJ..JJ....',
+    '....JJ..JJ....',
+    '....JJ..JJ....',
+    '...NN....NN...',
+  ], { H: '#6b4226', S: '#e8b796', K: C.ink, W: C.white, B: C.cyan, Q: C.teal, Z: C.sky, L: C.gray, C: C.orange, P: C.sky, J: '#3a3f52', N: C.white });
+
+  // Growth Lab: modern glass building with a holo chart
+  S.growthlab = G.makeSprite([
+    '...G..G..G....',
+    '...G.GG.GG....',
+    '..CCCCCCCCCC..',
+    '.CCCCCCCCCCCC.',
+    '..TWWTWWTWWT..',
+    '..TWWTWWTWWT..',
+    '..TTTTDDTTTT..',
+    '..TTTTDDTTTT..',
+  ], { G: C.lime, C: C.cyan, T: C.teal, W: C.sky, D: C.ink });
+
+  // AI drone: tiny hovering helper (for particles / flair)
+  S.aidrone = G.makeSprite([
+    'C.C',
+    'WWW',
+    'CKC',
+  ], { C: C.cyan, W: C.white, K: C.ink });
+
   // Commercial plaza: wide storefront, big windows
   S.plaza = G.makeSprite([
     'PPPPPPPPPPPPPPPP',

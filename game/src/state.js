@@ -99,6 +99,9 @@ G.State = {
       weather: null,
       bradUsed: false,
       jeffCooldown: 0,
+      blakeCooldown: 0,
+      aiOverdrive: 0,
+      scaleMode: 0,
       commercialUnlocked: false,
       rivalry: 0,
       dayVolume: 0,
@@ -143,6 +146,9 @@ G.State = {
     st.weather = st.weather || null;
     st.bradUsed = st.bradUsed || false;
     st.jeffCooldown = st.jeffCooldown || 0;
+    st.blakeCooldown = st.blakeCooldown || 0;
+    st.aiOverdrive = st.aiOverdrive || 0;
+    st.scaleMode = st.scaleMode || 0;
     st.commercialUnlocked = st.commercialUnlocked || false;
     st.rivalry = st.rivalry || 0;
     st.dayVolume = st.dayVolume || 0;
@@ -178,7 +184,14 @@ G.State = {
     return G.Data.SEASON.baseEnergy
       + (this.has('ai') ? 1 : 0)
       + (this.has('corporateHQ') ? 1 : 0)
+      + (this.s.scaleMode > 0 ? 1 : 0)   // Blake's Scale Mode: everything speeds up
       + Math.min(3, this.rookieLevel());
+  },
+
+  blakeBuff() {
+    if (this.s.scaleMode > 0) return { label: 'SCALE MODE', days: this.s.scaleMode, color: G.C.cyan };
+    if (this.s.aiOverdrive > 0) return { label: 'AI OVERDRIVE', days: this.s.aiOverdrive, color: G.C.lime };
+    return null;
   },
 
   totalDay() { return this.s.month * G.Data.SEASON.daysPerMonth + this.s.dayOfMonth; },
@@ -422,6 +435,7 @@ G.State = {
       if (this.has('videographer')) adj += 0.15;
     }
     if ((id === 'negotiate' || id === 'inspect') && this.s.effects.preapproved) adj += 0.15;
+    if (this.s.scaleMode > 0) adj += 0.12;   // Scale Mode: higher close chance, faster tasks
     return adj;
   },
 
@@ -791,12 +805,53 @@ G.State = {
   },
 
   // ----------------------------------------------------------
+  // Blake Suddath - The Growth Guru (AI Overdrive / Scale Mode)
+  // ----------------------------------------------------------
+  visitBlake() {
+    const s = this.s;
+    const B = G.Data.BLAKE;
+    if (s.blakeCooldown > 0) {
+      return { lines: ['BLAKE: "Systems are still running - give it ' + s.blakeCooldown + ' day(s)."',
+        G.choice(B.coffee), '"' + G.choice(['Scale beats hustle.', 'Work smarter, not harder.']) + '"'], used: true };
+    }
+    s.blakeCooldown = 3;
+    const lines = [B.name + ' - ' + B.title];
+
+    if (G.chance(B.scaleChance)) {
+      // ULTIMATE: Scale Mode
+      s.scaleMode = Math.max(s.scaleMode, 2);
+      s.energy = Math.min(s.energy + 2, this.maxEnergy());
+      s.abilityUsed = false; // cooldowns melt
+      lines.push(...B.scaleLines);
+      for (let i = 0; i < 2; i++) {
+        const l = this.spawnLead();
+        lines.push('+ LEAD: ' + l.name + ' recruited by the AI swarm!');
+      }
+      lines.push('', 'SCALE MODE active for 2 days: 2x leads, faster closes, +1 energy, free abilities.');
+      G.Profile.award('scalemode');
+    } else {
+      // SPECIAL: AI Overdrive
+      s.aiOverdrive = Math.max(s.aiOverdrive, 3);
+      lines.push(...B.intro);
+      lines.push('', B.ability + ' DEPLOYED:');
+      const twoDrones = G.shuffle(B.drones).slice(0, 2);
+      for (const d of twoDrones) lines.push('* ' + d);
+      const l = this.spawnLead();
+      lines.push('', '+ LEAD: ' + l.name + ' (network effect kicking in)');
+      lines.push(G.choice(B.coffee));
+      lines.push('', 'AI OVERDRIVE active 3 days: passive leads + income, auto follow-up.');
+    }
+    lines.push(G.choice(B.lines));
+    return { lines };
+  },
+
+  // ----------------------------------------------------------
   // Special ability (once per day) - per character
   // ----------------------------------------------------------
   useAbility() {
     const s = this.s;
-    if (s.abilityUsed) return null;
-    s.abilityUsed = true;
+    if (s.abilityUsed && !(s.scaleMode > 0)) return null;
+    if (!(s.scaleMode > 0)) s.abilityUsed = true;
     const lines = [];
     const perk = this.perk();
 
@@ -957,6 +1012,28 @@ G.State = {
           passiveLines.push('Those pro photos worked: an offer came in on ' + l.name + '\'s place!');
         }
       }
+    }
+
+    // 3b. BLAKE SUDDATH buffs: AI Overdrive / Scale Mode + Network Effect
+    if (s.scaleMode > 0 || s.aiOverdrive > 0) {
+      const scaling = s.scaleMode > 0;
+      const drones = scaling ? 2 : 1;                 // AI-sourced leads
+      for (let i = 0; i < drones; i++) {
+        if (G.chance(scaling ? 0.9 : 0.6)) passiveSpawn(1, null, "BLAKE'S AI SOURCED A LEAD: %N (%T)!");
+      }
+      // auto follow-up (CRM Sync / Daily Discipline style)
+      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + (scaling ? 12 : 8), 0, 100);
+      // passive income (AI drones earning referral fees / marketing)
+      const income = scaling ? 2000 : 800;
+      s.cash += income; s.stats.commission += income;
+      // Network Effect: leads multiply
+      if (G.chance(scaling ? 0.6 : 0.35)) {
+        const r = this.spawnLead('referral'); s.stats.referrals++; G.Profile.bump('referrals');
+        passiveLines.push('NETWORK EFFECT: ' + r.name + ' was introduced by someone Blake connected you with!');
+      }
+      passiveLines.push((scaling ? 'SCALE MODE' : 'AI OVERDRIVE') + ': AI drones worked overnight (+' + G.money(income) + ' passive).');
+      if (scaling) { s.scaleMode--; if (s.scaleMode === 0) passiveLines.push('Scale Mode wound down. The dashboards fade.'); }
+      else { s.aiOverdrive--; if (s.aiOverdrive === 0) passiveLines.push('AI Overdrive ended. The drones return to the backpack.'); }
     }
 
     // 4. rival AI + trash talk scaled by rivalry

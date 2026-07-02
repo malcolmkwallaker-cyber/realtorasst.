@@ -81,19 +81,25 @@ G.Engine.register('map', {
       note: !s.commercialUnlocked ? 'MEET' : (s.jeffCooldown > 0 ? s.jeffCooldown + 'D' : '-1E'),
       desc: 'Visit Jeff Nobleza, The Commercial King. Cap rates. Big money.',
     });
+    items.push({
+      label: '> BLAKE (LAB)', id: 'blake', kind: 'visit',
+      disabled: s.blakeCooldown > 0,
+      note: s.blakeCooldown > 0 ? s.blakeCooldown + 'D' : 'FREE',
+      desc: 'Visit Blake Suddath, The Growth Guru. AI OVERDRIVE, or roll SCALE MODE.',
+    });
     const ab = G.State.char().ability;
     items.push({
       label: '* ' + ab.name, id: 'ability', kind: 'ability',
-      disabled: s.abilityUsed,
-      note: s.abilityUsed ? 'USED' : 'FREE',
+      disabled: s.abilityUsed && !(s.scaleMode > 0),
+      note: (s.abilityUsed && !(s.scaleMode > 0)) ? 'USED' : 'FREE',
       desc: ab.desc,
     });
     // SHOP / STATS / PIPELINE / END DAY live as fixed buttons below the list
 
     const keepIndex = this.menu ? this.menu.index : 0;
     this.menu = new G.Menu(items, {
-      x: 4, y: 44, w: 142, rowH: 11,
-      maxVisible: 14,
+      x: 4, y: 44, w: 142, rowH: 10,
+      maxVisible: 15,
       onSelect: (it) => this.onMenuPick(it),
     });
     this.menu.index = Math.min(keepIndex, items.length - 1);
@@ -118,6 +124,12 @@ G.Engine.register('map', {
     } else if (it.id === 'jeff') {
       const loc = G.Data.MAP.locations.plaza;
       this.pendingAction = { id: '_jeff', loc: 'plaza' };
+      this.carTarget = { x: loc.x, y: loc.y + 12 };
+      this.mode = 'drive';
+      G.Audio.swoosh();
+    } else if (it.id === 'blake') {
+      const loc = G.Data.MAP.locations.growthlab;
+      this.pendingAction = { id: '_blake', loc: 'growthlab' };
       this.carTarget = { x: loc.x, y: loc.y + 12 };
       this.mode = 'drive';
       G.Audio.swoosh();
@@ -190,6 +202,28 @@ G.Engine.register('map', {
         onClose: () => this.buildMenu(),
       });
     }
+  },
+
+  visitBlake() {
+    const res = G.State.visitBlake();
+    const scaling = G.State.s.scaleMode > 0 && !res.used;
+    if (!res.used) {
+      G.Audio[scaling ? 'fanfare' : 'ability']();
+      G.Engine.shake = scaling ? 5 : 3;
+      // AI drones + holographic charts swirl out
+      this.particles.spawn(278, 235, {
+        count: scaling ? 50 : 28,
+        colors: scaling ? [G.C.cyan, G.C.lime, G.C.sky, G.C.white] : [G.C.cyan, G.C.lime, G.C.sky],
+        life: 1.6, vyMin: -110, vyMax: -30,
+      });
+    }
+    G.Popup.show({
+      title: res.used ? 'GROWTH LAB' : (scaling ? 'SCALE MODE!!' : 'AI OVERDRIVE!'),
+      lines: res.lines,
+      sprite: 'blakeSuddath',
+      color: scaling ? G.C.cyan : G.C.lime,
+      onClose: () => this.buildMenu(),
+    });
   },
 
   // ----------------------------------------------------------
@@ -291,6 +325,7 @@ G.Engine.register('map', {
         const a = this.pendingAction;
         this.pendingAction = null;
         if (a.id === '_brad') { this.visitBrad(); return; }
+        if (a.id === '_blake') { this.visitBlake(); return; }
         if (a.id === '_jeff') { this.visitJeff(); return; }
         if (a.minigame) {
           G.Engine.goto(a.minigame, { actionId: a.id });
@@ -414,6 +449,7 @@ G.Engine.register('map', {
       if (selected.kind === 'action') selLoc = (G.Data.ACTIONS.find(a => a.id === selected.id) || {}).loc;
       if (selected.id === 'brad') selLoc = 'bank';
       if (selected.id === 'jeff') selLoc = 'plaza';
+      if (selected.id === 'blake') selLoc = 'growthlab';
     }
     for (const [key, loc] of Object.entries(G.Data.MAP.locations)) {
       const sp = G.Sprites[loc.sprite];
@@ -501,6 +537,14 @@ G.Engine.register('map', {
       ctx.fillRect(72 + i * 8, 28, 6, 6);
       ctx.strokeStyle = G.C.slate;
       ctx.strokeRect(72.5 + i * 8, 28.5, 5, 5);
+    }
+
+    // Blake buff badge (blinks)
+    const buff = G.State.blakeBuff();
+    if (buff && Math.floor(this.t * 3) % 2 === 0) {
+      G.UI.text(ctx, buff.label + ' ' + buff.days + 'D', 38, 37, { size: 6, color: buff.color });
+    } else if (buff) {
+      G.UI.text(ctx, buff.label + ' ' + buff.days + 'D', 38, 37, { size: 6, color: G.C.slate });
     }
 
     this.menu.render(ctx);
