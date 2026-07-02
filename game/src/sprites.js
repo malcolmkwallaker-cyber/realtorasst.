@@ -578,6 +578,39 @@ G.makeSprite = (rows, colors) => {
     '..TTTTDDTTTT..',
   ], { G: C.lime, C: C.cyan, T: C.teal, W: C.sky, D: C.ink });
 
+  // TYLER LEWIS: The Systems Architect - black hair, clean-shaven, black shirt,
+  // glowing tablet + smartwatch (controls his digital assistants)
+  S.tylerLewis = G.makeSprite([
+    '....HHHHHH....',
+    '...HHHHHHHH...',
+    '...HSSSSSSH...',
+    '...HSKSSKSH...',
+    '....SSSSSS....',
+    '....SSSSSS....',
+    '....SSSSSS....',
+    '....ZZZZZZ....',
+    '....ZZZZZZ....',
+    '..T.ZZZZZZ.M..',
+    '..T.ZZZZZZ.S..',
+    '....ZZZZZZ....',
+    '....JJJJJJ....',
+    '....JJ..JJ....',
+    '....JJ..JJ....',
+    '....JJ..JJ....',
+    '...NN....NN...',
+  ], { H: '#232433', S: '#e8b796', K: C.ink, Z: '#232433', T: C.cyan, M: C.red, J: '#3a3f52', N: C.white });
+
+  // Systems Lab: dark server building with data lights
+  S.systemslab = G.makeSprite([
+    '..KKKKKKKKKK..',
+    '..KCKCKCKCKK..',
+    '..KCKCKCKCKK..',
+    '..KKKKKKKKKK..',
+    '..KWWKWWKWWK..',
+    '..KWWKWWKWWK..',
+    '..KKKKDDKKKK..',
+  ], { K: '#232433', C: C.cyan, W: C.sky, D: C.teal });
+
   // AI drone: tiny hovering helper (for particles / flair)
   S.aidrone = G.makeSprite([
     'C.C',

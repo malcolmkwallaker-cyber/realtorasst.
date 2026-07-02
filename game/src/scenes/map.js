@@ -87,6 +87,12 @@ G.Engine.register('map', {
       note: s.blakeCooldown > 0 ? s.blakeCooldown + 'D' : 'FREE',
       desc: 'Visit Blake Suddath, The Growth Guru. AI OVERDRIVE, or roll SCALE MODE.',
     });
+    items.push({
+      label: '= TYLER (SYS)', id: 'tyler', kind: 'visit',
+      disabled: s.tylerCooldown > 0,
+      note: s.tylerCooldown > 0 ? s.tylerCooldown + 'D' : 'FREE',
+      desc: 'Visit Tyler Lewis, The Systems Architect. Cirql Scan + compounding systems.',
+    });
     const ab = G.State.char().ability;
     items.push({
       label: '* ' + ab.name, id: 'ability', kind: 'ability',
@@ -98,8 +104,8 @@ G.Engine.register('map', {
 
     const keepIndex = this.menu ? this.menu.index : 0;
     this.menu = new G.Menu(items, {
-      x: 4, y: 44, w: 142, rowH: 10,
-      maxVisible: 15,
+      x: 4, y: 44, w: 142, rowH: 9,
+      maxVisible: 16,
       onSelect: (it) => this.onMenuPick(it),
     });
     this.menu.index = Math.min(keepIndex, items.length - 1);
@@ -130,6 +136,12 @@ G.Engine.register('map', {
     } else if (it.id === 'blake') {
       const loc = G.Data.MAP.locations.growthlab;
       this.pendingAction = { id: '_blake', loc: 'growthlab' };
+      this.carTarget = { x: loc.x, y: loc.y + 12 };
+      this.mode = 'drive';
+      G.Audio.swoosh();
+    } else if (it.id === 'tyler') {
+      const loc = G.Data.MAP.locations.systemslab;
+      this.pendingAction = { id: '_tyler', loc: 'systemslab' };
       this.carTarget = { x: loc.x, y: loc.y + 12 };
       this.mode = 'drive';
       G.Audio.swoosh();
@@ -222,6 +234,29 @@ G.Engine.register('map', {
       lines: res.lines,
       sprite: 'blakeSuddath',
       color: scaling ? G.C.cyan : G.C.lime,
+      onClose: () => this.buildMenu(),
+    });
+  },
+
+  visitTyler() {
+    const before = { sys: G.State.s.systemOverride, oh: G.State.s.openHouseEngine };
+    const res = G.State.visitTyler();
+    const override = G.State.s.systemOverride > before.sys;
+    if (!res.used) {
+      G.Audio[override ? 'fanfare' : 'ability']();
+      G.Engine.shake = override ? 5 : 2;
+      // holographic radar sweep + dashboards
+      this.particles.spawn(185, 228, {
+        count: override ? 44 : 24,
+        colors: override ? [G.C.sky, G.C.cyan, G.C.white, G.C.teal] : [G.C.sky, G.C.cyan, G.C.teal],
+        life: 1.6, vyMin: -100, vyMax: -30,
+      });
+    }
+    G.Popup.show({
+      title: res.used ? 'SYSTEMS LAB' : (override ? 'SYSTEM OVERRIDE!!' : 'CIRQL SCAN'),
+      lines: res.lines,
+      sprite: 'tylerLewis',
+      color: override ? G.C.sky : G.C.teal,
       onClose: () => this.buildMenu(),
     });
   },
@@ -326,6 +361,7 @@ G.Engine.register('map', {
         this.pendingAction = null;
         if (a.id === '_brad') { this.visitBrad(); return; }
         if (a.id === '_blake') { this.visitBlake(); return; }
+        if (a.id === '_tyler') { this.visitTyler(); return; }
         if (a.id === '_jeff') { this.visitJeff(); return; }
         if (a.minigame) {
           G.Engine.goto(a.minigame, { actionId: a.id });
@@ -450,6 +486,7 @@ G.Engine.register('map', {
       if (selected.id === 'brad') selLoc = 'bank';
       if (selected.id === 'jeff') selLoc = 'plaza';
       if (selected.id === 'blake') selLoc = 'growthlab';
+      if (selected.id === 'tyler') selLoc = 'systemslab';
     }
     for (const [key, loc] of Object.entries(G.Data.MAP.locations)) {
       const sp = G.Sprites[loc.sprite];
@@ -539,12 +576,15 @@ G.Engine.register('map', {
       ctx.strokeRect(72.5 + i * 8, 28.5, 5, 5);
     }
 
-    // Blake buff badge (blinks)
-    const buff = G.State.blakeBuff();
-    if (buff && Math.floor(this.t * 3) % 2 === 0) {
-      G.UI.text(ctx, buff.label + ' ' + buff.days + 'D', 38, 37, { size: 6, color: buff.color });
-    } else if (buff) {
-      G.UI.text(ctx, buff.label + ' ' + buff.days + 'D', 38, 37, { size: 6, color: G.C.slate });
+    // Active buff badges (Blake / Tyler), blinking
+    const buffs = G.State.activeBuffs();
+    if (buffs.length) {
+      const blink = Math.floor(this.t * 3) % 2 === 0;
+      let bx = 38;
+      for (const bf of buffs) {
+        G.UI.text(ctx, bf.t, bx, 37, { size: 6, color: blink ? bf.c : G.C.slate });
+        bx += G.UI.measure(ctx, bf.t, 6) + 5;
+      }
     }
 
     this.menu.render(ctx);

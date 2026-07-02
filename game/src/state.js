@@ -102,6 +102,10 @@ G.State = {
       blakeCooldown: 0,
       aiOverdrive: 0,
       scaleMode: 0,
+      tylerCooldown: 0,
+      tylerTier: 0,
+      systemOverride: 0,
+      openHouseEngine: 0,
       commercialUnlocked: false,
       rivalry: 0,
       dayVolume: 0,
@@ -149,6 +153,10 @@ G.State = {
     st.blakeCooldown = st.blakeCooldown || 0;
     st.aiOverdrive = st.aiOverdrive || 0;
     st.scaleMode = st.scaleMode || 0;
+    st.tylerCooldown = st.tylerCooldown || 0;
+    st.tylerTier = st.tylerTier || 0;
+    st.systemOverride = st.systemOverride || 0;
+    st.openHouseEngine = st.openHouseEngine || 0;
     st.commercialUnlocked = st.commercialUnlocked || false;
     st.rivalry = st.rivalry || 0;
     st.dayVolume = st.dayVolume || 0;
@@ -192,6 +200,17 @@ G.State = {
     if (this.s.scaleMode > 0) return { label: 'SCALE MODE', days: this.s.scaleMode, color: G.C.cyan };
     if (this.s.aiOverdrive > 0) return { label: 'AI OVERDRIVE', days: this.s.aiOverdrive, color: G.C.lime };
     return null;
+  },
+
+  // Compact list of active timed buffs / passive tiers for the HUD badge line
+  activeBuffs() {
+    const s = this.s, out = [];
+    if (s.scaleMode > 0) out.push({ t: 'SCALE' + s.scaleMode, c: G.C.cyan });
+    else if (s.aiOverdrive > 0) out.push({ t: 'AI' + s.aiOverdrive, c: G.C.lime });
+    if (s.systemOverride > 0) out.push({ t: 'SYS' + s.systemOverride, c: G.C.sky });
+    else if (s.openHouseEngine > 0) out.push({ t: 'OH' + s.openHouseEngine, c: G.C.orange });
+    if (s.tylerTier > 0) out.push({ t: 'DSC' + s.tylerTier, c: G.C.teal });
+    return out;
   },
 
   totalDay() { return this.s.month * G.Data.SEASON.daysPerMonth + this.s.dayOfMonth; },
@@ -846,6 +865,54 @@ G.State = {
   },
 
   // ----------------------------------------------------------
+  // Tyler Lewis - The Systems Architect (systems that compound;
+  // weak early, strong late). Every visit runs Cirql Scan and
+  // strengthens the Daily Discipline passive; may deploy the
+  // Open House Engine or the System Override ultimate.
+  // ----------------------------------------------------------
+  visitTyler() {
+    const s = this.s;
+    const T = G.Data.TYLER;
+    if (s.tylerCooldown > 0) {
+      return { lines: ['TYLER: "The systems are running. Give it ' + s.tylerCooldown + ' day(s)."',
+        '"' + G.choice(['Consistency beats intensity.', 'The basics always win.']) + '"'], used: true };
+    }
+    s.tylerCooldown = 2;
+    s.tylerTier = Math.min(s.tylerTier + 1, 6);
+    const lines = [T.name + ' - ' + T.title];
+
+    // Cirql Scan (every visit): reveal + warm, scaling with tier
+    lines.push(...T.scanLines);
+    for (const l of this.leadsInStage('new', 'hot')) l.warmth = G.clamp(l.warmth + 15, 0, 100);
+    const reveals = 1 + Math.floor(s.tylerTier / 2);
+    for (let i = 0; i < reveals; i++) {
+      const l = this.spawnLead(G.chance(0.5) ? 'pastclient' : 'referral');
+      l.warmth = G.clamp(l.warmth + 10, 0, 100);
+      lines.push('+ REVEALED: ' + l.name + ' (' + l.label + ')');
+    }
+    // surface a hidden listing appointment
+    const hiddenSeller = this.bestLead(this.leadsInStage('new', 'hot').filter(l => l.seller));
+    if (hiddenSeller) { this.advance(hiddenSeller, 'appt'); lines.push('+ HIDDEN LISTING APPT: ' + hiddenSeller.name + ' is ready to meet!'); }
+
+    // Roll a bigger system (gated by tier -> weak early, strong late)
+    if (s.tylerTier >= 2 && G.chance(T.overrideChance)) {
+      s.systemOverride = Math.max(s.systemOverride, 3);
+      lines.push('', ...T.overrideLines);
+      lines.push('SYSTEM OVERRIDE active 3 days.');
+      G.Profile.award('sysoverride');
+    } else if (G.chance(T.engineChance)) {
+      s.openHouseEngine = Math.max(s.openHouseEngine, 2);
+      lines.push('', ...T.engineLines);
+      lines.push('OPEN HOUSE ENGINE active 2 days.');
+    } else {
+      lines.push('', 'DAILY DISCIPLINE strengthened (tier ' + s.tylerTier + '): more auto follow-up',
+        'and referral generation every day. The system compounds.');
+    }
+    lines.push(G.choice(T.lines));
+    return { lines };
+  },
+
+  // ----------------------------------------------------------
   // Special ability (once per day) - per character
   // ----------------------------------------------------------
   useAbility() {
@@ -1034,6 +1101,39 @@ G.State = {
       passiveLines.push((scaling ? 'SCALE MODE' : 'AI OVERDRIVE') + ': AI drones worked overnight (+' + G.money(income) + ' passive).');
       if (scaling) { s.scaleMode--; if (s.scaleMode === 0) passiveLines.push('Scale Mode wound down. The dashboards fade.'); }
       else { s.aiOverdrive--; if (s.aiOverdrive === 0) passiveLines.push('AI Overdrive ended. The drones return to the backpack.'); }
+    }
+
+    // 3c. TYLER LEWIS: Daily Discipline (scales with tier) + System Override + Open House Engine
+    if (s.tylerTier > 0) {
+      const tier = s.tylerTier;
+      // auto follow-up: warmth scales with tier
+      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + 5 + tier * 2, 0, 100);
+      // organize / remind about neglected clients: reset the most-neglected lead so it won't ghost
+      const neglected = this.leadsInStage('new', 'hot').sort((a, b) => b.daysInStage - a.daysInStage)[0];
+      if (neglected) neglected.daysInStage = 0;
+      // referral generation: weak early, strong late
+      if (G.chance(0.08 + tier * 0.05)) {
+        const r = this.spawnLead('referral'); s.stats.referrals++; G.Profile.bump('referrals');
+        passiveLines.push('DAILY DISCIPLINE: consistent follow-up earned a referral from ' + r.name + '.');
+      }
+    }
+    if (s.systemOverride > 0) {
+      // paperwork completes itself: auto-close one clean pending deal
+      const closeable = this.leadsInStage('pending').filter(l => !l.issue && l.delay <= 0 && l.daysInStage >= 1)[0];
+      if (closeable) { const cl = []; this.closeLead(closeable, cl); passiveLines.push('SYSTEM OVERRIDE closed a deal automatically: ' + cl[0]); }
+      // CRM organized + marketing automated + passive income + doubled referrals
+      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + 10, 0, 100);
+      s.stats.followers += 200;
+      s.cash += 1500; s.stats.commission += 1500;
+      if (G.chance(0.6)) { const r = this.spawnLead('referral'); s.stats.referrals++; G.Profile.bump('referrals'); passiveLines.push('SYSTEM OVERRIDE: referral engine produced ' + r.name + '.'); }
+      passiveLines.push('SYSTEM OVERRIDE: automations ran the business overnight (+' + G.money(1500) + ').');
+      s.systemOverride--; if (s.systemOverride === 0) passiveLines.push('System Override ended. The systems keep humming.');
+    }
+    if (s.openHouseEngine > 0) {
+      const g1 = this.spawnLead('openhouse'); G.Profile.bump('ohLeads');
+      passiveLines.push('OPEN HOUSE ENGINE: ' + g1.name + ' signed in overnight.');
+      if (G.chance(0.6)) { const g2 = this.spawnLead(G.chance(0.5) ? 'expired' : 'referral'); passiveLines.push('OPEN HOUSE ENGINE: + ' + g2.name + ' (' + g2.label + ').'); }
+      s.openHouseEngine--; if (s.openHouseEngine === 0) passiveLines.push('Open House Engine wrapped up.');
     }
 
     // 4. rival AI + trash talk scaled by rivalry

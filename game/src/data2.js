@@ -98,6 +98,41 @@
     ],
   };
 
+  D.TYLER = {
+    name: 'TYLER LEWIS',
+    title: 'THE SYSTEMS ARCHITECT',
+    sprite: 'tylerLewis',
+    overrideChance: 0.15,   // gated behind tier >= 2
+    engineChance: 0.30,
+    intro: [
+      'Calm. Analytical. Builds the system once, then leverages it.',
+      'A glowing tablet controls his digital assistants; his smartwatch',
+      'streams analytics. Floating dashboards hum around him.',
+    ],
+    scanLines: [
+      'CIRQL SCAN: a holographic radar sweeps the whole map...',
+      '- forgotten past clients light up',
+      '- warm leads highlighted',
+      '- referral opportunities revealed',
+      '- a hidden listing appointment surfaces',
+    ],
+    engineLines: [
+      'OPEN HOUSE ENGINE deployed. Visitors keep arriving on their own,',
+      'generating buyer leads, seller leads, and referrals for days.',
+    ],
+    overrideLines: [
+      'SYSTEM OVERRIDE!! Every follow-up automates. Paperwork completes',
+      'itself. The CRM organizes. Referrals double. Passive income climbs.',
+    ],
+    lines: [
+      '"The basics always win."',
+      '"Build the system once."',
+      '"Consistency beats intensity."',
+      '"Automation creates freedom."',
+      '"Your CRM should work harder than you do."',
+    ],
+  };
+
   // ----------------------------------------------------------
   // Secret characters (unlockable, playable)
   // ----------------------------------------------------------
@@ -367,6 +402,7 @@
     { id: 'squatch',    name: 'SQUATCH SPOTTER',       desc: 'Find Bigfoot in the woods. He is shy.' },
     { id: 'megaslayer', name: 'GIANT SLAYER',          desc: 'Defeat the final boss.' },
     { id: 'scalemode',  name: 'SCALE BEATS HUSTLE',    desc: 'Trigger Blake Suddath\'s Scale Mode ultimate.' },
+    { id: 'sysoverride', name: 'AUTOMATION IS FREEDOM', desc: 'Trigger Tyler Lewis\'s System Override.' },
   ];
 
   // ----------------------------------------------------------
@@ -402,6 +438,7 @@
   D.MAP.locations.bank = { x: 434, y: 168, sprite: 'bank', label: 'FIRST NORTHERN BANK' };
   D.MAP.locations.plaza = { x: 222, y: 218, sprite: 'plaza', label: 'NOBLEZA COMMERCIAL PLAZA' };
   D.MAP.locations.growthlab = { x: 278, y: 250, sprite: 'growthlab', label: 'SUDDATH GROWTH LAB' };
+  D.MAP.locations.systemslab = { x: 185, y: 242, sprite: 'systemslab', label: 'LEWIS SYSTEMS LAB' };
 
   // Hidden actions reached via map visits (not in the sidebar list)
   D.ACTIONS.push(
