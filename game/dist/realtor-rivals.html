@@ -1331,7 +1331,7 @@ G.Data.FLAVOR = {
       '"Apartment complex. 24 doors. The roof is... a journey."',
       '"Office building. Half vacant, fully charming."',
     ],
-    passiveChance: 0.12, // 1031 exchange investor calls
+    passiveChance: 0.08, // 1031 exchange investor calls
   };
 
   D.BLAKE = {
@@ -1340,7 +1340,7 @@ G.Data.FLAVOR = {
     sprite: 'blakeSuddath',
     ability: 'AI OVERDRIVE',
     ultimate: 'SCALE MODE',
-    scaleChance: 0.22, // chance a visit rolls the ultimate instead
+    scaleChance: 0.15, // chance a visit rolls the ultimate instead
     intro: [
       'Mentor. Rival. Power-up vendor. All at 100 mph.',
       'Laptop in one hand, phone in the other, earbuds in,',
@@ -1378,8 +1378,8 @@ G.Data.FLAVOR = {
     name: 'TYLER LEWIS',
     title: 'THE SYSTEMS ARCHITECT',
     sprite: 'tylerLewis',
-    overrideChance: 0.15,   // gated behind tier >= 2
-    engineChance: 0.30,
+    overrideChance: 0.12,   // gated behind tier >= 2
+    engineChance: 0.22,
     intro: [
       'Calm. Analytical. Builds the system once, then leverages it.',
       'A glowing tablet controls his digital assistants; his smartwatch',
@@ -2419,7 +2419,7 @@ G.State = {
       if (this.has('videographer')) adj += 0.15;
     }
     if ((id === 'negotiate' || id === 'inspect') && this.s.effects.preapproved) adj += 0.15;
-    if (this.s.scaleMode > 0) adj += 0.12;   // Scale Mode: higher close chance, faster tasks
+    if (this.s.scaleMode > 0) adj += 0.06;   // Scale Mode: higher close chance, faster tasks
     return adj;
   },
 
@@ -2712,9 +2712,9 @@ G.State = {
         // Jeff's Commercial Takeover deal - negotiate minigame result
         const J = G.Data.JEFF;
         const power = G.clamp(score + ch.negotiateBonus, 0, 1);
-        if (power >= 0.55) {
+        if (power >= 0.65) {
           const value = G.randInt(1500000, 6000000);
-          const comm = Math.round(value * 0.015 * (this.has('commercialdiv') ? 1.1 : 1));
+          const comm = Math.round(value * 0.01 * (this.has('commercialdiv') ? 1.1 : 1));
           s.cash += comm;
           s.stats.commission += comm;
           s.stats.homesSold++;
@@ -2725,7 +2725,7 @@ G.State = {
           lines.push('DEAL CLOSED: ' + G.money(value) + ' (+' + G.money(comm) + ' commission!)');
           lines.push('JEFF: "Told you. Cap rates don\'t lie."');
           this.addReputation(5);
-          s.jeffCooldown = 3;
+          s.jeffCooldown = 4;
           if (s.dayVolume >= 1000000) G.Profile.award('monday');
         } else {
           lines.push('The deal collapsed in due diligence. Jeff shrugged: "Happens. Phase 2 environmental."');
@@ -2805,7 +2805,7 @@ G.State = {
       return { lines: ['BLAKE: "Systems are still running - give it ' + s.blakeCooldown + ' day(s)."',
         G.choice(B.coffee), '"' + G.choice(['Scale beats hustle.', 'Work smarter, not harder.']) + '"'], used: true };
     }
-    s.blakeCooldown = 3;
+    s.blakeCooldown = 4;
     const lines = [B.name + ' - ' + B.title];
 
     if (G.chance(B.scaleChance)) {
@@ -2850,22 +2850,24 @@ G.State = {
       return { lines: ['TYLER: "The systems are running. Give it ' + s.tylerCooldown + ' day(s)."',
         '"' + G.choice(['Consistency beats intensity.', 'The basics always win.']) + '"'], used: true };
     }
-    s.tylerCooldown = 2;
+    s.tylerCooldown = 3;
     s.tylerTier = Math.min(s.tylerTier + 1, 6);
     const lines = [T.name + ' - ' + T.title];
 
     // Cirql Scan (every visit): reveal + warm, scaling with tier
     lines.push(...T.scanLines);
-    for (const l of this.leadsInStage('new', 'hot')) l.warmth = G.clamp(l.warmth + 15, 0, 100);
-    const reveals = 1 + Math.floor(s.tylerTier / 2);
+    for (const l of this.leadsInStage('new', 'hot')) l.warmth = G.clamp(l.warmth + 8, 0, 100);
+    const reveals = Math.max(1, Math.floor(s.tylerTier / 2));
     for (let i = 0; i < reveals; i++) {
       const l = this.spawnLead(G.chance(0.5) ? 'pastclient' : 'referral');
       l.warmth = G.clamp(l.warmth + 10, 0, 100);
       lines.push('+ REVEALED: ' + l.name + ' (' + l.label + ')');
     }
-    // surface a hidden listing appointment
-    const hiddenSeller = this.bestLead(this.leadsInStage('new', 'hot').filter(l => l.seller));
-    if (hiddenSeller) { this.advance(hiddenSeller, 'appt'); lines.push('+ HIDDEN LISTING APPT: ' + hiddenSeller.name + ' is ready to meet!'); }
+    // surface a hidden listing appointment (higher-tier systems only)
+    if (s.tylerTier >= 3) {
+      const hiddenSeller = this.bestLead(this.leadsInStage('new', 'hot').filter(l => l.seller));
+      if (hiddenSeller) { this.advance(hiddenSeller, 'appt'); lines.push('+ HIDDEN LISTING APPT: ' + hiddenSeller.name + ' is ready to meet!'); }
+    }
 
     // Roll a bigger system (gated by tier -> weak early, strong late)
     if (s.tylerTier >= 2 && G.chance(T.overrideChance)) {
@@ -3079,9 +3081,9 @@ G.State = {
         if (G.chance(scaling ? 0.9 : 0.6)) passiveSpawn(1, null, "BLAKE'S AI SOURCED A LEAD: %N (%T)!");
       }
       // auto follow-up (CRM Sync / Daily Discipline style)
-      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + (scaling ? 12 : 8), 0, 100);
+      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + (scaling ? 8 : 5), 0, 100);
       // passive income (AI drones earning referral fees / marketing)
-      const income = scaling ? 2000 : 800;
+      const income = scaling ? 700 : 300;
       s.cash += income; s.stats.commission += income;
       // Network Effect: leads multiply
       if (G.chance(scaling ? 0.6 : 0.35)) {
@@ -3118,15 +3120,15 @@ G.State = {
       }
     }
     if (s.systemOverride > 0) {
-      // paperwork completes itself: auto-close one clean pending deal
-      const closeable = this.leadsInStage('pending').filter(l => !l.issue && l.delay <= 0 && l.daysInStage >= 1)[0];
-      if (closeable) { const cl = []; this.closeLead(closeable, cl); passiveLines.push('SYSTEM OVERRIDE closed a deal automatically: ' + cl[0]); }
-      // CRM organized + marketing automated + passive income + doubled referrals
-      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + 10, 0, 100);
-      s.stats.followers += 200;
-      s.cash += 1500; s.stats.commission += 1500;
-      if (G.chance(0.6)) { const r = this.spawnLead('referral'); s.stats.referrals++; G.Profile.bump('referrals'); passiveLines.push('SYSTEM OVERRIDE: referral engine produced ' + r.name + '.'); }
-      passiveLines.push('SYSTEM OVERRIDE: automations ran the business overnight (+' + G.money(1500) + ').');
+      // paperwork moves itself along: unstick one snagged pending deal (you still close it)
+      const stuck = this.leadsInStage('pending').filter(l => l.issue || l.delay > 0)[0];
+      if (stuck) { stuck.issue = false; stuck.delay = 0; passiveLines.push('SYSTEM OVERRIDE cleared the paperwork snag on ' + stuck.name + '\'s deal.'); }
+      // CRM organized + marketing automated + modest passive income
+      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + 8, 0, 100);
+      s.stats.followers += 80;
+      s.cash += 600; s.stats.commission += 600;
+      if (G.chance(0.4)) { const r = this.spawnLead('referral'); s.stats.referrals++; G.Profile.bump('referrals'); passiveLines.push('SYSTEM OVERRIDE: referral engine produced ' + r.name + '.'); }
+      passiveLines.push('SYSTEM OVERRIDE: automations ran the business overnight (+' + G.money(600) + ').');
       s.systemOverride--; if (s.systemOverride === 0) passiveLines.push('System Override ended. The systems keep humming.');
     }
     if (s.openHouseEngine > 0) {

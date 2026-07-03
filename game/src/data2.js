@@ -55,7 +55,7 @@
       '"Apartment complex. 24 doors. The roof is... a journey."',
       '"Office building. Half vacant, fully charming."',
     ],
-    passiveChance: 0.12, // 1031 exchange investor calls
+    passiveChance: 0.08, // 1031 exchange investor calls
   };
 
   D.BLAKE = {
@@ -64,7 +64,7 @@
     sprite: 'blakeSuddath',
     ability: 'AI OVERDRIVE',
     ultimate: 'SCALE MODE',
-    scaleChance: 0.22, // chance a visit rolls the ultimate instead
+    scaleChance: 0.15, // chance a visit rolls the ultimate instead
     intro: [
       'Mentor. Rival. Power-up vendor. All at 100 mph.',
       'Laptop in one hand, phone in the other, earbuds in,',
@@ -102,8 +102,8 @@
     name: 'TYLER LEWIS',
     title: 'THE SYSTEMS ARCHITECT',
     sprite: 'tylerLewis',
-    overrideChance: 0.15,   // gated behind tier >= 2
-    engineChance: 0.30,
+    overrideChance: 0.12,   // gated behind tier >= 2
+    engineChance: 0.22,
     intro: [
       'Calm. Analytical. Builds the system once, then leverages it.',
       'A glowing tablet controls his digital assistants; his smartwatch',
