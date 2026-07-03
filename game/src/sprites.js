@@ -546,25 +546,26 @@ G.makeSprite = (rows, colors) => {
   ], { Y: C.yellow, W: C.gray, D: '#6b4226' });
 
   // BLAKE SUDDATH: The Growth Guru - quarter-zip, earbuds, laptop, coffee, phone
+  // Black hair + goatee, no earbuds, crossed-keys logo on the shirt (white on teal)
   S.blakeSuddath = G.makeSprite([
     '....HHHHHH....',
     '...HHHHHHHH...',
     '...HSSSSSSH...',
     '...HSKSSKSH...',
-    '..B.SSSSSS.B..',
+    '....SSSSSS....',
     '....XWWWWX....',
     '....SXXXXS....',
     '....QQQQQQ....',
-    '...QQQZZQQQ...',
-    '..L.QQZZQQ.C..',
-    '..L.QQQQQQ.P..',
-    '....QQQQQQ....',
+    '...QWQQQQWQ...',
+    '..L.QWQQWQ.C..',
+    '..L.QQWWQQ.P..',
+    '....QWQQWQ....',
     '....JJJJJJ....',
     '....JJ..JJ....',
     '....JJ..JJ....',
     '....JJ..JJ....',
     '...NN....NN...',
-  ], { H: '#232433', X: '#232433', S: '#e8b796', K: C.ink, W: C.white, B: C.cyan, Q: C.teal, Z: C.sky, L: C.gray, C: C.orange, P: C.sky, J: '#3a3f52', N: C.white });
+  ], { H: '#232433', X: '#232433', S: '#e8b796', K: C.ink, W: C.white, Q: C.teal, L: C.gray, C: C.orange, P: C.sky, J: '#3a3f52', N: C.white });
 
   // Growth Lab: modern glass building with a holo chart
   S.growthlab = G.makeSprite([
