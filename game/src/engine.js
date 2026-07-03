@@ -77,9 +77,18 @@ G.Engine = {
     if (this.current && this.current.exit) this.current.exit();
     this.current = this.scenes[name];
     this.currentName = name;
+    // Clear any consumed transition BEFORE enter() so a scene whose enter()
+    // redirects (via goto, e.g. a pending listing battle) is not blocked.
+    this.pendingScene = null;
     if (this.current.enter) this.current.enter(params);
-    this.fade = 1;
-    this.fadeDir = -1;
+    if (this.pendingScene) {
+      // enter() requested another scene: hold black, let the fade loop consume
+      // it next frame. Clobbering fadeDir here strands pendingScene and
+      // soft-locks all future navigation.
+      this.fade = 1; this.fadeDir = 1;
+    } else {
+      this.fade = 1; this.fadeDir = -1;
+    }
   },
 
   update(dt) {
@@ -88,6 +97,10 @@ G.Engine = {
       const muted = G.Audio.toggleMute();
       if (muted) G.Audio.stopMusic(); else G.Audio.startMusic();
     }
+
+    // Watchdog: a pendingScene must never sit while not transitioning, or
+    // goto() (which bails when pendingScene is set) would block forever.
+    if (this.pendingScene && this.fadeDir === 0) this.fadeDir = 1;
 
     // fade transitions
     if (this.fadeDir !== 0) {
