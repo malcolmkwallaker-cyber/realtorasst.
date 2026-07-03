@@ -20,6 +20,13 @@ G.Engine = {
     G.Input.init(canvas);
     this.resize();
     window.addEventListener('resize', () => this.resize());
+    window.addEventListener('orientationchange', () => { this.resize(); setTimeout(() => this.resize(), 300); });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => this.resize());
+      window.visualViewport.addEventListener('scroll', () => this.resize());
+    }
+    // friendly (non-blocking) rotate hint on touch phones in portrait
+    this.portraitHintT = 8;
 
     let last = performance.now();
     const frame = (now) => {
@@ -55,12 +62,19 @@ G.Engine = {
     this.lastError = msg;
   },
 
+  // Responsive scaling: integer scale for crisp pixels when there's room,
+  // fractional below 1 so small phones see the WHOLE canvas (no clipping).
+  cssScale: 1,
   resize() {
-    const scale = Math.max(1, Math.floor(Math.min(
-      window.innerWidth / G.W, window.innerHeight / G.H
-    )));
+    const vp = window.visualViewport;
+    const vw = vp ? vp.width : window.innerWidth;
+    const vh = vp ? vp.height : window.innerHeight;
+    const rawScale = Math.min(vw / G.W, vh / G.H);
+    const scale = rawScale >= 1 ? Math.floor(rawScale) : rawScale;
+    this.cssScale = scale;
     this.canvas.style.width = (G.W * scale) + 'px';
     this.canvas.style.height = (G.H * scale) + 'px';
+    this.isPortrait = vh > vw;
   },
 
   register(name, scene) { this.scenes[name] = scene; },
@@ -151,6 +165,17 @@ G.Engine = {
     // mute indicator
     if (G.Audio.muted) {
       G.UI.text(ctx, 'MUTED [M]', G.W - 4, G.H - 10, { align: 'right', size: 7, color: G.C.slate });
+    }
+
+    // "landscape recommended" toast: informative only, gameplay continues
+    if (G.Input.touch && this.isPortrait && this.portraitHintT > 0) {
+      this.portraitHintT -= 1 / 60;
+      ctx.fillStyle = 'rgba(26,28,44,0.85)';
+      ctx.fillRect(G.W / 2 - 110, 30, 220, 24);
+      ctx.strokeStyle = G.C.yellow;
+      ctx.strokeRect(G.W / 2 - 109.5, 30.5, 219, 23);
+      G.UI.text(ctx, 'LANDSCAPE RECOMMENDED', G.W / 2, 35, { align: 'center', size: 8, color: G.C.yellow });
+      G.UI.text(ctx, '(rotate your phone - but you CAN keep playing)', G.W / 2, 45, { align: 'center', size: 6, color: G.C.gray });
     }
 
     if (this.fade > 0) {

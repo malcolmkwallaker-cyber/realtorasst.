@@ -6,6 +6,44 @@
 'use strict';
 
 // ------------------------------------------------------------
+// On-screen touch buttons. IMPORTANT: hit-test in play() (before
+// input is cleared), draw in draw(). Each button:
+// { label, key, x, y, w, h }
+// ------------------------------------------------------------
+G.TouchBtns = {
+  // call from play(): taps inject virtual key presses
+  check(btns) {
+    const I = G.Input;
+    if (!I.touch) return false;
+    let hit = false;
+    for (const b of btns) {
+      if (I.clickedRect(b.x, b.y, b.w, b.h, 4)) {
+        I.pressVirtual(b.key);
+        I.vibrate(10);
+        hit = true;
+      }
+    }
+    return hit;
+  },
+  // did this frame's tap land on any button? (so games don't double-count)
+  hitAny(btns) {
+    const I = G.Input;
+    return I.touch && I.mouse.clicked && btns.some(b => I.inRect(b.x, b.y, b.w, b.h, 4));
+  },
+  draw(ctx, btns) {
+    if (!G.Input.touch) return;
+    for (const b of btns) {
+      const held = G.Input.mouse.down && G.Input.inRect(b.x, b.y, b.w, b.h, 4);
+      ctx.fillStyle = held ? G.C.blue : 'rgba(26,28,44,0.82)';
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.strokeStyle = held ? G.C.yellow : G.C.gray;
+      ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+      G.UI.text(ctx, b.label, b.x + b.w / 2, b.y + (b.h - (b.size || 12)) / 2 + 1, { align: 'center', size: b.size || 12, color: held ? G.C.white : G.C.cyan });
+    }
+  },
+};
+
+// ------------------------------------------------------------
 // Shared minigame scaffolding
 // def: { title, subtitle, howto:[], duration, init(), play(dt), draw(ctx), bonus() }
 // ------------------------------------------------------------
@@ -32,6 +70,7 @@ G.makeMinigame = (name, def) => {
       this.score = sc;
       this.phase = 'done';
       this.t = 0;
+      G.Input.vibrate(sc >= 0.6 ? 20 : 45);
       if (sc >= 0.6) G.Audio.great(); else if (sc >= 0.35) G.Audio.good(); else G.Audio.sadTromb();
     },
 
@@ -76,14 +115,15 @@ G.makeMinigame = (name, def) => {
       if (this.phase === 'intro') {
         G.UI.panel(ctx, 90, 70, 300, 130, { title: 'GET READY', titleBg: G.C.blue, bg: G.C.ink });
         let y = 92;
-        for (const line of def.howto) {
+        const howtoLines = typeof def.howto === 'function' ? def.howto.call(this) : def.howto;
+        for (const line of howtoLines) {
           for (const l of G.UI.wrap(ctx, line, 270, 8)) {
             G.UI.text(ctx, l, 104, y, { size: 8, color: G.C.white });
             y += 11;
           }
         }
         if (Math.floor(this.t * 2) % 2 === 0) {
-          G.UI.text(ctx, '- PRESS ENTER TO START -', G.W / 2, 182, { align: 'center', size: 8, color: G.C.yellow });
+          G.UI.text(ctx, G.CT('- PRESS ENTER TO START -', '- TAP TO START -'), G.W / 2, 182, { align: 'center', size: 8, color: G.C.yellow });
         }
         return;
       }
@@ -111,15 +151,15 @@ G.makeMinigame = (name, def) => {
         G.UI.text(ctx, grade, G.W / 2, 98, { align: 'center', size: 44, color: gcol, shadow: true });
         G.UI.text(ctx, def.gradeLines ? def.gradeLines.call(this) : Math.round(this.score * 100) + '%', G.W / 2, 152, { align: 'center', size: 9, color: G.C.white });
         if (this.t > 0.5 && Math.floor(this.t * 2) % 2 === 0) {
-          G.UI.text(ctx, '- PRESS ENTER -', G.W / 2, 190, { align: 'center', size: 8, color: G.C.yellow });
+          G.UI.text(ctx, G.CT('- PRESS ENTER -', '- TAP -'), G.W / 2, 190, { align: 'center', size: 8, color: G.C.yellow });
         }
       }
     },
   };
 
-  // expose the definition's helper methods (e.g. newRound) on the scene
+  // expose the definition's helpers AND data (e.g. newRound, PAD layouts)
   for (const [k, v] of Object.entries(def)) {
-    if (typeof v === 'function' && !(k in scene)) scene[k] = v;
+    if (!(k in scene)) scene[k] = v;
   }
   G.Engine.register(name, scene);
 };
@@ -130,10 +170,13 @@ G.makeMinigame = (name, def) => {
 G.makeMinigame('callGame', {
   title: 'COLD CALL FRENZY',
   subtitle: 'STOP THE NEEDLE IN THE GREEN',
-  howto: [
-    'Your lead answers! Hit SPACE/ENTER (or click) when the needle is in the GREEN sweet-talk zone.',
-    '3 calls. Green = appointment. Red = voicemail abyss.',
-  ],
+  howto() {
+    return [
+      G.CT('Your lead answers! Hit SPACE/ENTER (or click) when the needle is in the GREEN sweet-talk zone.',
+           'Your lead answers! TAP anywhere when the needle is in the GREEN sweet-talk zone.'),
+      '3 calls. Green = appointment. Red = voicemail abyss.',
+    ];
+  },
   bg: G.C.navy,
 
   init() {
@@ -214,10 +257,13 @@ G.TEXT_ROUNDS = [
 G.makeMinigame('textGame', {
   title: 'THUMB STORM',
   subtitle: 'PICK THE PRO REPLY - FAST',
-  howto: [
-    'Leads are texting! Pick the PROFESSIONAL reply with UP/DOWN + ENTER (or click) before the patience meter empties.',
-    '4 messages. Speed earns bonus points.',
-  ],
+  howto() {
+    return [
+      G.CT('Leads are texting! Pick the PROFESSIONAL reply with UP/DOWN + ENTER (or click) before the patience meter empties.',
+           'Leads are texting! TAP the PROFESSIONAL reply before the patience meter empties.'),
+      '4 messages. Speed earns bonus points.',
+    ];
+  },
   bg: G.C.teal,
 
   init() {
@@ -250,10 +296,11 @@ G.makeMinigame('textGame', {
     if (G.Input.up()) { this.sel = (this.sel + 2) % 3; G.Audio.move(); }
     if (G.Input.down()) { this.sel = (this.sel + 1) % 3; G.Audio.move(); }
 
+    const cardH = G.Input.touch ? 32 : 30;
     let picked = -1;
     if (G.Input.confirm()) picked = this.sel;
     for (let i = 0; i < 3; i++) {
-      if (G.Input.clickedRect(60, 120 + i * 30, 360, 26)) picked = i;
+      if (G.Input.clickedRect(60, 116 + i * cardH, 360, cardH - 4, 3)) picked = i;
     }
 
     if (picked >= 0) {
@@ -290,15 +337,16 @@ G.makeMinigame('textGame', {
     // patience
     G.UI.text(ctx, 'PATIENCE', 60, 92, { size: 7, color: G.C.gray });
     G.UI.bar(ctx, 120, 92, 240, 7, this.timer / 5, this.timer < 1.5 ? G.C.red : G.C.orange);
-    // replies
+    // replies (full card is tappable; taller cards on touch)
+    const cardH = G.Input.touch ? 32 : 30;
     for (let i = 0; i < 3; i++) {
-      const y = 120 + i * 30;
+      const y = 116 + i * cardH;
       const sel = this.sel === i;
       ctx.fillStyle = sel ? G.C.blue : G.C.ink;
-      ctx.fillRect(60, y, 360, 26);
+      ctx.fillRect(60, y, 360, cardH - 4);
       ctx.strokeStyle = sel ? G.C.yellow : G.C.slate;
-      ctx.strokeRect(60.5, y + 0.5, 359, 25);
-      G.UI.text(ctx, (sel ? '> ' : '  ') + this.opts[i].t, 68, y + 9, { size: 8, color: sel ? G.C.white : G.C.gray });
+      ctx.strokeRect(60.5, y + 0.5, 359, cardH - 5);
+      G.UI.text(ctx, (sel ? '> ' : '  ') + this.opts[i].t, 68, y + (cardH - 12) / 2, { size: 8, color: sel ? G.C.white : G.C.gray });
     }
   },
 
@@ -311,12 +359,22 @@ G.makeMinigame('textGame', {
 G.makeMinigame('listingGame', {
   title: 'PITCH PERFECT',
   subtitle: 'REPEAT THE WINNING PITCH',
-  howto: [
-    'The seller wants to hear THE PITCH, in exactly the right order.',
-    'Watch the arrow sequence, then repeat it with the ARROW KEYS.',
-    '3 rounds. Each round gets longer. No pressure.',
-  ],
+  howto() {
+    return [
+      'The seller wants to hear THE PITCH, in exactly the right order.',
+      G.CT('Watch the arrow sequence, then repeat it with the ARROW KEYS.',
+           'Watch the arrow sequence, then repeat it on the TOUCH PAD.'),
+      '3 rounds. Each round gets longer. No pressure.',
+    ];
+  },
   bg: G.C.purple,
+
+  PAD: [
+    { label: '^', key: 'ArrowUp',    x: 402, y: 156, w: 36, h: 34 },
+    { label: '<', key: 'ArrowLeft',  x: 364, y: 192, w: 36, h: 34 },
+    { label: '>', key: 'ArrowRight', x: 440, y: 192, w: 36, h: 34 },
+    { label: 'v', key: 'ArrowDown',  x: 402, y: 228, w: 36, h: 34 },
+  ],
 
   init() {
     this.round = 0;         // 0..2, lengths 3,4,5
@@ -341,6 +399,7 @@ G.makeMinigame('listingGame', {
 
   play(dt) {
     const PITCH_WORDS = ['COMPS!', 'STAGING!', 'MARKETING!', 'PRICE!', 'DRONE!', 'TRUST!'];
+    if (this.state === 'input') G.TouchBtns.check(this.PAD);
 
     if (this.state === 'show') {
       this.showTimer -= dt;
@@ -419,8 +478,9 @@ G.makeMinigame('listingGame', {
       }
     }
 
-    G.UI.text(ctx, this.state === 'show' ? 'MEMORIZE THE PITCH...' : 'REPEAT IT WITH ARROW KEYS!',
-      G.W / 2, 196, { align: 'center', size: 9, color: this.state === 'show' ? G.C.orange : G.C.cyan });
+    G.UI.text(ctx, this.state === 'show' ? 'MEMORIZE THE PITCH...' : G.CT('REPEAT IT WITH ARROW KEYS!', 'REPEAT IT ON THE PAD!'),
+      G.CT ? (G.Input.touch ? 200 : G.W / 2) : G.W / 2, 196, { align: G.Input.touch ? 'center' : 'center', size: 9, color: this.state === 'show' ? G.C.orange : G.C.cyan });
+    if (this.state === 'input') G.TouchBtns.draw(ctx, this.PAD);
   },
 
   bonus() { return G.State.has('drone') ? 0.05 : 0; },
@@ -433,10 +493,13 @@ G.makeMinigame('listingGame', {
 G.makeMinigame('showGame', {
   title: 'THE GRAND TOUR',
   subtitle: 'HYPE THE FEATURES ON CUE',
-  howto: [
-    'You are touring buyers through the house. When a feature lights up, press its KEY before the excitement fades!',
-    'Keys: A S D F. 6 features. Sell that granite.',
-  ],
+  howto() {
+    return [
+      G.CT('You are touring buyers through the house. When a feature lights up, press its KEY before the excitement fades!',
+           'You are touring buyers through the house. When a feature lights up, TAP IT before the excitement fades!'),
+      G.CT('Keys: A S D F. 6 features. Sell that granite.', '6 features. Sell that granite.'),
+    ];
+  },
   bg: G.C.navy,
 
   duration: 18,
@@ -482,6 +545,24 @@ G.makeMinigame('showGame', {
       return;
     }
 
+    // touch: tap the glowing feature itself (generous 26px hitbox)
+    if (G.Input.touch && G.Input.mouse.clicked) {
+      const m = G.Input.mouse;
+      if (G.dist(m.x, m.y, this.active.x, this.active.y) <= 26) {
+        this.hits++;
+        this.pop(this.active.label + '! "WOW!"', G.C.lime);
+        this.particles.spawn(this.active.x, this.active.y, { count: 10, colors: [G.C.yellow, G.C.cyan] });
+        G.Audio.good();
+        G.Input.vibrate(10);
+      } else {
+        this.misses++;
+        this.pop('YOU HYPED THE WRONG ROOM', G.C.red);
+        G.Audio.bad();
+      }
+      this.active = null;
+      this.spawnT = 0.7;
+      return;
+    }
     for (const k of ['a', 's', 'd', 'f']) {
       if (G.Input.p(k)) {
         if (k === this.active.key) {
@@ -528,7 +609,7 @@ G.makeMinigame('showGame', {
         ctx.beginPath();
         ctx.arc(f.x, f.y, 9, 0, Math.PI * 2);
         ctx.fill();
-        G.UI.text(ctx, f.key.toUpperCase(), f.x, f.y - 4, { align: 'center', size: 9, color: G.C.yellow });
+        G.UI.text(ctx, G.Input.touch ? '!' : f.key.toUpperCase(), f.x, f.y - 4, { align: 'center', size: 9, color: G.C.yellow });
         G.UI.text(ctx, f.label, f.x, f.y - 24, { align: 'center', size: 8, color: G.C.white, shadow: true });
         G.UI.bar(ctx, f.x - 15, f.y + 14, 30, 4, this.activeT / 1.6, G.C.orange);
       } else {
@@ -550,11 +631,15 @@ G.makeMinigame('showGame', {
 G.makeMinigame('negotiateGame', {
   title: 'DEAL DUEL',
   subtitle: 'TALK WHEN GREEN. LISTEN WHEN RED.',
-  howto: [
-    'Tug-of-war over the deal! During TALK phases, MASH SPACE to push the bar your way.',
-    'During LISTEN phases, DO NOT press anything - interrupting costs you.',
-    'Get the bar as far right as you can before time runs out.',
-  ],
+  howto() {
+    return [
+      G.CT('Tug-of-war over the deal! During TALK phases, MASH SPACE to push the bar your way.',
+           'Tug-of-war over the deal! During TALK phases, TAP REPEATEDLY to push the bar your way.'),
+      G.CT('During LISTEN phases, DO NOT press anything - interrupting costs you.',
+           'During LISTEN phases, DO NOT tap - interrupting costs you.'),
+      'Get the bar as far right as you can before time runs out.',
+    ];
+  },
   bg: G.C.ink,
   duration: 15,
 
@@ -602,7 +687,7 @@ G.makeMinigame('negotiateGame', {
     G.UI.text(ctx, 'YOU', 111, 122, { align: 'center', size: 8, color: G.C.lime });
     G.UI.text(ctx, 'OTHER AGENT', 361, 122, { align: 'center', size: 8, color: G.C.red });
 
-    G.UI.text(ctx, talk ? '>>> TALK! MASH SPACE! <<<' : '*** LISTEN... DO NOT PRESS ***',
+    G.UI.text(ctx, talk ? G.CT('>>> TALK! MASH SPACE! <<<', '>>> TALK! TAP TAP TAP! <<<') : G.CT('*** LISTEN... DO NOT PRESS ***', '*** LISTEN... DO NOT TAP ***'),
       G.W / 2, 44, { align: 'center', size: 12, color: talk ? G.C.lime : G.C.red, shadow: true });
 
     // tug bar
@@ -629,10 +714,13 @@ G.makeMinigame('negotiateGame', {
 G.makeMinigame('inspectGame', {
   title: 'FIX-IT FRENZY',
   subtitle: 'CLEAR THE INSPECTION REPORT',
-  howto: [
-    'The inspection report is BAD. Fix each issue by pressing its two keys in order.',
-    'Clear as many of the 5 issues as you can before time runs out!',
-  ],
+  howto() {
+    return [
+      G.CT('The inspection report is BAD. Fix each issue by pressing its two keys in order.',
+           'The inspection report is BAD. Fix each issue by TAPPING its two tool keys in order.'),
+      'Clear as many of the 5 issues as you can before time runs out!',
+    ];
+  },
   bg: G.C.dusk,
   duration: 16,
 
@@ -646,11 +734,26 @@ G.makeMinigame('inspectGame', {
       fixed: false,
     }));
     this.current = 0;
+    this.buildTouchKeys();
+  },
+
+  // 2x2 touch grid: the current combo keys + 2 decoys, shuffled
+  buildTouchKeys() {
+    const cur = this.issues[this.current];
+    if (!cur) { this.touchKeys = []; return; }
+    const KEYS = 'qwerasdfzxcv'.split('');
+    const decoys = G.shuffle(KEYS.filter(k => !cur.combo.includes(k))).slice(0, 2);
+    const set = G.shuffle([...new Set([...cur.combo, ...decoys])]);
+    this.touchKeys = set.map((k, i) => ({
+      label: k.toUpperCase(), key: k,
+      x: 16 + (i % 2) * 60, y: 150 + Math.floor(i / 2) * 44, w: 54, h: 40,
+    }));
   },
 
   play(dt) {
     const cur = this.issues[this.current];
     if (!cur) return;
+    G.TouchBtns.check(this.touchKeys || []);
 
     for (const k of 'qwerasdfzxcv'.split('')) {
       if (!G.Input.p(k)) continue;
@@ -663,6 +766,7 @@ G.makeMinigame('inspectGame', {
           this.particles.spawn(G.W / 2, 130, { count: 10, colors: [G.C.lime, G.C.white] });
           G.Audio.good();
           this.current++;
+          this.buildTouchKeys();
           if (this.current >= this.issues.length) this.finish(1);
         }
       } else {
@@ -678,6 +782,10 @@ G.makeMinigame('inspectGame', {
 
   draw(ctx) {
     G.drawSprite(ctx, G.Sprites.houseStarter, 30, 50, 3);
+    G.TouchBtns.draw(ctx, this.touchKeys || []);
+    if (G.Input.touch && this.issues[this.current]) {
+      G.UI.text(ctx, 'TOOLS:', 16, 140, { size: 7, color: G.C.gray });
+    }
     let y = 44;
     for (let i = 0; i < this.issues.length; i++) {
       const iss = this.issues[i];
@@ -713,13 +821,22 @@ G.makeMinigame('inspectGame', {
 G.makeMinigame('videoGame', {
   title: 'LIGHTS, CAMERA, LISTING!',
   subtitle: 'HIT THE BEATS - LEFT / DOWN / RIGHT',
-  howto: [
-    'Film the perfect listing video! Notes fall down 3 lanes.',
-    'Press LEFT / DOWN / RIGHT when a note reaches the glowing line.',
-    'Great timing = great content = leads.',
-  ],
+  howto() {
+    return [
+      'Film the perfect listing video! Notes fall down 3 lanes.',
+      G.CT('Press LEFT / DOWN / RIGHT when a note reaches the glowing line.',
+           'TAP a lane button when its note reaches the glowing line.'),
+      'Great timing = great content = leads.',
+    ];
+  },
   bg: G.C.purple,
   duration: 16,
+
+  LANE_BTNS: [
+    { label: 'LEFT',  key: 'ArrowLeft',  x: 106, y: 216, w: 68, h: 38, size: 9 },
+    { label: 'DOWN',  key: 'ArrowDown',  x: 206, y: 216, w: 68, h: 38, size: 9 },
+    { label: 'RIGHT', key: 'ArrowRight', x: 306, y: 216, w: 68, h: 38, size: 9 },
+  ],
 
   init() {
     this.lanes = ['ArrowLeft', 'ArrowDown', 'ArrowRight'];
@@ -736,6 +853,7 @@ G.makeMinigame('videoGame', {
   },
 
   play(dt) {
+    G.TouchBtns.check(this.LANE_BTNS);
     const inputs = [G.Input.left(), G.Input.down(), G.Input.right()];
     for (let lane = 0; lane < 3; lane++) {
       if (!inputs[lane]) continue;
@@ -799,6 +917,7 @@ G.makeMinigame('videoGame', {
       ctx.strokeStyle = G.C.white;
       ctx.strokeRect(laneX[n.lane] - 10.5, y - 5.5, 21, 11);
     }
+    G.TouchBtns.draw(ctx, this.LANE_BTNS);
     // camera guy
     G.drawSprite(ctx, G.Sprites[G.State.char().sprite], 40, 100, 3);
     G.UI.text(ctx, 'HITS ' + this.hits + '/' + this.notes.length, G.W - 12, 32, { align: 'right', size: 9, color: G.C.white });
@@ -816,16 +935,129 @@ G.makeMinigame('videoGame', {
 });
 
 // ------------------------------------------------------------
+// FOLLOW UP - short decision game: pick the reply that keeps
+// the relationship alive. Your score drives warmth gains and
+// whether at-risk leads (and open-house attendees) stick around.
+// ------------------------------------------------------------
+G.makeMinigame('followupGame', {
+  title: 'FOLLOW-UP HOUR',
+  subtitle: 'SAY THE RIGHT THING',
+  howto() {
+    return [
+      'Your leads wrote back! Pick the reply that keeps the relationship alive.',
+      G.CT('UP/DOWN + ENTER (or click). 3 conversations.', 'TAP the best reply. 3 conversations.'),
+      'Great replies warm leads up. Bad ones lose them.',
+    ];
+  },
+  bg: '#4a3429',
+
+  init() {
+    this.rounds = G.shuffle(G.Data.FOLLOWUP_ROUNDS).slice(0, 3);
+    this.round = 0;
+    this.points = 0;
+    this.max = 3;
+    this.newRound();
+  },
+
+  newRound() {
+    const r = this.rounds[this.round];
+    this.opts = G.shuffle([{ t: r.good, ok: true }, { t: r.bad[0], ok: false }, { t: r.bad[1], ok: false }]);
+    this.sel = 0;
+    this.timer = 8;
+    this.answered = false;
+    G.Audio.tick();
+  },
+
+  play(dt) {
+    if (this.answered) return;
+    this.timer -= dt;
+    if (this.timer <= 0) {
+      this.pop('YOU LEFT THEM ON READ', G.C.red);
+      G.Audio.bad();
+      this.nextRound();
+      return;
+    }
+    if (G.Input.up()) { this.sel = (this.sel + 2) % 3; G.Audio.move(); }
+    if (G.Input.down()) { this.sel = (this.sel + 1) % 3; G.Audio.move(); }
+
+    const cardH = G.Input.touch ? 36 : 32;
+    let picked = -1;
+    if (G.Input.confirm()) picked = this.sel;
+    for (let i = 0; i < 3; i++) {
+      if (G.Input.clickedRect(50, 118 + i * cardH, 380, cardH - 4, 3)) picked = i;
+    }
+    if (picked >= 0) {
+      this.sel = picked;
+      if (this.opts[picked].ok) {
+        this.points += 1;
+        this.pop(G.choice(['PERFECT TOUCH!', 'THEY FEEL HEARD!', 'RELATIONSHIP: STRONGER']), G.C.lime);
+        G.Audio.good();
+        G.Input.vibrate(12);
+      } else {
+        this.points += 0.15;
+        this.pop(G.choice(['...OOF.', 'READ AT 2:14 PM', 'THE TYPING BUBBLE VANISHED']), G.C.red);
+        G.Audio.bad();
+        G.Input.vibrate(35);
+      }
+      this.nextRound();
+    }
+  },
+
+  nextRound() {
+    this.answered = true;
+    setTimeout(() => {
+      this.round++;
+      if (this.round >= 3) { this.finish(this.points / this.max); return; }
+      this.newRound();
+    }, 650);
+  },
+
+  draw(ctx) {
+    const r = this.rounds[Math.min(this.round, 2)];
+    G.UI.text(ctx, 'CONVO ' + Math.min(this.round + 1, 3) + '/3', 8, 32, { size: 8, color: G.C.white });
+    G.drawSprite(ctx, G.Sprites[G.State.char().sprite], 20, 48, 2);
+    // incoming message
+    G.UI.panel(ctx, 50, 44, 380, 42, { bg: G.C.ink, border: G.C.gray });
+    G.UI.text(ctx, 'LEAD:', 60, 52, { size: 7, color: G.C.orange });
+    for (const [i, line] of G.UI.wrap(ctx, r.msg, 350, 8).entries()) {
+      G.UI.text(ctx, line, 60, 64 + i * 9, { size: 8, color: G.C.white });
+    }
+    G.UI.text(ctx, 'PATIENCE', 50, 96, { size: 7, color: G.C.gray });
+    G.UI.bar(ctx, 110, 96, 240, 7, this.timer / 8, this.timer < 2.5 ? G.C.red : G.C.orange);
+    // reply cards
+    const cardH = G.Input.touch ? 36 : 32;
+    for (let i = 0; i < 3; i++) {
+      const y = 118 + i * cardH;
+      const sel = this.sel === i;
+      ctx.fillStyle = sel ? G.C.blue : G.C.ink;
+      ctx.fillRect(50, y, 380, cardH - 4);
+      ctx.strokeStyle = sel ? G.C.yellow : G.C.slate;
+      ctx.strokeRect(50.5, y + 0.5, 379, cardH - 5);
+      const wrapped = G.UI.wrap(ctx, this.opts[i].t, 360, 7);
+      for (const [j, line] of wrapped.slice(0, 2).entries()) {
+        G.UI.text(ctx, (j === 0 ? (sel ? '> ' : '  ') : '  ') + line, 58, y + 5 + j * 9, { size: 7, color: sel ? G.C.white : G.C.gray });
+      }
+    }
+  },
+
+  bonus() { return G.State.has('crm') ? 0.05 : 0; },
+  gradeLines() { return Math.round(this.points) + '/3 GREAT REPLIES'; },
+});
+
+// ------------------------------------------------------------
 // 8. OPEN HOUSE - catch guests, dodge tire kickers
 // ------------------------------------------------------------
 G.makeMinigame('openHouseGame', {
   title: 'OPEN HOUSE RUSH',
   subtitle: 'CATCH LEADS - DODGE TIRE KICKERS',
-  howto: [
-    'Guests are flooding in! Move your SIGN-IN SHEET with LEFT/RIGHT to catch falling guests.',
-    'YELLOW STARS are hot leads (+2). WHITE guests are leads (+1).',
-    'RED tire kickers just want free cookies (-1). Avoid!',
-  ],
+  howto() {
+    return [
+      G.CT('Guests are flooding in! Move your SIGN-IN SHEET with LEFT/RIGHT to catch falling guests.',
+           'Guests are flooding in! DRAG anywhere - the SIGN-IN SHEET follows your finger.'),
+      'YELLOW STARS are hot leads (+2). WHITE guests are leads (+1).',
+      'RED tire kickers just want free cookies (-1). Avoid!',
+    ];
+  },
   bg: G.C.teal,
   duration: 20,
 
@@ -842,11 +1074,18 @@ G.makeMinigame('openHouseGame', {
     const sp = 220 * dt;
     if (G.Input.held('ArrowLeft') || G.Input.held('a')) this.px -= sp;
     if (G.Input.held('ArrowRight') || G.Input.held('d')) this.px += sp;
-    if (G.Input.mouse.x > 0) {
-      // gentle mouse-follow if the mouse is being used
-      if (Math.abs(G.Input.mouse.x - this.px) > 8 && G.Input.mouse.down) {
+    if (G.Input.mouse.down && G.Input.mouse.x > 0) {
+      if (G.Input.touch) {
+        // finger drag: the sheet tracks the finger closely
+        this.px += (G.Input.mouse.x - this.px) * Math.min(1, dt * 14);
+      } else if (Math.abs(G.Input.mouse.x - this.px) > 8) {
         this.px += Math.sign(G.Input.mouse.x - this.px) * sp;
       }
+    }
+    // optional hold zones: press-and-hold the bottom corners to steer
+    if (G.Input.touch && G.Input.mouse.down && G.Input.mouse.y > 240) {
+      if (G.Input.mouse.x < 60) this.px -= sp;
+      if (G.Input.mouse.x > G.W - 60) this.px += sp;
     }
     this.px = G.clamp(this.px, 40, G.W - 40);
 

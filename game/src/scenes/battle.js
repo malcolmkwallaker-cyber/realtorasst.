@@ -23,6 +23,13 @@ G.Engine.register('battle', {
 
   ROUND_NAMES: ['DIALOGUE', 'MARKET KNOWLEDGE', 'PRESENTATION', 'NEGOTIATION'],
 
+  PAD: [
+    { label: '^', key: 'ArrowUp',    x: 402, y: 156, w: 36, h: 34 },
+    { label: '<', key: 'ArrowLeft',  x: 364, y: 192, w: 36, h: 34 },
+    { label: '>', key: 'ArrowRight', x: 440, y: 192, w: 36, h: 34 },
+    { label: 'v', key: 'ArrowDown',  x: 402, y: 228, w: 36, h: 34 },
+  ],
+
   startRound() {
     this.t = 0;
     if (this.round === 0 || this.round === 1) {
@@ -88,7 +95,7 @@ G.Engine.register('battle', {
       let picked = -1;
       if (G.Input.confirm()) picked = this.sel;
       for (let i = 0; i < 3; i++) {
-        if (G.Input.clickedRect(60, 130 + i * 30, 360, 26)) picked = i;
+        if (G.Input.clickedRect(60, 130 + i * 30, 360, 26, 3)) picked = i;
       }
       if (picked >= 0) { this.sel = picked; this.roundOver(this.opts[picked].ok); }
       return;
@@ -104,6 +111,7 @@ G.Engine.register('battle', {
         }
         return;
       }
+      G.TouchBtns.check(this.PAD);
       const dirs = { ArrowUp: G.Input.up(), ArrowDown: G.Input.down(), ArrowLeft: G.Input.left(), ArrowRight: G.Input.right() };
       for (const [key, hit] of Object.entries(dirs)) {
         if (!hit) continue;
@@ -176,7 +184,7 @@ G.Engine.register('battle', {
       G.UI.text(ctx, 'Win at dialogue, market knowledge, presentation & negotiation.', G.W / 2, 152, { align: 'center', size: 8, color: G.C.cyan });
       G.UI.text(ctx, 'Best of 4. Ties go to the agent with more REPUTATION.', G.W / 2, 164, { align: 'center', size: 7, color: G.C.slate });
       if (Math.floor(this.t * 2) % 2 === 0) {
-        G.UI.text(ctx, '- PRESS ENTER TO PITCH -', G.W / 2, 190, { align: 'center', size: 9, color: G.C.yellow });
+        G.UI.text(ctx, G.CT('- PRESS ENTER TO PITCH -', '- TAP TO PITCH -'), G.W / 2, 190, { align: 'center', size: 9, color: G.C.yellow });
       }
       return;
     }
@@ -197,15 +205,16 @@ G.Engine.register('battle', {
         ctx.strokeRect(60.5, y + 0.5, 359, 25);
         G.UI.text(ctx, (sel ? '> ' : '  ') + this.opts[i].t, 68, y + 9, { size: 8, color: sel ? G.C.white : G.C.gray });
       }
-      G.UI.text(ctx, 'UP/DOWN + ENTER (OR CLICK)', G.W / 2, 226, { align: 'center', size: 7, color: G.C.slate });
+      G.UI.text(ctx, G.CT('UP/DOWN + ENTER (OR CLICK)', 'TAP AN ANSWER'), G.W / 2, 226, { align: 'center', size: 7, color: G.C.slate });
     }
 
     if (this.phase === 'simon') {
       const ARROWS = { ArrowUp: '^', ArrowDown: 'v', ArrowLeft: '<', ArrowRight: '>' };
       const n = this.seq.length;
       const startX = G.W / 2 - n * 16;
-      G.UI.text(ctx, this.simonState === 'show' ? 'WATCH THE WINNING PRESENTATION FLOW...' : 'REPEAT IT WITH ARROW KEYS!',
+      G.UI.text(ctx, this.simonState === 'show' ? 'WATCH THE WINNING PRESENTATION FLOW...' : G.CT('REPEAT IT WITH ARROW KEYS!', 'REPEAT IT ON THE PAD!'),
         G.W / 2, 128, { align: 'center', size: 9, color: this.simonState === 'show' ? G.C.orange : G.C.cyan });
+      if (this.simonState === 'input') G.TouchBtns.draw(ctx, this.PAD);
       for (let i = 0; i < n; i++) {
         const x = startX + i * 32;
         let show = false, litUp = false;
@@ -231,13 +240,13 @@ G.Engine.register('battle', {
       ctx.fillRect(mx + this.zone.start * mw, my, this.zone.width * mw, mh);
       ctx.fillStyle = G.C.white;
       ctx.fillRect(mx + this.needle * mw - 1, my - 5, 3, mh + 10);
-      G.UI.text(ctx, 'SPACE / ENTER / CLICK', G.W / 2, my + 28, { align: 'center', size: 8, color: G.C.gray });
+      G.UI.text(ctx, G.CT('SPACE / ENTER / CLICK', 'TAP TO STRIKE'), G.W / 2, my + 28, { align: 'center', size: 8, color: G.C.gray });
     }
 
     if (this.phase === 'result') {
       G.UI.text(ctx, this.won ? 'THEY PICKED YOU!' : 'THEY PICKED... THEM.', G.W / 2, 140, { align: 'center', size: 18, color: this.won ? G.C.lime : G.C.red, shadow: true });
       if (this.t > 0.8 && Math.floor(this.t * 2) % 2 === 0) {
-        G.UI.text(ctx, '- PRESS ENTER -', G.W / 2, 180, { align: 'center', size: 8, color: G.C.yellow });
+        G.UI.text(ctx, G.CT('- PRESS ENTER -', '- TAP -'), G.W / 2, 180, { align: 'center', size: 8, color: G.C.yellow });
       }
     }
 

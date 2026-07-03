@@ -80,9 +80,10 @@ G.State = {
   s: null, // current game state
 
   // ----------------------------------------------------------
-  newGame(charId) {
+  newGame(charId, difficulty) {
     this.s = {
       charId,
+      difficulty: G.Data.BALANCE[difficulty] ? difficulty : 'standard',
       month: 0,        // 0..2
       dayOfMonth: 1,   // 1..daysPerMonth
       energy: G.Data.SEASON.baseEnergy,
@@ -111,6 +112,10 @@ G.State = {
       rivalry: 0,
       dayVolume: 0,
       bigfootToday: false,
+      mentorUsedToday: false,   // one major mentor benefit per day
+      marketVisibility: 40,     // 0..100 public-marketing momentum
+      eventHistory: [],         // last 5 event ids (no immediate repeats)
+      followReport: null,       // yesterday's follow-up summary
       stats: {
         homesSold: 0, commission: 0, listings: 0, buyers: 0,
         referrals: 0, reviews: 5, followers: 120, happiness: 70,
@@ -126,17 +131,15 @@ G.State = {
     const pool = G.shuffle(G.Data.BOSS_POOL).slice(0, 2);
     this.s.bossPlan = [...pool, G.Data.FINAL_BOSS];
 
-    // starting pipeline (Rookie & Tyler start slow)
+    // starting pipeline (Rookie & Tyler start slow; size set by difficulty)
     if (this.perk() === 'rookie') {
       this.spawnLead('firsttime');
     } else if (this.perk() === 'tyler') {
       this.spawnLead('firsttime');
       this.spawnLead('signcall');
     } else {
-      this.spawnLead('facebook');
-      this.spawnLead('firsttime');
-      this.spawnLead('signcall');
-      this.spawnLead(this.char().id === 'malcolm' ? 'lakehome' : 'luxury');
+      const pool = ['firsttime', 'signcall', this.char().id === 'malcolm' ? 'lakehome' : 'luxury', 'facebook'];
+      for (const t of pool.slice(0, this.bal().startingLeadCount)) this.spawnLead(t);
     }
     if (this.perk() === 'influencer') { this.spawnLead('facebook'); this.spawnLead('facebook'); }
 
@@ -171,10 +174,40 @@ G.State = {
     st.bossPlan = st.bossPlan || [...G.shuffle(G.Data.BOSS_POOL).slice(0, 2), G.Data.FINAL_BOSS];
     st.stats.reputation = st.stats.reputation ?? 50;
     st.stats.commercialDeals = st.stats.commercialDeals ?? 0;
+    // v2 migration: difficulty modes, mentor limit, momentum, follow-up tracking
+    st.difficulty = G.Data.BALANCE[st.difficulty] ? st.difficulty : 'standard';
+    st.mentorUsedToday = st.mentorUsedToday || false;
+    st.marketVisibility = st.marketVisibility == null ? 40 : st.marketVisibility;
+    st.eventHistory = st.eventHistory || [];
+    st.followReport = st.followReport || null;
+    st.effects.showPenalty = st.effects.showPenalty || false;
+    st.effects.detour = st.effects.detour || 0;
+    st.effects.distracted = st.effects.distracted || false;
+    st.tylerTier = Math.min(st.tylerTier || 0, 3);
+    st.scaleMode = Math.min(st.scaleMode || 0, 1);
+    st.aiOverdrive = Math.min(st.aiOverdrive || 0, 2);
+    st.systemOverride = Math.min(st.systemOverride || 0, 1);
+    st.openHouseEngine = Math.min(st.openHouseEngine || 0, 1);
+    const today = st.month * G.Data.SEASON.daysPerMonth + st.dayOfMonth;
+    for (const l of st.leads || []) {
+      l.lastContactDay = l.lastContactDay ?? today;
+      l.daysSinceContact = l.daysSinceContact || 0;
+      l.contactAttempts = l.contactAttempts || 0;
+      l.qualified = l.qualified ?? (l.stage !== 'attendee');
+      l.attendedOpenHouse = l.attendedOpenHouse || false;
+      l.followUpDeadline = l.followUpDeadline ?? null;
+      if (l.seller && (l.stage === 'active')) {
+        l.listingMomentum = l.listingMomentum ?? 50;
+        l.expectsOpenHouse = l.expectsOpenHouse ?? false;
+      }
+    }
     this.s = st;
     if (!this.s.weather) this.rollWeather();
     return st;
   },
+
+  // Current difficulty's balance table
+  bal() { return G.Data.BALANCE[(this.s && this.s.difficulty) || 'standard'] || G.Data.BALANCE.standard; },
 
   autosave() {
     if (this.s && !this.s.seasonOver) G.Save.save(this.s);
@@ -200,7 +233,6 @@ G.State = {
     return G.Data.SEASON.baseEnergy
       + (this.has('ai') ? 1 : 0)
       + (this.has('corporateHQ') ? 1 : 0)
-      + (this.s.scaleMode > 0 ? 1 : 0)   // Blake's Scale Mode: everything speeds up
       + (this.perk() === 'blake' && this.s.coffee <= 0 ? -1 : 0)  // out of coffee: slower
       + Math.min(3, this.rookieLevel());
   },
@@ -208,7 +240,7 @@ G.State = {
   // Tyler's Daily Discipline passive tier (playable). Dormant the first
   // few days (weak early), then compounds (strong late).
   tylerPassiveTier() {
-    return this.perk() === 'tyler' ? Math.floor((this.totalDay() - 1) / 3) : 0;
+    return this.perk() === 'tyler' ? Math.min(3, Math.floor((this.totalDay() - 1) / 3)) : 0;
   },
 
   blakeBuff() {
@@ -304,8 +336,14 @@ G.State = {
   // ----------------------------------------------------------
   // Leads
   // ----------------------------------------------------------
+  // Returns the new lead, or null if the pipeline is full (opportunity lost).
+  // opts.force bypasses the cap (story-critical spawns only).
   spawnLead(typeId, opts = {}) {
     const s = this.s;
+    if (!opts.force && s.leads.length >= this.bal().maxActivePipeline) {
+      s.stats.leadsMissed = (s.stats.leadsMissed || 0) + 1;
+      return null;
+    }
     let type;
     if (typeId) {
       type = G.Data.LEAD_TYPES.find(t => t.id === typeId);
@@ -358,10 +396,38 @@ G.State = {
       issue: false,
       delay: 0,
       overpriced: false,
+      // follow-up tracking
+      lastContactDay: this.totalDay(),
+      daysSinceContact: 0,
+      contactAttempts: 0,
+      qualified: opts.stage !== 'attendee',
+      attendedOpenHouse: opts.stage === 'attendee',
+      followUpDeadline: opts.stage === 'attendee' ? this.bal().attendeeDeadline : null,
     };
     s.leads.push(lead);
     s.stats.leadsReceived++;
     return lead;
+  },
+
+  // Mark a lead as personally contacted today
+  touch(lead) {
+    lead.lastContactDay = this.totalDay();
+    lead.daysSinceContact = 0;
+    lead.contactAttempts = (lead.contactAttempts || 0) + 1;
+  },
+
+  // Follow-up risk assessment for a lead (drives UI + report)
+  leadRisk(l) {
+    if (l.stage === 'attendee') {
+      return l.followUpDeadline <= 0 ? 'ABOUT TO GHOST' : 'DUE TODAY';
+    }
+    if (l.stage === 'pending' || l.stage === 'offer') return 'SAFE';
+    const d = l.daysSinceContact || 0;
+    if (l.stage === 'appt') return d >= 1 ? 'AT RISK' : 'SAFE';
+    if (d >= 3) return 'ABOUT TO GHOST';
+    if (d >= 2) return 'AT RISK';
+    if (d >= 1) return 'DUE TODAY';
+    return 'SAFE';
   },
 
   leadsInStage(...stages) {
@@ -378,9 +444,19 @@ G.State = {
   advance(lead, toStage) {
     lead.stage = toStage;
     lead.daysInStage = 0;
+    if (toStage !== 'attendee') { lead.qualified = true; lead.followUpDeadline = null; }
     if (toStage === 'active') {
-      if (lead.seller) this.s.stats.listings++;
-      else this.s.stats.buyers++;
+      if (lead.seller) {
+        this.s.stats.listings++;
+        // Listings track marketing momentum + some sellers expect open houses
+        lead.listingMomentum = 50;
+        lead.expectsOpenHouse = G.chance(0.45);
+        lead.ohExpectation = G.choice([
+          'wants an open house ASAP', 'does not care about open houses',
+          'wants one only if it has not sold', 'expects 40 people minimum',
+          'does not want strangers touching anything',
+        ]);
+      } else this.s.stats.buyers++;
     }
   },
 
@@ -401,7 +477,7 @@ G.State = {
         return this.leadsInStage('new', 'hot').length
           ? { ok: true } : { ok: false, reason: 'NO NEW/WARM LEADS' };
       case 'followup':
-        return this.leadsInStage('new', 'hot', 'appt').length
+        return this.leadsInStage('attendee', 'new', 'hot', 'appt', 'active').length
           ? { ok: true } : { ok: false, reason: 'NOBODY TO NUDGE' };
       case 'video':
         if (this.perk() === 'grandpa') return { ok: false, reason: 'GRANDPA SAYS NO' };
@@ -437,6 +513,7 @@ G.State = {
     const a = G.Data.ACTIONS.find(x => x.id === id);
     let cost = a ? a.energy : 1;
     if (id === 'openhouse' && this.has('vehicle')) cost = 1;
+    if (id === 'show' && this.s.effects.showPenalty) cost += 1;  // frozen lockbox
     return cost;
   },
 
@@ -452,7 +529,10 @@ G.State = {
 
   closableLeads() {
     const pre = this.s.effects.preapproved;
-    return this.leadsInStage('pending').filter(l => !l.issue && (pre || l.delay <= 0) && l.daysInStage >= 1);
+    // New pendings must sit a couple days (TC trims one, never below 1)
+    let wait = this.bal().pendingDaysBeforeClose;
+    if (this.has('tc')) wait = Math.max(1, wait - 1);
+    return this.leadsInStage('pending').filter(l => !l.issue && (pre || l.delay <= 0) && l.daysInStage >= wait);
   },
 
   // Extra score from gear + weather + rookie level (applied to minigame results)
@@ -471,7 +551,11 @@ G.State = {
       if (this.has('videographer')) adj += 0.15;
     }
     if ((id === 'negotiate' || id === 'inspect') && this.s.effects.preapproved) adj += 0.15;
-    if (this.s.scaleMode > 0) adj += 0.06;   // Scale Mode: higher close chance, faster tasks
+    if (this.s.scaleMode > 0) adj += 0.05;   // Scale Mode: everything a touch smoother
+    // county road detour: tomorrow's tours suffer
+    if (this.s.effects.detour > 0 && (id === 'show' || id === 'openhouse')) adj -= 0.15;
+    // market visibility: known agents draw better open house crowds
+    if (id === 'openhouse') adj += (this.s.marketVisibility - 40) / 500;
     return adj;
   },
 
@@ -480,13 +564,15 @@ G.State = {
   // ----------------------------------------------------------
   closeLead(l, lines) {
     const s = this.s;
-    const rate = l.commercial ? 0.015 : 0.027;
+    const rate = l.commercial ? 0.005 : 0.027;
     const comm = Math.round(l.value * rate);
-    s.stats.homesSold++;
+    // Commercial deals are their own stat - they do NOT count as homes sold
+    if (l.commercial) s.stats.commercialDeals++;
+    else s.stats.homesSold++;
     s.stats.commission += comm;
     s.cash += comm;
     s.dayVolume += l.value;
-    if (l.commercial) s.stats.commercialDeals++;
+    s.marketVisibility = G.clamp(s.marketVisibility + 5, 0, 100);  // SOLD signs sell
     lines.push('SOLD! ' + l.name + ' - ' + G.money(l.value) + ' (+' + G.money(comm) + ' commission)');
     s.stats.happiness = G.clamp(s.stats.happiness + 4, 0, 100);
 
@@ -503,6 +589,7 @@ G.State = {
       const n = this.perk() === 'grandpa' ? 2 : 1;
       for (let i = 0; i < n; i++) {
         const r = this.spawnLead('referral');
+        if (!r) { lines.push('They wanted to refer a friend, but your plate is FULL. (pipeline cap)'); break; }
         s.stats.referrals++;
         G.Profile.bump('referrals');
         lines.push('+ REFERRAL: they told ' + r.name + ' about you!');
@@ -538,14 +625,21 @@ G.State = {
       case 'call': {
         G.Profile.bump('calls');
         if (score >= 0.99) G.Profile.bump('perfectCalls');
+        const bal = this.bal();
         const targets = this.leadsInStage('new', 'hot');
         const n = Math.min(targets.length, Math.round(score * 3.4));
         lines.push(grade(score) + ' You worked the phones.');
         const picked = G.shuffle(targets).slice(0, Math.max(n, 0));
         for (const l of picked) {
-          l.warmth = G.clamp(l.warmth + 20, 0, 100);
-          if (l.stage === 'new') { this.advance(l, 'hot'); lines.push(l.name + ' warmed up! (' + l.label + ')'); }
-          else { this.advance(l, 'appt'); lines.push(l.name + ' booked an appointment!'); }
+          this.touch(l);
+          l.warmth = G.clamp(l.warmth + Math.round(10 + 10 * score), 0, 100);
+          if (l.stage === 'new' && l.warmth >= bal.warmThreshold) {
+            this.advance(l, 'hot'); lines.push(l.name + ' warmed up! (' + l.label + ')');
+          } else if (l.stage === 'hot' && l.warmth >= bal.apptThreshold) {
+            this.advance(l, 'appt'); lines.push(l.name + ' booked an appointment!');
+          } else {
+            lines.push(l.name + ' is warming: ' + l.warmth + '/' + (l.stage === 'new' ? bal.warmThreshold : bal.apptThreshold) + ' to advance.');
+          }
         }
         if (!picked.length) lines.push('Straight to voicemail. All of them. Brutal.');
         break;
@@ -553,15 +647,21 @@ G.State = {
 
       case 'text': {
         G.Profile.bump('texts');
+        const bal = this.bal();
         const targets = this.leadsInStage('new', 'hot');
-        for (const l of targets) l.warmth = G.clamp(l.warmth + Math.round(15 * score), 0, 100);
+        for (const l of targets) { this.touch(l); l.warmth = G.clamp(l.warmth + Math.round(12 * score), 0, 100); }
         const n = Math.min(targets.length, score >= 0.8 ? 2 : score >= 0.45 ? 1 : 0);
         lines.push(grade(score) + ' Thumbs of fury engaged.');
         const picked = G.shuffle(targets).slice(0, n);
+        let advanced = 0;
         for (const l of picked) {
-          if (l.stage === 'new') { this.advance(l, 'hot'); lines.push(l.name + ' replied with 3 emojis. Warm!'); }
-          else { this.advance(l, 'appt'); lines.push(l.name + ' set an appointment by text!'); }
+          if (l.stage === 'new' && l.warmth >= bal.warmThreshold) {
+            this.advance(l, 'hot'); lines.push(l.name + ' replied with 3 emojis. Warm!'); advanced++;
+          } else if (l.stage === 'hot' && l.warmth >= bal.apptThreshold) {
+            this.advance(l, 'appt'); lines.push(l.name + ' set an appointment by text!'); advanced++;
+          }
         }
+        if (targets.length && !advanced) lines.push('Everyone is "def interested!!" but nobody committed. Keep warming them.');
         break;
       }
 
@@ -569,6 +669,7 @@ G.State = {
         G.Profile.bump('coffees');
         G.Profile.load().coffeeVisits++;
         G.Profile.save();
+        const bal = this.bal();
         // Blake refuels at the coffee shop
         if (this.perk() === 'blake') {
           const wasEmpty = s.coffee <= 0;
@@ -576,43 +677,167 @@ G.State = {
           if (wasEmpty) { s.energy = Math.min(s.energy + 1, this.maxEnergy()); lines.push('COFFEE REFILLED to 100%! Blake is back to 100 mph. (+1 energy)'); }
           else lines.push('Coffee topped off to 100%. The cup that never empties, empties into Blake.');
         }
-        const targets = this.leadsInStage('new', 'hot', 'appt');
-        for (const l of targets) l.warmth = G.clamp(l.warmth + 10, 0, 100);
+        lines.push(grade(score) + ' ' + G.choice(G.Data.FLAVOR.followup));
+        // Contact a limited number of people - most at-risk first
+        const riskOrder = { 'ABOUT TO GHOST': 0, 'AT RISK': 1, 'DUE TODAY': 2, 'SAFE': 3 };
+        const pool = this.leadsInStage('attendee', 'new', 'hot', 'appt', 'active')
+          .sort((a, b) => (riskOrder[this.leadRisk(a)] - riskOrder[this.leadRisk(b)]) ||
+                          ((b.daysSinceContact || 0) - (a.daysSinceContact || 0)));
+        const contacts = bal.followupContacts + (this.has('crm') ? 2 : 0);
+        const picked = pool.slice(0, contacts);
+        for (const l of picked) {
+          const late = (l.daysSinceContact || 0) >= 2;
+          this.touch(l);
+          let gain = Math.round(4 + 10 * score);
+          if (late) gain = Math.ceil(gain / 2);
+          if (l.stage === 'attendee') {
+            // Open house attendee: this follow-up decides if they become business
+            if (score >= 0.45 && !late) {
+              const roll = Math.random();
+              if (roll < 0.5) {
+                l.stage = 'new'; l.qualified = true; l.followUpDeadline = null;
+                l.warmth = G.clamp(l.warmth + 15, 0, 100);
+                lines.push(l.name + ' is a REAL buyer - qualified into your pipeline!');
+              } else if (roll < 0.65) {
+                l.stage = 'new'; l.seller = true; l.qualified = true; l.followUpDeadline = null;
+                l.warmth = G.clamp(l.warmth + 15, 0, 100);
+                lines.push(l.name + ' needs to SELL first. Seller opportunity!');
+              } else if (roll < 0.75) {
+                this.removeLead(l);
+                const r = this.spawnLead('referral');
+                if (r) { s.stats.referrals++; G.Profile.bump('referrals'); lines.push(l.name + ' is not moving - but referred ' + r.name + '!'); }
+                else lines.push(l.name + ' offered a referral, but your pipeline is FULL.');
+              } else if (roll < 0.9) {
+                this.removeLead(l);
+                lines.push(l.name + ' was a neighbor who "just loves floor plans." Farewell.');
+              } else {
+                this.removeLead(l);
+                lines.push(l.name + ' already has an agent. (Their cousin. It is always the cousin.)');
+              }
+            } else {
+              this.removeLead(l);
+              lines.push(l.name + ' (attendee) slipped away. ' + G.choice(G.Data.FLAVOR.lostReasons));
+            }
+            continue;
+          }
+          l.warmth = G.clamp(l.warmth + gain, 0, 100);
+          if (late && score < 0.4 && (l.stage === 'new' || l.stage === 'hot') && G.chance(0.25)) {
+            this.removeLead(l);
+            lines.push(l.name + ': "Oh! We actually went with another agent." Ouch.');
+            continue;
+          }
+          if (l.stage === 'new' && l.warmth >= bal.warmThreshold) {
+            this.advance(l, 'hot'); lines.push(l.name + ' warmed up! (+' + gain + ' warmth)');
+          } else if (l.stage === 'hot' && l.warmth >= bal.apptThreshold && G.chance(0.4 + score * 0.4)) {
+            this.advance(l, 'appt'); lines.push(l.name + ' says "ope, yeah, let\'s meet!"');
+          } else if (l.stage === 'active') {
+            s.stats.happiness = G.clamp(s.stats.happiness + 1, 0, 100);
+            lines.push(l.name + ' (client) feels looked after.');
+          } else {
+            lines.push(l.name + ': +' + gain + ' warmth' + (late ? ' (they noticed the delay)' : '') + '.');
+          }
+        }
+        // AI assistant sends one extra automated, low-quality touch
+        if (this.has('ai') && pool.length > picked.length) {
+          const l = pool[picked.length];
+          if (l.stage !== 'attendee') {
+            this.touch(l);
+            l.warmth = G.clamp(l.warmth + 3, 0, 100);
+            lines.push('AI ASSISTANT auto-texted ' + l.name + '. It used two emojis. (+3 warmth)');
+          }
+        }
+        // Excellent follow-up occasionally creates something special
+        if (score >= 0.9 && G.chance(0.5)) {
+          const roll = Math.random();
+          if (roll < 0.4) {
+            const r = this.spawnLead('referral');
+            if (r) { s.stats.referrals++; G.Profile.bump('referrals'); lines.push('+ A delighted lead referred ' + r.name + '!'); }
+          } else if (roll < 0.7) {
+            const r = this.spawnLead('pastclient');
+            if (r) lines.push('+ Past client ' + r.name + ' wants a market analysis!');
+          } else {
+            const cold = this.leadsInStage('new').sort((a, b) => a.warmth - b.warmth)[0];
+            if (cold) { cold.warmth = G.clamp(cold.warmth + 25, 0, 100); lines.push('+ ' + cold.name + ' unexpectedly got MOTIVATED. (+25 warmth)'); }
+          }
+        }
+        if (!picked.length) lines.push('Nobody to follow up with. A rare, eerie silence.');
         s.stats.happiness = G.clamp(s.stats.happiness + 2, 0, 100);
-        lines.push(G.choice(G.Data.FLAVOR.followup));
+        if (score >= 0.7) this.addReputation(1);
         if (G.Profile.load().coffeeVisits === 10) {
           lines.push('The baristas started your order when your car pulled in. You have ARRIVED.');
           this.addReputation(5);
-        }
-        lines.push('Your whole pipeline feels appreciated. (+warmth)');
-        const hot = this.leadsInStage('hot');
-        if (hot.length && G.chance(0.3 + (this.has('crm') ? 0.2 : 0))) {
-          const l = this.bestLead(hot);
-          this.advance(l, 'appt');
-          lines.push(l.name + ' says "ope, yeah, let\'s meet!"');
         }
         break;
       }
 
       case 'openhouse': {
-        let count = Math.round(score * 4)
-          + (this.has('marketing') ? 1 : 0)
-          + (this.has('goldensigns') ? 1 : 0)
-          + (this.has('helicopter') ? 2 : 0);
-        count = G.clamp(count, 0, 8);
-        lines.push(grade(score) + ' The open house wrapped up.');
-        for (let i = 0; i < count; i++) {
-          const l = this.spawnLead(G.chance(0.7) ? 'openhouse' : null);
-          lines.push('+ NEW LEAD: ' + l.name + ' (' + l.label + ')');
-          G.Profile.bump('ohLeads');
-        }
-        if (!count) lines.push('Only visitor was a neighbor who "just loves floor plans."');
-        s.stats.followers += Math.round(20 * score * this.followerGainMult());
+        // Open houses feed the whole business: attendees to follow up with,
+        // listing momentum, market visibility - not a pile of free leads.
         const listings = this.leadsInStage('active').filter(l => l.seller);
-        if (listings.length && score > 0.5 && G.chance(0.5)) {
-          const l = this.bestLead(listings);
-          this.advance(l, 'offer');
-          lines.push('An open house guest wrote an offer on ' + l.name + '\'s place!');
+        const listing = this.bestLead(listings);
+        const bumpMomentum = (n) => { if (listing) listing.listingMomentum = G.clamp((listing.listingMomentum ?? 50) + n, 0, 100); };
+        const band = score >= 0.9 ? 3 : score >= 0.7 ? 2 : score >= 0.45 ? 1 : 0;
+        lines.push(grade(score) + ' The open house wrapped up.');
+
+        let qualified = 0, attendees = 0;
+        if (band === 0) {
+          lines.push('Only visitor was a neighbor who "just loves floor plans."');
+          this.addReputation(-1);
+          bumpMomentum(-5);
+          if (listing && G.chance(0.4)) {
+            lines.push(listing.name + ' (seller) is FRUSTRATED: "Where was everybody?" (-3 happiness)');
+            s.stats.happiness = G.clamp(s.stats.happiness - 3, 0, 100);
+          }
+        } else if (band === 1) {
+          attendees = 1;
+          bumpMomentum(10);
+          s.marketVisibility = G.clamp(s.marketVisibility + 15, 0, 100);
+        } else if (band === 2) {
+          qualified = 1; attendees = 1;
+          bumpMomentum(20);
+          s.marketVisibility = G.clamp(s.marketVisibility + 20, 0, 100);
+          this.addReputation(1);
+          if (G.chance(0.3)) {
+            const w = this.bestLead(this.leadsInStage('new', 'hot'));
+            if (w) { w.warmth = G.clamp(w.warmth + 10, 0, 100); lines.push(w.name + ' stopped by too. (+10 warmth)'); }
+          }
+        } else {
+          qualified = 2;
+          bumpMomentum(30);
+          s.marketVisibility = G.clamp(s.marketVisibility + 30, 0, 100);
+          this.addReputation(2);
+          if (listing && G.chance(0.4)) {
+            this.advance(listing, 'offer');
+            lines.push('AN OFFER came in on ' + listing.name + '\'s place before the bars ran out!');
+          } else if (G.chance(0.4)) {
+            const sl = this.spawnLead(G.chance(0.5) ? 'fsbo' : 'expired');
+            if (sl) lines.push('+ SELLER OPPORTUNITY: ' + sl.name + ' asked "what would OURS go for?"');
+          }
+          s.rivalry++;
+          lines.push('Competing agents noticed the packed driveway. The rivalry heats up.');
+        }
+        if (band > 0) {
+          // Upgrades improve the crowd - hard cap of 3 qualified leads
+          if (this.has('marketing') && G.chance(0.35)) qualified++;
+          if (this.has('goldensigns') && G.chance(0.25)) qualified++;
+          if (this.has('helicopter')) qualified++;
+          qualified = Math.min(qualified, 3);
+          for (let i = 0; i < qualified; i++) {
+            const l = this.spawnLead('openhouse');
+            if (l) {
+              l.warmth = G.randInt(25, 40);
+              lines.push('+ QUALIFIED LEAD: ' + l.name + ' (' + l.label + ')');
+              G.Profile.bump('ohLeads');
+            } else lines.push('Another serious buyer showed up... but your pipeline is FULL. They left.');
+          }
+          for (let i = 0; i < attendees; i++) {
+            const a = this.spawnLead('openhouse', { stage: 'attendee' });
+            if (a) {
+              a.warmth = G.randInt(20, 45);
+              lines.push('+ ATTENDEE: ' + a.name + ' signed in. FOLLOW UP by tomorrow or lose them!');
+            }
+          }
+          s.stats.followers += Math.round(20 * score * this.followerGainMult());
         }
         break;
       }
@@ -625,11 +850,15 @@ G.State = {
           'WE FOUND THE CHEAPEST HOUSE IN TOWN', 'ICE FISHING HOUSE TOUR (YES REALLY)',
         ]) + '"');
         lines.push('+' + gain + ' FOLLOWERS');
-        let leadChance = score * (this.has('social') ? 0.9 : 0.6);
-        if (this.has('youtube')) leadChance += 0.1;
+        s.marketVisibility = G.clamp(s.marketVisibility + Math.round(5 + 5 * score), 0, 100);
+        let leadChance = 0.08 + score * 0.30;
+        if (this.has('social')) leadChance += 0.08;
+        if (this.has('youtube')) leadChance += 0.05;
+        leadChance = Math.min(leadChance, 0.45);
         if (G.chance(leadChance)) {
           const l = this.spawnLead(G.chance(0.5) ? 'facebook' : null);
-          lines.push('+ NEW LEAD: ' + l.name + ' saw the video!');
+          if (l) lines.push('+ NEW LEAD: ' + l.name + ' saw the video!');
+          else lines.push('Someone DMed about the video... but your pipeline is FULL.');
         }
         if (score >= 0.9 && G.chance(0.5)) {
           const extra = Math.round(600 * this.followerGainMult());
@@ -646,6 +875,7 @@ G.State = {
       case 'listing': {
         const sellers = this.leadsInStage('appt').filter(l => l.seller);
         const l = this.bestLead(sellers);
+        this.touch(l);
         const bonus = ch.listingBonus + (this.has('drone') ? 0.15 : 0);
         if (score + bonus >= 0.5) {
           this.advance(l, 'active');
@@ -668,8 +898,10 @@ G.State = {
         buyers.sort((a, b) => (a.stage === 'active' ? -1 : 1) - (b.stage === 'active' ? -1 : 1));
         const howMany = this.has('assistant') ? 2 : 1;
         const picked = buyers.slice(0, howMany);
+        if (s.effects.showPenalty) { s.effects.showPenalty = false; lines.push('(The lockbox finally opened. Your mitten will never be the same.)'); }
         lines.push(grade(score) + ' Tour day!');
         for (const l of picked) {
+          this.touch(l);
           if (l.stage === 'appt') {
             if (score >= 0.35) {
               this.advance(l, 'active');
@@ -695,6 +927,7 @@ G.State = {
         G.Profile.bump('offers');
         const ready = this.offerReadyLeads();
         const l = this.bestLead(ready);
+        this.touch(l);
         this.advance(l, 'offer');
         lines.push(G.choice(G.Data.FLAVOR.offer));
         lines.push(l.name + ' (' + G.money(l.value) + ') is now UNDER OFFER.');
@@ -704,6 +937,7 @@ G.State = {
       case 'negotiate': {
         const offers = this.leadsInStage('offer');
         const l = this.bestLead(offers);
+        this.touch(l);
         let power = G.clamp(score + ch.negotiateBonus, 0, 1);
         if (s.effects.preapproved) {
           power = 1;
@@ -738,6 +972,7 @@ G.State = {
         G.Profile.bump('inspections');
         const issues = this.leadsInStage('pending').filter(l => l.issue);
         const l = this.bestLead(issues);
+        this.touch(l);
         if (score >= 0.4) {
           l.issue = false;
           lines.push(grade(score) + ' Issues fixed on ' + l.name + '\'s deal!');
@@ -761,28 +996,29 @@ G.State = {
       }
 
       case 'commercial': {
-        // Jeff's Commercial Takeover deal - negotiate minigame result
+        // Jeff's Commercial Takeover deal - negotiate minigame result.
+        // Commercial money is great, but it does NOT count as homes sold.
         const J = G.Data.JEFF;
+        s.mentorUsedToday = true;
         const power = G.clamp(score + ch.negotiateBonus, 0, 1);
-        if (power >= 0.65) {
-          const value = G.randInt(1500000, 6000000);
-          const comm = Math.round(value * 0.01 * (this.has('commercialdiv') ? 1.1 : 1));
+        if (power >= 0.75) {
+          const value = G.randInt(750000, 3000000);
+          const comm = Math.round(value * 0.005 * (this.has('commercialdiv') ? 1.1 : 1));
           s.cash += comm;
           s.stats.commission += comm;
-          s.stats.homesSold++;
           s.stats.commercialDeals++;
           s.dayVolume += value;
-          sold++;
           lines.push('COMMERCIAL TAKEOVER! ' + G.choice(J.dealLines));
           lines.push('DEAL CLOSED: ' + G.money(value) + ' (+' + G.money(comm) + ' commission!)');
           lines.push('JEFF: "Told you. Cap rates don\'t lie."');
+          lines.push('(Commercial deals boost cash & score - not your homes-sold race.)');
           this.addReputation(5);
-          s.jeffCooldown = 4;
+          s.jeffCooldown = 6;
           if (s.dayVolume >= 1000000) G.Profile.award('monday');
         } else {
           lines.push('The deal collapsed in due diligence. Jeff shrugged: "Happens. Phase 2 environmental."');
-          lines.push('(Come back in a day - he always has another deal.)');
-          s.jeffCooldown = 1;
+          lines.push('(Come back in a few days - he always finds another deal.)');
+          s.jeffCooldown = 3;
         }
         break;
       }
@@ -794,10 +1030,23 @@ G.State = {
   // ----------------------------------------------------------
   // Legendary power-ups: Brad Nolan & Jeff Nobleza
   // ----------------------------------------------------------
+  // One major mentor benefit per day - visiting a second mentor gets a rain check
+  mentorBusy() {
+    if (!this.s.mentorUsedToday) return null;
+    return { lines: ['You already leaned on a mentor today.', G.choice([
+      '"Spread the wisdom out. Sleep on it." they say.',
+      'Two mentors in one day is how you end up with a podcast.',
+      'Their assistant offers you a granola bar and a smile.',
+    ]), '(One mentor power-up per day - come back tomorrow.)'], used: true };
+  },
+
   visitBrad() {
     const s = this.s;
     if (s.bradUsed) return { lines: ['Brad is out closing loans. Back tomorrow. His voicemail is just air horns.'], used: true };
+    const busy = this.mentorBusy();
+    if (busy) return busy;
     s.bradUsed = true;
+    s.mentorUsedToday = true;
     const B = G.Data.BRAD;
     const lines = [B.name + ' - ' + B.title];
     lines.push(...B.intro);
@@ -834,14 +1083,24 @@ G.State = {
     const s = this.s;
     const J = G.Data.JEFF;
     if (!s.commercialUnlocked) {
+      const busy = this.mentorBusy();
+      if (busy) return busy;
       s.commercialUnlocked = true;
-      const l1 = this.spawnLead('ex1031');
+      s.mentorUsedToday = true;
+      // one cold commercial opportunity - it still needs nurturing
+      const l1 = this.spawnLead('ex1031', { force: true });
+      l1.warmth = 25;
       const lines = [J.name + ' - ' + J.title, ...J.intro, '', ...J.unlockLines,
-        '', '+ FIRST LEAD: ' + l1.name + ' needs a 1031 Exchange!'];
+        '', '+ COLD OPPORTUNITY: ' + l1.name + ' might need a 1031 Exchange. Warm them up!'];
       return { unlock: true, lines };
     }
     if (s.jeffCooldown > 0) {
       return { lines: ['JEFF: "Nothing on the desk today. Check back in ' + s.jeffCooldown + ' day(s)."', 'He is studying a blueprint upside down. It still makes him money.'], used: true };
+    }
+    const busy = this.mentorBusy();
+    if (busy) return busy;
+    if (s.energy < this.actionCost('commercial')) {
+      return { lines: ['JEFF: "This deal needs your FULL attention. Come back with 2 energy."'], used: true };
     }
     // offer the takeover deal (launches negotiate minigame)
     return { deal: true, lines: [G.choice(J.dealLines)] };
@@ -857,33 +1116,37 @@ G.State = {
       return { lines: ['BLAKE: "Systems are still running - give it ' + s.blakeCooldown + ' day(s)."',
         G.choice(B.coffee), '"' + G.choice(['Scale beats hustle.', 'Work smarter, not harder.']) + '"'], used: true };
     }
-    s.blakeCooldown = 4;
+    const busy = this.mentorBusy();
+    if (busy) return busy;
+    if (s.energy < 1) {
+      return { lines: ['BLAKE: "Love the energy. Wait. You have none. Come back with 1 energy."'], used: true };
+    }
+    s.energy -= 1;
+    s.blakeCooldown = 6;
+    s.mentorUsedToday = true;
     const lines = [B.name + ' - ' + B.title];
 
     if (G.chance(B.scaleChance)) {
-      // ULTIMATE: Scale Mode
-      s.scaleMode = Math.max(s.scaleMode, 2);
-      s.energy = Math.min(s.energy + 2, this.maxEnergy());
-      s.abilityUsed = false; // cooldowns melt
+      // ULTIMATE: Scale Mode (1 day)
+      s.scaleMode = Math.max(s.scaleMode, 1);
+      s.energy = Math.min(s.energy + 1, this.maxEnergy());
       lines.push(...B.scaleLines);
-      for (let i = 0; i < 2; i++) {
-        const l = this.spawnLead();
-        lines.push('+ LEAD: ' + l.name + ' recruited by the AI swarm!');
-      }
-      lines.push('', 'SCALE MODE active for 2 days: 2x leads, faster closes, +1 energy, free abilities.');
+      const l = this.spawnLead();
+      if (l) lines.push('+ LEAD: ' + l.name + ' recruited by the AI swarm!');
+      else lines.push('The AI swarm found a lead... but your pipeline is FULL.');
+      lines.push('', 'SCALE MODE active today: +1 energy, smoother tasks, drones hunt overnight.');
       G.Profile.award('scalemode');
       G.Profile.unlock('blake', 'You triggered Blake\'s Scale Mode!');
     } else {
-      // SPECIAL: AI Overdrive
-      s.aiOverdrive = Math.max(s.aiOverdrive, 3);
+      // SPECIAL: AI Overdrive (2 days, passive-only)
+      s.aiOverdrive = Math.max(s.aiOverdrive, 2);
       lines.push(...B.intro);
       lines.push('', B.ability + ' DEPLOYED:');
       const twoDrones = G.shuffle(B.drones).slice(0, 2);
       for (const d of twoDrones) lines.push('* ' + d);
-      const l = this.spawnLead();
-      lines.push('', '+ LEAD: ' + l.name + ' (network effect kicking in)');
       lines.push(G.choice(B.coffee));
-      lines.push('', 'AI OVERDRIVE active 3 days: passive leads + income, auto follow-up.');
+      lines.push('', 'AI OVERDRIVE active 2 days: the drones may source leads overnight,');
+      lines.push('nudge your pipeline, and earn a little passive income.');
     }
     lines.push(G.choice(B.lines));
     return { lines };
@@ -902,39 +1165,45 @@ G.State = {
       return { lines: ['TYLER: "The systems are running. Give it ' + s.tylerCooldown + ' day(s)."',
         '"' + G.choice(['Consistency beats intensity.', 'The basics always win.']) + '"'], used: true };
     }
-    s.tylerCooldown = 3;
-    s.tylerTier = Math.min(s.tylerTier + 1, 6);
+    const busy = this.mentorBusy();
+    if (busy) return busy;
+    if (s.energy < 1) {
+      return { lines: ['TYLER: "A system needs an operator. Come back with 1 energy."'], used: true };
+    }
+    s.energy -= 1;
+    s.tylerCooldown = 5;
+    s.mentorUsedToday = true;
+    s.tylerTier = Math.min(s.tylerTier + 1, 3);
     const lines = [T.name + ' - ' + T.title];
 
-    // Cirql Scan (every visit): reveal + warm, scaling with tier
-    lines.push(...T.scanLines);
-    for (const l of this.leadsInStage('new', 'hot')) l.warmth = G.clamp(l.warmth + 8, 0, 100);
-    const reveals = Math.max(1, Math.floor(s.tylerTier / 2));
-    for (let i = 0; i < reveals; i++) {
-      const l = this.spawnLead(G.chance(0.5) ? 'pastclient' : 'referral');
-      l.warmth = G.clamp(l.warmth + 10, 0, 100);
-      lines.push('+ REVEALED: ' + l.name + ' (' + l.label + ')');
+    // Cirql Scan: warms only your two coldest prospects
+    lines.push(...T.scanLines.slice(0, 3));
+    const coldest = this.leadsInStage('new', 'hot').sort((a, b) => a.warmth - b.warmth).slice(0, 2);
+    for (const l of coldest) {
+      l.warmth = G.clamp(l.warmth + 5, 0, 100);
+      lines.push('* ' + l.name + ' resurfaced in the CRM. (+5 warmth)');
     }
-    // surface a hidden listing appointment (higher-tier systems only)
-    if (s.tylerTier >= 3) {
-      const hiddenSeller = this.bestLead(this.leadsInStage('new', 'hot').filter(l => l.seller));
-      if (hiddenSeller) { this.advance(hiddenSeller, 'appt'); lines.push('+ HIDDEN LISTING APPT: ' + hiddenSeller.name + ' is ready to meet!'); }
+    // Sometimes the scan digs up a real person
+    if (G.chance(0.35)) {
+      const l = this.spawnLead(G.chance(0.5) ? 'pastclient' : 'referral');
+      if (l) lines.push('+ REVEALED: ' + l.name + ' (' + l.label + ')');
+      else lines.push('The scan found someone... but your pipeline is FULL.');
     }
 
-    // Roll a bigger system (gated by tier -> weak early, strong late)
-    if (s.tylerTier >= 2 && G.chance(T.overrideChance)) {
-      s.systemOverride = Math.max(s.systemOverride, 3);
+    // Bigger systems unlock at higher tiers (weak early, useful late)
+    if (s.tylerTier >= 3 && G.chance(T.overrideChance)) {
+      s.systemOverride = Math.max(s.systemOverride, 1);
       lines.push('', ...T.overrideLines);
-      lines.push('SYSTEM OVERRIDE active 3 days.');
+      lines.push('SYSTEM OVERRIDE active 1 day.');
       G.Profile.award('sysoverride');
       G.Profile.unlock('tyler', 'You triggered Tyler\'s System Override!');
-    } else if (G.chance(T.engineChance)) {
-      s.openHouseEngine = Math.max(s.openHouseEngine, 2);
+    } else if (s.tylerTier >= 2 && G.chance(T.engineChance)) {
+      s.openHouseEngine = Math.max(s.openHouseEngine, 1);
       lines.push('', ...T.engineLines);
-      lines.push('OPEN HOUSE ENGINE active 2 days.');
+      lines.push('OPEN HOUSE ENGINE active 1 day.');
     } else {
-      lines.push('', 'DAILY DISCIPLINE strengthened (tier ' + s.tylerTier + '): more auto follow-up',
-        'and referral generation every day. The system compounds.');
+      lines.push('', 'DAILY DISCIPLINE strengthened (tier ' + s.tylerTier + '/3): nightly warmth,',
+        'lower ghosting risk, and a small referral chance. Systems compound.');
     }
     lines.push(G.choice(T.lines));
     return { lines };
@@ -945,8 +1214,8 @@ G.State = {
   // ----------------------------------------------------------
   useAbility() {
     const s = this.s;
-    if (s.abilityUsed && !(s.scaleMode > 0)) return null;
-    if (!(s.scaleMode > 0)) s.abilityUsed = true;
+    if (s.abilityUsed) return null;
+    s.abilityUsed = true;
     const lines = [];
     const perk = this.perk();
 
@@ -968,7 +1237,7 @@ G.State = {
     if (s.charId === 'malcolm') {
       const gain = Math.round(G.randInt(300, 800) * this.followerGainMult());
       s.stats.followers += gain;
-      const n = G.randInt(2, 4);
+      const n = G.randInt(1, 2);
       lines.push('VIRAL VIDEO! "' + G.choice([
         'AGENT RATES EVERY LAKE (PART 7)', 'I SLEPT IN AN ICE HOUSE FOR A LISTING',
         'THE LOON CALL CHALLENGE', 'SELLING A HOUSE IN -30 (GONE WRONG)',
@@ -976,7 +1245,8 @@ G.State = {
       lines.push('+' + gain + ' FOLLOWERS!');
       for (let i = 0; i < n; i++) {
         const l = this.spawnLead(G.chance(0.4) ? 'lakehome' : 'facebook');
-        lines.push('+ LEAD: ' + l.name + ' - "saw your video, had to call!"');
+        if (l) lines.push('+ LEAD: ' + l.name + ' - "saw your video, had to call!"');
+        else lines.push('More viewers wanted to call... but your pipeline is FULL.');
       }
     } else if (s.charId === 'bridger') {
       lines.push('POWER CLOSE! Bridger straightens his tie...');
@@ -986,18 +1256,19 @@ G.State = {
       lines.push('THE ROLODEX! Grandpa licks a thumb and flips...');
       for (let i = 0; i < 2; i++) {
         const l = this.spawnLead('pastclient');
-        l.warmth = 85;
-        lines.push('+ ' + l.name + ' answered on the first ring. Of course they did.');
+        if (l) { l.warmth = 85; lines.push('+ ' + l.name + ' answered on the first ring. Of course they did.'); }
+        else lines.push('The Rolodex had more names, but your plate is FULL.');
       }
     } else if (perk === 'influencer') {
       const gain = Math.round(G.randInt(400, 900) * this.followerGainMult());
       s.stats.followers += gain;
       lines.push('GOING LIVE! Chaos. Beautiful chaos.');
       lines.push('+' + gain + ' FOLLOWERS!');
-      const n = G.randInt(1, 3);
+      const n = G.randInt(1, 2);
       for (let i = 0; i < n; i++) {
         const l = this.spawnLead('facebook');
-        lines.push('+ LEAD: ' + l.name + ' from the live chat!');
+        if (l) lines.push('+ LEAD: ' + l.name + ' from the live chat!');
+        else lines.push('The chat is full of buyers... and your pipeline is full of everyone else.');
       }
       if (s.stats.followers >= 5000) G.Profile.award('butterfly');
     } else if (perk === 'veteran') {
@@ -1015,9 +1286,9 @@ G.State = {
       s.stats.followers += gain;
       lines.push('AI OVERDRIVE! Drones deploy - holographic dashboards everywhere.');
       lines.push('+' + gain + ' FOLLOWERS');
-      const n = G.randInt(1, 2);
-      for (let i = 0; i < n; i++) { const l = this.spawnLead(); lines.push('+ LEAD: ' + l.name + ' (AI-sourced)'); }
-      lines.push('2 days of passive AI lead-gen + income now active.');
+      const l = this.spawnLead();
+      if (l) lines.push('+ LEAD: ' + l.name + ' (AI-sourced)');
+      lines.push('2 days of passive AI drone work now active.');
     } else if (perk === 'tyler') {
       s.systemOverride = Math.max(s.systemOverride, 1);
       lines.push('SYSTEM OVERRIDE! Automations take the wheel tonight.');
@@ -1061,17 +1332,74 @@ G.State = {
   // ----------------------------------------------------------
   endDay() {
     const s = this.s;
+    const bal = this.bal();
+    const today = this.totalDay();
     const passiveLines = [];
+    const report = { contacted: 0, due: 0, atRisk: 0, lost: [] };
     s.dayVolume = 0;
     s.bigfootToday = G.chance(0.06);
+    if (s.effects.detour > 0) s.effects.detour--;
 
-    // 1. age leads, ghosting, influencer collapse
+    // Tyler's Daily Discipline tier (vendor visits + playable passive)
+    const disciplineTier = Math.min(6, s.tylerTier + this.tylerPassiveTier());
+
+    // 1. FOLLOW-UP DECAY: untouched leads cool, then ghost.
+    // CRM softens decay (-40%) and halves ghosting; Tyler -10%/tier ghosting.
+    const decayMult = this.has('crm') ? 0.6 : 1;
+    const ghostMult = (this.has('crm') ? 0.5 : 1) * Math.max(0.4, 1 - 0.1 * disciplineTier);
+    const lose = (l, why) => { this.removeLead(l); report.lost.push(l.name + ' (' + G.Data.STAGE_LABELS[l.stage] + '): ' + why); };
     for (const l of s.leads.slice()) {
       l.daysInStage++;
       if (l.delay > 0) l.delay--;
-      if (!this.has('crm') && (l.stage === 'new' || l.stage === 'hot') && l.daysInStage > 3 && G.chance(0.35)) {
-        this.removeLead(l);
-        passiveLines.push(l.name + ' ghosted you (they ' + G.choice(G.Data.FLAVOR.ghostReasons) + ').');
+      const touched = (l.lastContactDay ?? 0) >= today;
+      if (touched) { report.contacted++; l.daysSinceContact = 0; continue; }
+      l.daysSinceContact = (l.daysSinceContact || 0) + 1;
+      const d = l.daysSinceContact;
+      switch (l.stage) {
+        case 'attendee': {
+          l.followUpDeadline = (l.followUpDeadline ?? 1) - 1;
+          if (l.followUpDeadline < 0) lose(l, G.choice(G.Data.FLAVOR.lostReasons));
+          break;
+        }
+        case 'new': {
+          l.warmth = G.clamp(l.warmth - Math.round((d === 1 ? bal.decayNew[0] : bal.decayNew[1]) * decayMult), 0, 100);
+          if (d >= 4 && G.chance(bal.ghostNew4 * ghostMult)) lose(l, G.choice(G.Data.FLAVOR.lostReasons));
+          else if (d === 3 && G.chance(bal.ghostNew3 * ghostMult)) lose(l, G.choice(G.Data.FLAVOR.lostReasons));
+          break;
+        }
+        case 'hot': {
+          l.warmth = G.clamp(l.warmth - Math.round((d === 1 ? bal.decayWarm[0] : bal.decayWarm[1]) * decayMult), 0, 100);
+          if (d >= 3 && G.chance(bal.ghostWarm3 * ghostMult)) { lose(l, G.choice(G.Data.FLAVOR.lostReasons)); break; }
+          if (l.warmth < bal.warmThreshold - 10) {
+            l.stage = 'new';
+            passiveLines.push(l.name + ' cooled back to NEW. "We kind of forgot we were moving?"');
+          }
+          break;
+        }
+        case 'appt': {
+          if (d >= 2 && G.chance(bal.apptStealChance)) {
+            s.rivalry++;
+            lose(l, 'A competing agent responded in eleven seconds.');
+          } else if (d >= 1 && G.chance(bal.apptDropChance)) {
+            l.stage = 'hot';
+            l.warmth = G.clamp(l.warmth - 8, 0, 100);
+            passiveLines.push(l.name + '\'s appointment fell through - nobody confirmed. Back to WARM.');
+          }
+          break;
+        }
+        case 'active': {
+          if (d >= bal.clientNeglectDays) {
+            s.stats.happiness = G.clamp(s.stats.happiness - 2, 0, 100);
+            if (l.seller) passiveLines.push(l.name + ' (seller) left a voicemail: "Any... updates?" (-happiness)');
+            else if (G.chance(0.25)) { l.warmth = G.clamp(l.warmth - 5, 0, 100); passiveLines.push(l.name + ' (buyer) is pausing their search. They feel forgotten.'); }
+            if (d >= bal.clientNeglectDays + 2 && G.chance(0.15)) {
+              this.addReputation(-3);
+              lose(l, 'They fired you by text. The text had a typo. It still hurt.');
+            }
+          }
+          break;
+        }
+        // offer/pending are committed - they decay via events, not neglect
       }
     }
     if (this.perk() === 'influencer' && !this.has('tc')) {
@@ -1082,120 +1410,138 @@ G.State = {
         }
       }
     }
-    if (this.has('crm')) {
-      for (const l of this.leadsInStage('new', 'hot')) l.warmth = G.clamp(l.warmth + 5, 0, 100);
-    }
     if (this.has('smallOffice')) {
       for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + 2, 0, 100);
     }
 
-    // 2. passive lead sources
-    const passiveSpawn = (chanceVal, typeId, msg) => {
-      if (G.chance(chanceVal)) {
-        const l = this.spawnLead(typeId);
-        passiveLines.push(msg.replace('%N', l.name).replace('%T', l.label));
-      }
-    };
-    if (this.has('website')) passiveSpawn(0.35, 'zestimate', 'WEBSITE LEAD: %N filled out your contact form!');
-    if (this.has('seo')) passiveSpawn(0.3, 'zestimate', 'SEO LEAD: %N googled "best agent up north" and found YOU.');
-    if (this.has('fbads')) passiveSpawn(0.3, 'facebook', 'AD LEAD: %N clicked your Facebook ad!');
-    if (this.has('marketing')) passiveSpawn(0.35, null, 'AD LEAD: %N saw your billboard by the DQ!');
-    if (this.has('marketingdir')) passiveSpawn(0.45, null, 'YOUR MARKETING DIRECTOR delivered: %N (%T)!');
-    if (this.has('downtownOffice')) passiveSpawn(0.3, null, 'WALK-IN: %N wandered into the office. Free lead!');
-    if (this.perk() === 'influencer') passiveSpawn(0.8, 'facebook', 'DM LEAD: %N slid into the DMs. As they do.');
-    if (s.commercialUnlocked && G.chance(G.Data.JEFF.passiveChance)) {
-      passiveSpawn(1, 'ex1031', 'JEFF\'S NETWORK: %N called about a 1031 Exchange!');
+    // 2. PASSIVE LEAD SOURCES: every source rolls, but only
+    // maxPassiveLeadsPerDay actually become leads. The rest convert
+    // into small warmth / follower / reputation bumps.
+    const hits = [];
+    const roll = (id, ch, typeId, msg, isRef) => { if (ch > 0 && G.chance(ch)) hits.push({ id, typeId, msg, isRef }); };
+    if (this.has('website')) roll('website', 0.12, 'zestimate', 'WEBSITE LEAD: %N filled out your contact form!');
+    if (this.has('seo')) roll('seo', 0.10, 'zestimate', 'SEO LEAD: %N googled "best agent up north" and found YOU.');
+    if (this.has('fbads')) roll('fbads', 0.12, 'facebook', 'AD LEAD: %N clicked your Facebook ad!');
+    if (this.has('marketing')) roll('marketing', 0.15, null, 'AD LEAD: %N saw your billboard by the DQ!');
+    if (this.has('marketingdir')) roll('mdir', 0.20, null, 'YOUR MARKETING DIRECTOR delivered: %N (%T)!');
+    if (this.has('downtownOffice')) roll('walkin', 0.10, null, 'WALK-IN: %N wandered into the office. Free lead!');
+    if (this.perk() === 'influencer') roll('dm', 0.5, 'facebook', 'DM LEAD: %N slid into the DMs. As they do.');
+    if (s.commercialUnlocked) roll('jeff', G.Data.JEFF.passiveChance, 'ex1031', 'JEFF\'S NETWORK: %N called about a 1031 Exchange!');
+    const organicChance = Math.min(0.18, 0.08 + s.stats.followers / 40000 + Math.max(0, s.marketVisibility - 40) / 800);
+    roll('organic', organicChance, null, 'NEW LEAD: %N (%T) reached out!');
+    if (s.scaleMode > 0) roll('blakeScale', 0.6, null, 'BLAKE\'S DRONE SWARM delivered: %N (%T)!');
+    else if (s.aiOverdrive > 0) roll('blakeAI', 0.35, null, 'BLAKE\'S AI SOURCED A LEAD: %N (%T)!');
+    if (this.perk() === 'blake') roll('network', 0.15, null, 'NETWORK EFFECT: %N was introduced through Blake\'s network!');
+    if (s.openHouseEngine > 0) roll('ohengine', 0.8, 'openhouse', 'OPEN HOUSE ENGINE: %N signed in overnight.');
+    if (disciplineTier > 0) roll('discipline', 0.03 * disciplineTier, 'referral', 'DAILY DISCIPLINE: consistent follow-up earned a referral from %N.', true);
+    if (this.has('retreat')) roll('retreat', 0.10, 'referral', 'RETREAT MAGIC: %N was referred after a weekend at your cabin!', true);
+
+    const winners = G.shuffle(hits).slice(0, bal.maxPassiveLeadsPerDay);
+    for (const src of winners) {
+      const l = this.spawnLead(src.typeId);
+      if (!l) { passiveLines.push('A lead came in overnight... and got no reply. Your pipeline is FULL.'); continue; }
+      if (src.id === 'ohengine') l.warmth = G.randInt(20, 35);
+      if (src.isRef) { s.stats.referrals++; G.Profile.bump('referrals'); }
+      passiveLines.push(src.msg.replace('%N', l.name).replace('%T', l.label));
     }
-    if (G.chance(0.2 + s.stats.followers / 20000)) {
-      passiveSpawn(1, null, 'NEW LEAD: %N (%T) reached out!');
+    for (const src of hits.slice(bal.maxPassiveLeadsPerDay)) {
+      // consolation: buzz instead of a full lead
+      const r = Math.random();
+      if (r < 0.4) {
+        const cold = this.leadsInStage('new', 'hot').sort((a, b) => a.warmth - b.warmth)[0];
+        if (cold) cold.warmth = G.clamp(cold.warmth + 3, 0, 100);
+        passiveLines.push('Buzz from ' + src.id.toUpperCase() + ': your pipeline warmed a little.');
+      } else if (r < 0.7) {
+        s.stats.followers += G.randInt(15, 40);
+        passiveLines.push('Buzz from ' + src.id.toUpperCase() + ': +followers.');
+      } else {
+        this.addReputation(1);
+        passiveLines.push('Buzz from ' + src.id.toUpperCase() + ': +1 reputation.');
+      }
     }
     if (this.has('youtube')) s.stats.followers += 50;
-    if (this.has('retreat')) {
-      s.stats.happiness = G.clamp(s.stats.happiness + 2, 0, 100);
-      if (G.chance(0.1)) { passiveSpawn(1, 'referral', 'RETREAT MAGIC: %N was referred after a weekend at your cabin!'); s.stats.referrals++; }
-    }
+    if (this.has('retreat')) s.stats.happiness = G.clamp(s.stats.happiness + 2, 0, 100);
 
-    // 3. photographer: listings attract offers passively
-    if (this.has('photographer')) {
-      for (const l of this.leadsInStage('active').filter(x => x.seller && x.daysInStage >= 2)) {
-        if (G.chance(0.4)) {
-          this.advance(l, 'offer');
-          passiveLines.push('Those pro photos worked: an offer came in on ' + l.name + '\'s place!');
+    // 3. LISTING MOMENTUM: marketed listings attract offers; neglected
+    // listings breed unhappy sellers.
+    for (const l of this.leadsInStage('active').filter(x => x.seller).slice()) {
+      if (l.listingMomentum == null) l.listingMomentum = 50;
+      if (l.expectsOpenHouse === undefined) l.expectsOpenHouse = G.chance(0.4);
+      l.listingMomentum = G.clamp(l.listingMomentum - 6 + (this.has('photographer') ? 3 : 0), 0, 100);
+      if (l.daysInStage >= 1 && !l.overpriced && G.chance(l.listingMomentum / 250 + (this.has('photographer') ? 0.08 : 0))) {
+        this.advance(l, 'offer');
+        passiveLines.push('MOMENTUM: an offer came in on ' + l.name + '\'s listing!');
+        continue;
+      }
+      if (l.expectsOpenHouse && l.listingMomentum < 40 && l.daysInStage >= 2) {
+        l.listingMomentum = G.clamp(l.listingMomentum - 4, 0, 100);
+        passiveLines.push(l.name + ' expected an OPEN HOUSE by now. Their patience thins.');
+      }
+      if (l.listingMomentum <= 15) {
+        const r = Math.random();
+        if (r < 0.35) {
+          s.stats.happiness = G.clamp(s.stats.happiness - 2, 0, 100);
+          passiveLines.push(l.name + ' called: "What exactly are you DOING to sell our house?"');
+        } else if (r < 0.5 && !l.overpriced) {
+          l.overpriced = true;
+          passiveLines.push(l.name + ' now wants "a new pricing strategy." The listing got harder.');
+        } else if (r < 0.6 && l.daysInStage >= 4) {
+          s.rivalry++;
+          this.addReputation(-2);
+          lose(l, 'They canceled the listing and called your rival. Devastating.');
         }
       }
     }
+    // market visibility fades without public marketing
+    s.marketVisibility = G.clamp(s.marketVisibility - 8, 0, 100);
 
-    // 3b. BLAKE SUDDATH buffs: AI Overdrive / Scale Mode + Network Effect
+    // 3b. BLAKE SUDDATH buffs (leads come via the passive pool above)
     if (s.scaleMode > 0 || s.aiOverdrive > 0) {
       const scaling = s.scaleMode > 0;
-      const drones = scaling ? 2 : 1;                 // AI-sourced leads
-      for (let i = 0; i < drones; i++) {
-        if (G.chance(scaling ? 0.9 : 0.6)) passiveSpawn(1, null, "BLAKE'S AI SOURCED A LEAD: %N (%T)!");
-      }
-      // auto follow-up (CRM Sync / Daily Discipline style)
-      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + (scaling ? 8 : 5), 0, 100);
-      // passive income (AI drones earning referral fees / marketing)
-      const income = scaling ? 700 : 300;
+      // gentle auto follow-up
+      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + (scaling ? 5 : 3), 0, 100);
+      // modest passive income
+      const income = scaling ? 250 : 100;
       s.cash += income; s.stats.commission += income;
-      // Network Effect: leads multiply
-      if (G.chance(scaling ? 0.6 : 0.35)) {
-        const r = this.spawnLead('referral'); s.stats.referrals++; G.Profile.bump('referrals');
-        passiveLines.push('NETWORK EFFECT: ' + r.name + ' was introduced by someone Blake connected you with!');
-      }
       passiveLines.push((scaling ? 'SCALE MODE' : 'AI OVERDRIVE') + ': AI drones worked overnight (+' + G.money(income) + ' passive).');
       if (scaling) { s.scaleMode--; if (s.scaleMode === 0) passiveLines.push('Scale Mode wound down. The dashboards fade.'); }
       else { s.aiOverdrive--; if (s.aiOverdrive === 0) passiveLines.push('AI Overdrive ended. The drones return to the backpack.'); }
     }
 
-    // 3b2. BLAKE (playable): coffee drains; empty = slower next day. Plus network-effect passive.
+    // 3b2. BLAKE (playable): coffee drains; shiny-tool distraction costs real time
     if (this.perk() === 'blake') {
       s.coffee = Math.max(0, s.coffee - 34);
       if (s.coffee <= 0) passiveLines.push('COFFEE EMPTY! Blake is dragging - do FOLLOW UP to refuel. (-1 energy until then)');
       else if (s.coffee <= 34) passiveLines.push('Coffee low (' + s.coffee + '%). Refill soon or slow down.');
-      if (G.chance(0.35)) passiveSpawn(1, null, 'NETWORK EFFECT: %N was introduced through Blake\'s network!');
-      if (G.chance(0.15)) passiveLines.push('Blake lost an hour testing a shiny new AI tool. (Distraction.)');
-    }
-
-    // 3c. TYLER: Daily Discipline (vendor tier + playable passive) + System Override + Open House Engine
-    const disciplineTier = s.tylerTier + this.tylerPassiveTier();
-    if (disciplineTier > 0) {
-      const tier = disciplineTier;
-      // auto follow-up: warmth scales with tier
-      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + 5 + tier * 2, 0, 100);
-      // organize / remind about neglected clients: reset the most-neglected lead so it won't ghost
-      const neglected = this.leadsInStage('new', 'hot').sort((a, b) => b.daysInStage - a.daysInStage)[0];
-      if (neglected) neglected.daysInStage = 0;
-      // referral generation: weak early, strong late
-      if (G.chance(0.08 + tier * 0.05)) {
-        const r = this.spawnLead('referral'); s.stats.referrals++; G.Profile.bump('referrals');
-        passiveLines.push('DAILY DISCIPLINE: consistent follow-up earned a referral from ' + r.name + '.');
+      if (G.chance(0.15)) {
+        s.effects.distracted = true;
+        passiveLines.push('Blake stayed up testing a shiny new AI tool. Tomorrow starts slow. (-1 energy)');
       }
     }
+
+    // 3c. TYLER: Daily Discipline (+1 warmth per tier, referrals via pool)
+    if (disciplineTier > 0) {
+      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + disciplineTier, 0, 100);
+    }
     if (s.systemOverride > 0) {
-      // paperwork moves itself along: unstick one snagged pending deal (you still close it)
+      // paperwork moves itself along: unstick one snagged transaction
       const stuck = this.leadsInStage('pending').filter(l => l.issue || l.delay > 0)[0];
       if (stuck) { stuck.issue = false; stuck.delay = 0; passiveLines.push('SYSTEM OVERRIDE cleared the paperwork snag on ' + stuck.name + '\'s deal.'); }
-      // CRM organized + marketing automated + modest passive income
-      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + 8, 0, 100);
-      s.stats.followers += 80;
-      s.cash += 600; s.stats.commission += 600;
-      if (G.chance(0.4)) { const r = this.spawnLead('referral'); s.stats.referrals++; G.Profile.bump('referrals'); passiveLines.push('SYSTEM OVERRIDE: referral engine produced ' + r.name + '.'); }
-      passiveLines.push('SYSTEM OVERRIDE: automations ran the business overnight (+' + G.money(600) + ').');
+      s.stats.followers += 40;
+      s.cash += 200; s.stats.commission += 200;
+      passiveLines.push('SYSTEM OVERRIDE: automations ran the business overnight (+' + G.money(200) + ').');
       s.systemOverride--; if (s.systemOverride === 0) passiveLines.push('System Override ended. The systems keep humming.');
     }
     if (s.openHouseEngine > 0) {
-      const g1 = this.spawnLead('openhouse'); G.Profile.bump('ohLeads');
-      passiveLines.push('OPEN HOUSE ENGINE: ' + g1.name + ' signed in overnight.');
-      if (G.chance(0.6)) { const g2 = this.spawnLead(G.chance(0.5) ? 'expired' : 'referral'); passiveLines.push('OPEN HOUSE ENGINE: + ' + g2.name + ' (' + g2.label + ').'); }
       s.openHouseEngine--; if (s.openHouseEngine === 0) passiveLines.push('Open House Engine wrapped up.');
     }
 
     // 4. rival AI + trash talk scaled by rivalry
     const rivalLines = [];
     const rc = this.rivalChar();
-    const closeChance = 0.42 + s.month * 0.1;
+    const closeChance = bal.rivalCloseChances[Math.min(s.month, 2)];
     let rivalCloses = G.chance(closeChance) ? 1 : 0;
-    if (G.chance(0.08)) rivalCloses++;
+    if (G.chance(bal.rivalDoubleChance)) rivalCloses++;
     for (let i = 0; i < rivalCloses; i++) {
       const val = G.randInt(150000, s.month === 2 ? 600000 : 420000);
       s.rival.homesSold++;
@@ -1217,22 +1563,36 @@ G.State = {
       ]));
     }
 
-    // 5. random event: easter eggs are rare and checked first
+    // 5. random event: easter eggs are rare and checked first.
+    // Regular events are weighted (minor 1.0 / medium 0.6 / major 0.2),
+    // only eligible events fire, and the last 5 never repeat.
     let eventText = null, eventGood = null;
     if (G.chance(0.05)) {
       const ev = G.choice(G.Data.EASTER_EGGS);
       const extra = this.applyEventFx(ev.fx);
       if (extra !== false) { eventText = ev.text + (extra ? ' ' + extra : ''); eventGood = true; }
     }
-    if (!eventText && G.chance(0.6)) {
-      if (G.chance(0.5)) {
-        const ev = G.choice(G.Data.OBSTACLES);
+    if (!eventText && G.chance(bal.eventChance)) {
+      const negative = G.chance(bal.negativeEventShare);
+      const recent = s.eventHistory || (s.eventHistory = []);
+      const pickFrom = (pool) => {
+        const ok = pool.filter(ev => !recent.includes(ev.id) && this.eventEligible(ev));
+        return ok.length ? G.weightedChoice(ok.map(e => ({ ...e, weight: e.w || 1 }))) : null;
+      };
+      let ev = pickFrom(negative ? G.Data.OBSTACLES : G.Data.FUNNY_EVENTS);
+      // if no negative event can bite, fall back to a minor always-on setback
+      if (!ev && negative) {
+        const minors = G.Data.OBSTACLES.filter(e => (e.w || 1) >= 1 && !recent.includes(e.id) && this.eventEligible(e));
+        ev = minors.length ? G.choice(minors) : null;
+      }
+      if (ev) {
         const extra = this.applyEventFx(ev.fx);
-        if (extra !== false) { eventText = ev.text + (extra ? ' ' + extra : ''); eventGood = false; }
-      } else {
-        const ev = G.choice(G.Data.FUNNY_EVENTS);
-        const extra = this.applyEventFx(ev.fx);
-        if (extra !== false) { eventText = ev.text + (extra ? ' ' + extra : ''); eventGood = true; }
+        if (extra !== false) {
+          eventText = ev.text + (extra ? ' ' + extra : '');
+          eventGood = !negative;
+          recent.push(ev.id);
+          if (recent.length > 5) recent.shift();
+        }
       }
     }
 
@@ -1253,20 +1613,51 @@ G.State = {
     }
 
     // 8. energy + daily resets + weather for tomorrow
-    s.energy = this.maxEnergy() - (s.effects.snowTomorrow ? 1 : 0);
-    if (s.effects.snowTomorrow) passiveLines.push('You lost an hour shoveling the driveway. (-1 energy)');
+    let energyPenalty = 0;
+    if (s.effects.snowTomorrow) { energyPenalty++; passiveLines.push('You lost an hour shoveling the driveway. (-1 energy)'); }
+    if (s.effects.distracted) { energyPenalty++; s.effects.distracted = false; }
+    s.energy = Math.max(0, this.maxEnergy() - energyPenalty);
     s.effects.snowTomorrow = false;
     s.effects.preapproved = false;
     s.abilityUsed = false;
     s.bradUsed = false;
+    s.mentorUsedToday = false;
     if (s.jeffCooldown > 0) s.jeffCooldown--;
     if (s.blakeCooldown > 0) s.blakeCooldown--;
     if (s.tylerCooldown > 0) s.tylerCooldown--;
     const weatherLines = this.rollWeather();
     passiveLines.push(...weatherLines);
 
+    // finalize the FOLLOW-UP REPORT (who is due / at risk tomorrow)
+    for (const l of s.leads) {
+      const r = this.leadRisk(l);
+      if (r === 'DUE TODAY') report.due++;
+      else if (r === 'AT RISK' || r === 'ABOUT TO GHOST') report.atRisk++;
+    }
+    s.followReport = report;
+
     this.autosave();
-    return { eventText, eventGood, rivalLines, passiveLines, bossTime, battleTime: s.pendingBattle };
+    return { eventText, eventGood, rivalLines, passiveLines, bossTime, battleTime: s.pendingBattle, report };
+  },
+
+  // Can this event actually affect the current game state?
+  eventEligible(ev) {
+    const st = (...stages) => this.leadsInStage(...stages).length > 0;
+    switch (ev.fx) {
+      case 'inspectionIssue': return this.leadsInStage('pending').some(l => !l.issue);
+      case 'lowAppraisal': case 'floodHit': case 'septicHit': case 'apprHigh': return st('offer', 'pending');
+      case 'financeDelay': case 'coldFeet': return st('pending');
+      case 'ghostLead': return st('new', 'hot', 'appt');
+      case 'stolenDeal': return st('offer');
+      case 'greedySeller': case 'zestimateFrame': return this.leadsInStage('active').some(l => l.seller && !l.overpriced);
+      case 'valueHit5': return st('active', 'offer', 'pending');
+      case 'hotTub': return this.leadsInStage('active', 'appt').some(l => !l.seller);
+      case 'buyersCool': case 'rateJump': case 'rateFall': return this.s.leads.some(l => !l.seller);
+      case 'allCool': case 'notifyOff': case 'caramelRolls': return st('new', 'hot', 'appt');
+      case 'lakeFreeze': case 'fishBiting': return this.s.leads.some(l => l.lake);
+      case 'lotteryWin': return this.leadsInStage('active', 'offer', 'pending').some(l => !l.seller);
+      default: return true;
+    }
   },
 
   // Returns extra text ('' ok), or false if the event fizzled
@@ -1294,6 +1685,35 @@ G.State = {
       }
       case 'snowstorm':
         s.effects.snowTomorrow = true;
+        return '';
+      case 'lockboxFroze':
+        s.effects.showPenalty = true;
+        return '';
+      case 'roadDetour':
+        s.effects.detour = 1;
+        return '';
+      case 'caramelRolls': {
+        const t = this.leadsInStage('new', 'hot').sort((a, b) => b.warmth - a.warmth)[0];
+        if (!t) return false;
+        t.warmth = G.clamp(t.warmth - 20, 0, 100);
+        s.rivalry++;
+        return '(' + t.name + ' cooled off -20 warmth)';
+      }
+      case 'zestimateFrame': {
+        const t = this.leadsInStage('active').filter(l => l.seller && !l.overpriced);
+        if (!t.length) return false;
+        const l = G.choice(t);
+        l.overpriced = true;
+        if (l.listingMomentum != null) l.listingMomentum = G.clamp(l.listingMomentum - 15, 0, 100);
+        return '(' + l.name + '\'s listing is now overpriced)';
+      }
+      case 'groupText':
+        s.stats.reviews = Math.max(0, s.stats.reviews - 1);
+        s.stats.happiness = G.clamp(s.stats.happiness - 3, 0, 100);
+        this.addReputation(-2);
+        return '';
+      case 'notifyOff':
+        for (const l of this.leadsInStage('new', 'hot')) l.warmth = G.clamp(l.warmth - 5, 0, 100);
         return '';
       case 'badReview':
         s.stats.reviews = Math.max(0, s.stats.reviews - 1);
@@ -1386,14 +1806,16 @@ G.State = {
         return '';
       case 'hotSellerLead': {
         const l = this.spawnLead(G.chance(0.5) ? 'expired' : 'divorce');
+        if (!l) return false;
         l.warmth = 80;
         l.stage = 'hot';
         return '(' + l.name + ' is HOT to list)';
       }
       case 'leadFrenzy': {
-        const n = G.randInt(2, 3);
-        for (let i = 0; i < n; i++) this.spawnLead(G.chance(0.6) ? 'lakehome' : 'cabin');
-        return '(+' + n + ' lake-crazed leads!)';
+        const n = G.randInt(1, 2);
+        let got = 0;
+        for (let i = 0; i < n; i++) if (this.spawnLead(G.chance(0.6) ? 'lakehome' : 'cabin')) got++;
+        return got ? '(+' + got + ' lake-crazed lead' + (got > 1 ? 's' : '') + '!)' : false;
       }
       // happiness tweaks
       case 'happy3': s.stats.happiness = G.clamp(s.stats.happiness + 3, 0, 100); return '';
@@ -1410,7 +1832,7 @@ G.State = {
         this.advance(l, 'offer');
         return '(' + l.name + ' jumped to OFFER!)';
       }
-      case 'sellerLead': this.spawnLead(G.chance(0.5) ? 'fsbo' : 'expired'); return '';
+      case 'sellerLead': return this.spawnLead(G.chance(0.5) ? 'fsbo' : 'expired') ? '' : false;
       case 'deerVideo': {
         const gain = Math.round(200 * this.followerGainMult());
         s.stats.followers += gain;
@@ -1433,19 +1855,20 @@ G.State = {
       }
       case 'videoLead': {
         const l = this.spawnLead('facebook');
+        if (!l) return false;
         l.warmth = 80;
         l.stage = 'hot';
         return '(' + l.name + ' is HOT)';
       }
       case 'referralLead': {
-        this.spawnLead('referral');
+        if (!this.spawnLead('referral')) return false;
         s.stats.referrals++;
         G.Profile.bump('referrals');
         return '';
       }
       // easter eggs
       case 'bunyanReferral': {
-        const l = this.spawnLead(this.commercialOk() ? 'dev100' : 'farm');
+        const l = this.spawnLead(this.commercialOk() ? 'dev100' : 'farm', { force: true });
         l.warmth = 90;
         s.stats.referrals++;
         return '(' + l.name + ', friend of Paul. Warm as a griddle.)';
@@ -1484,11 +1907,12 @@ G.State = {
       s.cash += boss.reward.cash;
       s.stats.commission += boss.reward.cash;
       s.stats.followers += Math.round(boss.reward.followers * this.followerGainMult());
-      for (let i = 0; i < boss.reward.leads; i++) this.spawnLead();
+      let bossLeads = 0;
+      for (let i = 0; i < boss.reward.leads; i++) { if (this.spawnLead()) bossLeads++; }
       s.stats.happiness = G.clamp(s.stats.happiness + 8, 0, 100);
       this.addReputation(6);
       lines.push('YOU BEAT ' + boss.name + '!');
-      lines.push('+' + G.money(boss.reward.cash) + ' bonus, +' + boss.reward.leads + ' leads, +followers!');
+      lines.push('+' + G.money(boss.reward.cash) + ' bonus, +' + bossLeads + ' lead' + (bossLeads === 1 ? '' : 's') + ', +followers!');
       if (boss.final) {
         G.Profile.award('megaslayer');
         if (s.stats.bossWins >= 3) G.Profile.unlock('veteran', 'You won every boss battle this season!');
@@ -1529,8 +1953,10 @@ G.State = {
     s.rivalry++;
     const lines = [];
     if (won) {
-      const l = this.spawnLead(G.chance(0.5) ? 'luxury' : 'lakedev');
+      const l = this.spawnLead(G.chance(0.5) ? 'luxury' : 'lakedev', { force: true });
       l.stage = 'active';
+      l.listingMomentum = 50;
+      l.expectsOpenHouse = G.chance(0.4);
       l.seller = true;
       this.s.stats.listings++;
       this.addReputation(8);

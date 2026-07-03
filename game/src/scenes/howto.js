@@ -20,33 +20,35 @@ G.Engine.register('howto', {
     G.UI.panel(ctx, 16, 8, G.W - 32, G.H - 16, { title: 'HOW TO PLAY', titleBg: G.C.teal });
 
     const L = [
-      ['GOAL', G.C.yellow],
-      ['Sell more homes than your rival by the end of the season (3 months).', G.C.white],
+      ['GOAL: sell more homes than your rival in 3 months. Pick a DIFFICULTY', G.C.white],
+      ['(CASUAL / STANDARD / HARD) when you start - STANDARD is the real game.', G.C.white],
       ['', 0],
-      ['EACH DAY', G.C.yellow],
-      ['Spend ENERGY on actions: call & text leads, host open houses, film', G.C.white],
-      ['videos, pitch listings, show homes, write offers, negotiate, fix', G.C.white],
-      ['inspections, and CLOSE. Most actions launch a quick mini-game -', G.C.white],
-      ['play well and your leads move down the pipeline.', G.C.white],
+      ['THE PIPELINE & WARMTH', G.C.yellow],
+      ['NEW > WARM > APPT > CLIENT > OFFER > PENDING > SOLD.', G.C.cyan],
+      ['Leads advance on WARMTH: 40+ to go WARM, 65+ to book an APPT.', G.C.white],
+      ['Calls, texts & follow-ups add warmth. UNTOUCHED leads COOL EVERY', G.C.white],
+      ['NIGHT and eventually GHOST - check the PIPELINE screen for risk!', G.C.white],
+      ['Pipeline cap: 12 leads on Standard. Full plate = missed opportunities.', G.C.gray],
+      ['Fresh PENDING deals need 2 days before closing (TC speeds it up).', G.C.gray],
       ['', 0],
-      ['THE PIPELINE', G.C.yellow],
-      ['NEW > WARM > APPT SET > CLIENT > OFFER IN > PENDING > SOLD', G.C.cyan],
+      ['THE LOOP THAT WINS', G.C.yellow],
+      ['OPEN HOUSES bring attendees, listing momentum & market visibility.', G.C.white],
+      ['FOLLOW UP fast (attendees by NEXT DAY!) to turn them into buyers,', G.C.white],
+      ['sellers & referrals. Neglected listings = angry sellers.', G.C.white],
       ['', 0],
-      ['TIPS', G.C.yellow],
-      ['* Leads go cold if ignored (a CRM fixes that). Watch the WEATHER -', G.C.gray],
-      ['  it changes what works each day. Use your SPECIAL daily, it is free!', G.C.gray],
-      ['* Visit BRAD at the bank (Clear to Close!) and JEFF at the plaza', G.C.gray],
-      ['  (unlocks huge commercial deals). Month-end: BOSS SHOWDOWNS.', G.C.gray],
-      ['* Win seasons & feats to unlock 4 SECRET AGENTS. Beware the', G.C.gray],
-      ['  head-to-head LISTING BATTLES when the rivalry heats up.', G.C.gray],
+      ['MENTORS: Brad, Jeff, Blake & Tyler - ONE mentor power-up per day.', G.C.orange],
+      ['Jeff\'s commercial deals pay cash & score but do NOT count as homes.', G.C.orange],
       ['', 0],
-      ['CONTROLS: ARROWS/WASD + ENTER, or mouse. [M] mute. [ESC] back.', G.C.lime],
+      [null, 0], // controls line - filled at render time
     ];
 
-    let y = 26;
+    let y = 24;
     for (const [text, color] of L) {
-      if (text) G.UI.text(ctx, text, 28, y, { size: 8, color });
-      y += 12;
+      if (text === null) {
+        G.UI.text(ctx, G.CT('CONTROLS: ARROWS/WASD + ENTER, or mouse. [M] mute. [ESC] back.',
+          'CONTROLS: TAP buttons & cards. DRAG to scroll lists & the sign-in sheet.'), 28, y, { size: 8, color: G.C.lime });
+      } else if (text) G.UI.text(ctx, text, 28, y, { size: 8, color });
+      y += 10.5;
     }
 
     if (Math.floor(this.t * 2) % 2 === 0) {

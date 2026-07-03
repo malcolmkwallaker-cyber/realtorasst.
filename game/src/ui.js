@@ -3,6 +3,12 @@
 // ============================================================
 'use strict';
 
+// Pick instruction text for the current input style
+G.CT = (keyboard, touchText) => (G.Input && G.Input.touch) ? touchText : keyboard;
+
+// Pick instruction text for the current input style
+G.CT = (keyboard, touchText) => (G.Input && G.Input.touch) ? touchText : keyboard;
+
 G.UI = {
   // Crisp-ish retro text
   text(ctx, str, x, y, opts = {}) {
@@ -66,7 +72,8 @@ G.UI = {
   },
 
   button(ctx, label, x, y, w, h, opts = {}) {
-    const hover = G.Input.inRect(x, y, w, h);
+    const pad = opts.pad ?? (G.Input.touch ? 3 : 0);  // invisible finger padding
+    const hover = G.Input.inRect(x, y, w, h, pad);
     const active = opts.selected || hover;
     ctx.fillStyle = opts.disabled ? G.C.dusk : (active ? (opts.hoverBg || G.C.blue) : (opts.bg || G.C.navy));
     ctx.fillRect(x, y, w, h);
@@ -77,7 +84,7 @@ G.UI = {
       size: opts.size || 8,
       color: opts.disabled ? G.C.slate : (active ? G.C.white : (opts.color || G.C.gray)),
     });
-    return !opts.disabled && G.Input.clickedRect(x, y, w, h);
+    return !opts.disabled && G.Input.clickedRect(x, y, w, h, pad);
   },
 };
 
@@ -120,15 +127,24 @@ G.Menu = class {
       if (it && !it.disabled) { G.Audio.select(); this.onSelect(it, this.index); }
       else G.Audio.bad();
     }
-    // mouse (maps visible rows to items via scroll offset)
     const visCount = Math.min(this.maxVisible, this.items.length);
+    // touch: dragging over the list scrolls it
+    if (I.touch && I.drag.active && this.items.length > this.maxVisible &&
+        I.inRect(this.x, this.y, this.w, visCount * this.rowH, 8)) {
+      this._dragAcc = (this._dragAcc || 0) - I.drag.frameDY;
+      while (this._dragAcc >= this.rowH) { this.scroll++; this._dragAcc -= this.rowH; }
+      while (this._dragAcc <= -this.rowH) { this.scroll--; this._dragAcc += this.rowH; }
+      this.scroll = G.clamp(this.scroll, 0, Math.max(0, this.items.length - this.maxVisible));
+    }
+    // pointer select: on touch a TAP (release w/o drag) picks; mouse clicks pick
     for (let v = 0; v < visCount; v++) {
       const i = this.scroll + v;
       if (i >= this.items.length) break;
       const ry = this.y + v * this.rowH;
       if (I.inRect(this.x, ry, this.w, this.rowH - 1)) {
         if (I.mouse.x !== this._lastMx || I.mouse.y !== this._lastMy) this.index = i;
-        if (I.mouse.clicked) {
+        const picked = I.touch ? I.mouse.tapped : I.mouse.clicked;
+        if (picked) {
           const it = this.items[i];
           if (it && !it.disabled) { this.index = i; G.Audio.select(); this.onSelect(it, i); }
           else G.Audio.bad();
@@ -150,11 +166,13 @@ G.Menu = class {
         ctx.fillStyle = G.C.blue;
         ctx.fillRect(this.x, ry, this.w, this.rowH - 1);
       }
-      G.UI.text(ctx, (sel ? '>' : ' ') + it.label, this.x + 3, ry + 2, {
+      const ty = ry + Math.max(2, Math.floor((this.rowH - 9) / 2));
+      G.UI.text(ctx, (sel ? '>' : ' ') + it.label, this.x + 3, ty, {
+        size: this.rowH >= 14 ? 9 : 8,
         color: it.disabled ? G.C.slate : (sel ? G.C.white : G.C.gray),
       });
       if (it.note) {
-        G.UI.text(ctx, it.note, this.x + this.w - 3, ry + 2, {
+        G.UI.text(ctx, it.note, this.x + this.w - 3, ty, {
           align: 'right', size: 7,
           color: it.disabled ? G.C.slate : G.C.yellow,
         });
@@ -228,7 +246,7 @@ G.Popup = {
       ty += 10;
     }
     if ((this.t || 0) > 0.25 && Math.floor(this.t * 2) % 2 === 0) {
-      G.UI.text(ctx, '- PRESS ENTER -', x + w / 2, y + h - 12, { align: 'center', size: 7, color: G.C.yellow });
+      G.UI.text(ctx, G.CT('- PRESS ENTER -', '- TAP TO CONTINUE -'), x + w / 2, y + h - 12, { align: 'center', size: 7, color: G.C.yellow });
     }
   },
 };

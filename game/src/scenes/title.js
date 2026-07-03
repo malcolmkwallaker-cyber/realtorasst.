@@ -111,6 +111,6 @@ G.Engine.register('title', {
     ctx.fillStyle = G.C.white;
     for (const s of this.snow) ctx.fillRect(Math.round(s.x), Math.round(s.y), 1, 1);
 
-    G.UI.text(ctx, 'ARROWS/WASD + ENTER  -  OR JUST CLICK  -  [M] MUTE', G.W / 2, G.H - 10, { align: 'center', size: 7, color: G.C.slate });
+    G.UI.text(ctx, G.CT('ARROWS/WASD + ENTER  -  OR JUST CLICK  -  [M] MUTE', 'TAP TO PLAY  -  BEST IN LANDSCAPE'), G.W / 2, G.H - 10, { align: 'center', size: 7, color: G.C.slate });
   },
 });

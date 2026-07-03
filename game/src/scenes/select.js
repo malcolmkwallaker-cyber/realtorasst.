@@ -10,7 +10,11 @@ G.Engine.register('select', {
   enter() {
     this.t = 0;
     this.index = 0;
+    this.phase = 'char';      // char | difficulty
+    this.diffIndex = 1;       // default STANDARD
   },
+
+  DIFFS: ['casual', 'standard', 'hard'],
 
   charAt(i) { return G.Data.CHARACTERS[this.ORDER[i]]; },
   isUnlocked(i) { return G.Profile.unlocked(this.ORDER[i]); },
@@ -18,6 +22,22 @@ G.Engine.register('select', {
   update(dt) {
     this.t += dt;
     const I = G.Input;
+
+    if (this.phase === 'difficulty') {
+      if (I.left())  { this.diffIndex = (this.diffIndex + 2) % 3; G.Audio.move(); }
+      if (I.right()) { this.diffIndex = (this.diffIndex + 1) % 3; G.Audio.move(); }
+      for (let i = 0; i < 3; i++) {
+        const x = 34 + i * 142;
+        if (I.clickedRect(x, 60, 132, 150, 4)) {
+          if (this.diffIndex === i) { this.startGame(); return; }
+          this.diffIndex = i; G.Audio.move();
+        }
+      }
+      if (I.confirm()) { this.startGame(); return; }
+      if (I.cancel()) { this.phase = 'char'; G.Audio.back(); }
+      return;
+    }
+
     if (I.left())  { this.index = (this.index + this.ORDER.length - 1) % this.ORDER.length; G.Audio.move(); }
     if (I.right()) { this.index = (this.index + 1) % this.ORDER.length; G.Audio.move(); }
 
@@ -38,9 +58,14 @@ G.Engine.register('select', {
 
   pick() {
     if (!this.isUnlocked(this.index)) { G.Audio.bad(); return; }
+    G.Audio.select();
+    this.phase = 'difficulty';
+  },
+
+  startGame() {
     G.Audio.fanfare();
     const ch = this.charAt(this.index);
-    G.State.newGame(ch.id);
+    G.State.newGame(ch.id, this.DIFFS[this.diffIndex]);
     G.State.autosave();
     G.Engine.goto('map', { newDay: true });
   },
@@ -49,8 +74,13 @@ G.Engine.register('select', {
     ctx.fillStyle = G.C.dusk;
     ctx.fillRect(0, 0, G.W, G.H);
 
+    if (this.phase === 'difficulty') {
+      this.renderDifficulty(ctx);
+      return;
+    }
+
     G.UI.text(ctx, 'CHOOSE YOUR AGENT', G.W / 2, 8, { align: 'center', size: 13, color: G.C.yellow, shadow: true });
-    G.UI.text(ctx, '< LEFT / RIGHT >', G.W / 2, 22, { align: 'center', size: 7, color: G.C.slate });
+    G.UI.text(ctx, G.CT('< LEFT / RIGHT >', '< TAP THE PORTRAITS BELOW >'), G.W / 2, 22, { align: 'center', size: 7, color: G.C.slate });
 
     const ch = this.charAt(this.index);
     const unlocked = this.isUnlocked(this.index);
@@ -86,7 +116,7 @@ G.Engine.register('select', {
         ay += 8;
       }
       if (Math.floor(this.t * 2) % 2 === 0) {
-        G.UI.text(ctx, 'PRESS ENTER!', 240, 198, { align: 'center', size: 8, color: G.C.yellow });
+        G.UI.text(ctx, G.CT('PRESS ENTER!', 'TAP THE CARD!'), 240, 198, { align: 'center', size: 8, color: G.C.yellow });
       }
     } else {
       // locked silhouette
@@ -115,6 +145,46 @@ G.Engine.register('select', {
       }
     }
 
-    G.UI.text(ctx, 'MOST HOMES SOLD BY END OF JUNE WINS. [ESC] BACK', G.W / 2, 262, { align: 'center', size: 6, color: G.C.gray });
+    G.UI.text(ctx, G.CT('MOST HOMES SOLD BY END OF JUNE WINS. [ESC] BACK', 'MOST HOMES SOLD BY END OF JUNE WINS.'), G.W / 2, 262, { align: 'center', size: 6, color: G.C.gray });
+  },
+
+  renderDifficulty(ctx) {
+    const ch = this.charAt(this.index);
+    G.UI.text(ctx, 'SELECT DIFFICULTY', G.W / 2, 10, { align: 'center', size: 13, color: G.C.yellow, shadow: true });
+    G.UI.text(ctx, ch.name + ' - HOW TOUGH IS THE MARKET?', G.W / 2, 28, { align: 'center', size: 8, color: G.C.gray });
+
+    const DETAIL = {
+      casual: ['4 starting leads', 'Patient leads', 'Relaxed rival', 'Deals close in 1 day'],
+      standard: ['3 starting leads', 'Leads cool daily', 'Hungry rival', 'Deals pend 2 days'],
+      hard: ['2 starting leads', 'Leads cool FAST', 'Relentless rival', 'More setbacks'],
+    };
+    const COLS = [G.C.green, G.C.blue, G.C.red];
+    for (let i = 0; i < 3; i++) {
+      const id = this.DIFFS[i];
+      const B = G.Data.BALANCE[id];
+      const x = 34 + i * 142;
+      const sel = this.diffIndex === i;
+      G.UI.panel(ctx, x, 60, 132, 150, {
+        bg: sel ? G.C.navy : G.C.ink,
+        border: sel ? G.C.yellow : G.C.slate,
+        title: B.label + (id === 'standard' ? ' *' : ''),
+        titleBg: COLS[i],
+      });
+      let y = 82;
+      for (const line of G.UI.wrap(ctx, B.desc, 116, 7)) {
+        G.UI.text(ctx, line, x + 8, y, { size: 7, color: G.C.gray });
+        y += 9;
+      }
+      y += 4;
+      for (const d of DETAIL[id]) {
+        G.UI.text(ctx, '* ' + d, x + 8, y, { size: 7, color: sel ? G.C.white : G.C.slate });
+        y += 10;
+      }
+      if (sel && Math.floor(this.t * 2) % 2 === 0) {
+        G.UI.text(ctx, G.CT('ENTER TO START', 'TAP TO START'), x + 66, 196, { align: 'center', size: 7, color: G.C.yellow });
+      }
+    }
+    G.UI.text(ctx, '* STANDARD is the intended experience', G.W / 2, 224, { align: 'center', size: 7, color: G.C.cyan });
+    G.UI.text(ctx, G.CT('< LEFT / RIGHT >  [ESC] BACK', 'TAP A CARD TO SELECT, TAP AGAIN TO START'), G.W / 2, 240, { align: 'center', size: 7, color: G.C.slate });
   },
 });

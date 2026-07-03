@@ -15,6 +15,82 @@ G.Data.SEASON = {
 };
 
 // ------------------------------------------------------------
+// Centralized balance settings, per difficulty. Every important
+// tuning number lives here instead of being scattered in code.
+// ------------------------------------------------------------
+G.Data.BALANCE = {
+  casual: {
+    label: 'CASUAL',
+    desc: 'A friendly market. Leads are patient, the rival naps.',
+    startingLeadCount: 4,
+    maxActivePipeline: 14,
+    maxPassiveLeadsPerDay: 2,
+    pendingDaysBeforeClose: 1,
+    dailyLeadCooling: 2,          // idle warmth loss baseline
+    eventChance: 0.55,
+    negativeEventShare: 0.45,
+    rivalCloseChances: [0.40, 0.50, 0.60],  // APR, MAY, JUN
+    rivalDoubleChance: 0.05,
+    warmThreshold: 35,            // NEW -> WARM needs this warmth
+    apptThreshold: 60,            // WARM -> APPT needs this warmth
+    decayNew: [4, 7],             // warmth loss after 1st / 2nd+ ignored day
+    decayWarm: [4, 6],
+    ghostNew3: 0.25, ghostNew4: 0.55, ghostWarm3: 0.20,
+    attendeeDeadline: 2,          // days to follow up an open house attendee
+    apptDropChance: 0.25,         // ignored appt drops back to WARM
+    apptStealChance: 0.40,        // 2 days ignored: rival takes them
+    followupContacts: 3,          // leads contacted per FOLLOW UP action
+    clientNeglectDays: 3,         // active clients get antsy after this
+  },
+  standard: {
+    label: 'STANDARD',
+    desc: 'The intended experience. Follow up or lose them.',
+    startingLeadCount: 3,
+    maxActivePipeline: 12,
+    maxPassiveLeadsPerDay: 1,
+    pendingDaysBeforeClose: 2,
+    dailyLeadCooling: 3,
+    eventChance: 0.65,
+    negativeEventShare: 0.60,
+    rivalCloseChances: [0.50, 0.62, 0.74],
+    rivalDoubleChance: 0.06,
+    warmThreshold: 40,
+    apptThreshold: 65,
+    decayNew: [8, 12],
+    decayWarm: [6, 10],
+    ghostNew3: 0.45, ghostNew4: 0.80, ghostWarm3: 0.35,
+    attendeeDeadline: 1,
+    apptDropChance: 0.40,
+    apptStealChance: 0.60,
+    followupContacts: 3,
+    clientNeglectDays: 3,
+  },
+  hard: {
+    label: 'HARD',
+    desc: 'Cold leads, hot rival, and the market bites back.',
+    startingLeadCount: 2,
+    maxActivePipeline: 10,
+    maxPassiveLeadsPerDay: 1,
+    pendingDaysBeforeClose: 2,
+    dailyLeadCooling: 4,
+    eventChance: 0.75,
+    negativeEventShare: 0.70,
+    rivalCloseChances: [0.60, 0.72, 0.84],
+    rivalDoubleChance: 0.10,
+    warmThreshold: 40,
+    apptThreshold: 65,
+    decayNew: [10, 16],
+    decayWarm: [8, 13],
+    ghostNew3: 0.55, ghostNew4: 0.90, ghostWarm3: 0.45,
+    attendeeDeadline: 1,
+    apptDropChance: 0.50,
+    apptStealChance: 0.75,
+    followupContacts: 3,
+    clientNeglectDays: 2,
+  },
+};
+
+// ------------------------------------------------------------
 // Characters
 // ------------------------------------------------------------
 G.Data.CHARACTERS = {
@@ -100,14 +176,14 @@ G.Data.LEAD_NAMES = [
   'BIG MIKE', 'THE RUUDS', 'DARLENE & CHUCK', 'THE OSTLUNDS', 'LITTLE MIKE',
 ];
 
-// Pipeline stages
-G.Data.STAGES = ['new', 'hot', 'appt', 'active', 'offer', 'pending', 'closed'];
+// Pipeline stages ('attendee' = open-house sign-in awaiting follow-up)
+G.Data.STAGES = ['attendee', 'new', 'hot', 'appt', 'active', 'offer', 'pending', 'closed'];
 G.Data.STAGE_LABELS = {
-  new: 'NEW', hot: 'WARM', appt: 'APPT SET', active: 'CLIENT',
+  attendee: 'ATTENDEE', new: 'NEW', hot: 'WARM', appt: 'APPT SET', active: 'CLIENT',
   offer: 'OFFER IN', pending: 'PENDING', closed: 'SOLD',
 };
 G.Data.STAGE_COLORS = {
-  new: G.C.gray, hot: G.C.orange, appt: G.C.yellow, active: G.C.sky,
+  attendee: G.C.slate, new: G.C.gray, hot: G.C.orange, appt: G.C.yellow, active: G.C.sky,
   offer: G.C.cyan, pending: G.C.lime, closed: G.C.green,
 };
 
@@ -117,8 +193,8 @@ G.Data.STAGE_COLORS = {
 G.Data.ACTIONS = [
   { id: 'call',      label: 'CALL LEADS',     energy: 1, loc: 'office',   desc: 'Dial for dollars. Warm up leads, set appointments.', minigame: 'callGame' },
   { id: 'text',      label: 'TEXT LEADS',     energy: 1, loc: 'office',   desc: 'Thumbs of fury. Quick replies keep leads warm.', minigame: 'textGame' },
-  { id: 'followup',  label: 'FOLLOW UP',      energy: 1, loc: 'coffee',   desc: 'Coffee + check-ins. Warms your whole pipeline a bit.', minigame: null },
-  { id: 'openhouse', label: 'OPEN HOUSE',     energy: 2, loc: 'openhouse', desc: 'Cookies, sign-in sheets, fresh leads.', minigame: 'openHouseGame' },
+  { id: 'followup',  label: 'FOLLOW UP',      energy: 1, loc: 'coffee',   desc: 'Personally check in with your most at-risk leads before they ghost.', minigame: 'followupGame' },
+  { id: 'openhouse', label: 'OPEN HOUSE',     energy: 2, loc: 'openhouse', desc: 'Cookies, sign-in sheets, attendees to follow up with, listing momentum.', minigame: 'openHouseGame' },
   { id: 'video',     label: 'MAKE VIDEO',     energy: 1, loc: 'studio',   desc: 'Lights, camera, listings. Followers become leads.', minigame: 'videoGame' },
   { id: 'listing',   label: 'LISTING APPT',   energy: 1, loc: 'cabin',    desc: 'Pitch a seller. Nail it and take the listing.', minigame: 'listingGame' },
   { id: 'show',      label: 'SHOW HOMES',     energy: 1, loc: 'lakehome', desc: 'Tour homes with a buyer. Find "the one".', minigame: 'showGame' },
@@ -135,30 +211,31 @@ G.Data.UPGRADES = [
   { id: 'vehicle',      name: 'BETTER VEHICLE',      cost: 12000, desc: 'Heated seats + 4WD. Open houses cost 1 energy instead of 2.' },
   { id: 'camera',       name: 'CAMERA GEAR',         cost: 6000,  desc: 'Crispy footage. +15% video scores, +50% follower gains.' },
   { id: 'drone',        name: 'DRONE',               cost: 9000,  desc: 'Sweet aerial lake shots. +15% listing pitch, +10% listing value.' },
-  { id: 'crm',          name: 'CRM SYSTEM',          cost: 8000,  desc: 'Leads never go cold or ghost you. Auto follow-up daily.' },
+  { id: 'crm',          name: 'CRM SYSTEM',          cost: 8000,  desc: 'Organizes follow-up: warmth decay -40%, ghosting halved, +2 FOLLOW UP contacts.' },
   { id: 'ai',           name: 'AI ASSISTANT',        cost: 15000, desc: 'Handles the busywork. +1 ENERGY every day.' },
   { id: 'tc',           name: 'TRANSACTION COORD.',  cost: 12000, desc: 'Closings run themselves. 50% chance inspections auto-clear.' },
-  { id: 'marketing',    name: 'MARKETING BUDGET',    cost: 10000, desc: 'Ads everywhere. Extra lead chance daily, +1 open house lead.' },
+  { id: 'marketing',    name: 'MARKETING BUDGET',    cost: 10000, desc: 'Ads everywhere. Daily lead chance; open houses draw better crowds.' },
   { id: 'website',      name: 'WEBSITE',             cost: 7000,  desc: 'You exist on the internet now. Chance of a free web lead daily.' },
   { id: 'social',       name: 'SOCIAL MEDIA BOOST',  cost: 9000,  desc: 'The algorithm loves you. Follower gains x2, videos convert better.' },
-  { id: 'photographer', name: 'PHOTOGRAPHER',        cost: 8000,  desc: 'No more phone pics of toilets. Listings attract offers faster.' },
+  { id: 'photographer', name: 'PHOTOGRAPHER',        cost: 8000,  desc: 'No more phone pics of toilets. Listings gain momentum and attract offers.' },
   { id: 'assistant',    name: 'SHOWING ASSISTANT',   cost: 14000, desc: 'They handle tours too. Showings can advance 2 buyers at once.' },
 ];
 
 // ------------------------------------------------------------
 // Random obstacles (bad-ish) - fire at day end
 // ------------------------------------------------------------
+// w: event weight - minor 1.0, medium 0.6, major/catastrophic 0.2
 G.Data.OBSTACLES = [
-  { id: 'inspection', text: 'INSPECTION ISSUE! The inspector found "significant moisture concerns." A pending deal needs repairs.', fx: 'inspectionIssue' },
-  { id: 'appraisal',  text: 'LOW APPRAISAL! The appraiser used a comp from 2009. A deal loses 10% of its value.', fx: 'lowAppraisal' },
-  { id: 'financing',  text: 'FINANCING PROBLEM! The buyer financed a new ice castle last week. A pending deal is delayed.', fx: 'financeDelay' },
-  { id: 'snowstorm',  text: 'SNOWSTORM! 14 inches in April. Classic Minnesota. Tomorrow you lose 1 energy shoveling.', fx: 'snowstorm' },
-  { id: 'badreview',  text: 'BAD REVIEW! "Agent was 4 minutes late. One star." Ouch. -1 review, -5 happiness.', fx: 'badReview' },
-  { id: 'ghost',      text: 'GHOSTED! A lead vanished like a walleye at noon. They are gone.', fx: 'ghostLead' },
-  { id: 'stolen',     text: 'DEAL SNIPED! A competing agent swooped in with cookies and a lower commission. You lose a lead in offer stage.', fx: 'stolenDeal' },
-  { id: 'rates',      text: 'INTEREST RATE JUMP! The Fed did a thing. All your buyer deals lose 5% value.', fx: 'rateJump' },
-  { id: 'coldfeet',   text: 'COLD FEET! A buyer wants to "sleep on it, maybe till fall." A pending deal drops back to offer stage.', fx: 'coldFeet' },
-  { id: 'greedy',     text: 'SELLER WANTS DOUBLE! "The Zillow says..." A seller overprices their listing. It will be slower to sell.', fx: 'greedySeller' },
+  { id: 'inspection', w: 0.6, text: 'INSPECTION ISSUE! The inspector found "significant moisture concerns." A pending deal needs repairs.', fx: 'inspectionIssue' },
+  { id: 'appraisal',  w: 0.6, text: 'LOW APPRAISAL! The appraiser used a comp from 2009. A deal loses 10% of its value.', fx: 'lowAppraisal' },
+  { id: 'financing',  w: 1.0, text: 'FINANCING PROBLEM! The buyer financed a new ice castle last week. A pending deal is delayed.', fx: 'financeDelay' },
+  { id: 'snowstorm',  w: 1.0, text: 'SNOWSTORM! 14 inches in April. Classic Minnesota. Tomorrow you lose 1 energy shoveling.', fx: 'snowstorm' },
+  { id: 'badreview',  w: 1.0, text: 'BAD REVIEW! "Agent was 4 minutes late. One star." Ouch. -1 review, -5 happiness.', fx: 'badReview' },
+  { id: 'ghost',      w: 0.6, text: 'GHOSTED! A lead vanished like a walleye at noon. They are gone.', fx: 'ghostLead' },
+  { id: 'stolen',     w: 0.2, text: 'DEAL SNIPED! A competing agent swooped in with cookies and a lower commission. You lose a lead in offer stage.', fx: 'stolenDeal' },
+  { id: 'rates',      w: 0.6, text: 'INTEREST RATE JUMP! The Fed did a thing. All your buyer deals lose 5% value.', fx: 'rateJump' },
+  { id: 'coldfeet',   w: 0.6, text: 'COLD FEET! A buyer wants to "sleep on it, maybe till fall." A pending deal drops back to offer stage.', fx: 'coldFeet' },
+  { id: 'greedy',     w: 0.6, text: 'SELLER WANTS DOUBLE! "The Zillow says..." A seller overprices their listing. It will be slower to sell.', fx: 'greedySeller' },
 ];
 
 // ------------------------------------------------------------
@@ -184,21 +261,21 @@ G.Data.BOSSES = [
     id: 'shark', name: 'DALE "THE SHARK" SWANSON', sprite: 'bossShark',
     intro: ['Dale has sold homes here since 1987.', 'His face is on 14 bus benches.', 'He smells like Old Spice and victory.'],
     taunt: 'Kid, I was door-knocking before you were born.',
-    rounds: 3, difficulty: 0.45, reward: { cash: 5000, leads: 2, followers: 100 },
+    rounds: 3, difficulty: 0.45, reward: { cash: 5000, leads: 1, followers: 100 },
     skills: ['PROSPECTING', 'SPEED', 'CLIENT SERVICE'],
   },
   {
     id: 'lakes', name: 'CINDY "LAKESHORE" LARSEN', sprite: 'bossLakes',
     intro: ['Cindy owns the luxury lake market.', 'Her drone fleet blocks out the sun.', 'Her open houses have charcuterie.'],
     taunt: 'Oh sweetie. That lake is barely swimmable.',
-    rounds: 4, difficulty: 0.6, reward: { cash: 9000, leads: 3, followers: 250 },
+    rounds: 4, difficulty: 0.6, reward: { cash: 9000, leads: 2, followers: 250 },
     skills: ['MARKETING', 'NEGOTIATION', 'STRATEGY', 'SPEED'],
   },
   {
     id: 'mega', name: 'THE MEGA AGENT', sprite: 'megaAgent',
     intro: ['They have 74 agents. A helicopter.', 'A jingle you cannot unhear.', 'They ARE the market... until today.'],
     taunt: 'We close a home every 12 minutes. You are a rounding error.',
-    rounds: 6, difficulty: 0.72, reward: { cash: 20000, leads: 4, followers: 1000 },
+    rounds: 6, difficulty: 0.72, reward: { cash: 20000, leads: 2, followers: 1000 },
     skills: ['PROSPECTING', 'MARKETING', 'NEGOTIATION', 'CLIENT SERVICE', 'SPEED', 'STRATEGY'],
     final: true,
   },
@@ -259,5 +336,14 @@ G.Data.FLAVOR = {
   ghostReasons: [
     'moved to Arizona', 'decided to "wait till spring"', 'bought a houseboat instead',
     'their cousin got a real estate license', 'found the house on their own, sorry',
+  ],
+  // Why a neglected lead was lost (shown in the FOLLOW-UP REPORT)
+  lostReasons: [
+    'You waited too long. They called another agent.',
+    'They attended another open house and wrote an offer.',
+    'They assumed you were too busy for them.',
+    'They asked Facebook for an agent and received 84 recommendations.',
+    'A competing agent responded in eleven seconds.',
+    'They "went with someone their dentist knows."',
   ],
 };

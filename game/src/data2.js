@@ -55,7 +55,7 @@
       '"Apartment complex. 24 doors. The roof is... a journey."',
       '"Office building. Half vacant, fully charming."',
     ],
-    passiveChance: 0.08, // 1031 exchange investor calls
+    passiveChance: 0.03, // 1031 exchange investor calls
   };
 
   D.BLAKE = {
@@ -64,7 +64,7 @@
     sprite: 'blakeSuddath',
     ability: 'AI OVERDRIVE',
     ultimate: 'SCALE MODE',
-    scaleChance: 0.15, // chance a visit rolls the ultimate instead
+    scaleChance: 0.08, // chance a visit rolls the ultimate instead
     intro: [
       'Mentor. Rival. Power-up vendor. All at 100 mph.',
       'Laptop in one hand, phone in the other, earbuds in,',
@@ -102,8 +102,8 @@
     name: 'TYLER LEWIS',
     title: 'THE SYSTEMS ARCHITECT',
     sprite: 'tylerLewis',
-    overrideChance: 0.12,   // gated behind tier >= 2
-    engineChance: 0.22,
+    overrideChance: 0.06,   // requires tier 3
+    engineChance: 0.12,     // requires tier 2
     intro: [
       'Calm. Analytical. Builds the system once, then leverages it.',
       'A glowing tablet controls his digital assistants; his smartwatch',
@@ -259,19 +259,26 @@
   // New random events
   // ----------------------------------------------------------
   D.OBSTACLES.push(
-    { id: 'changemind', text: 'BUYER CHANGED THEIR MIND! "We prayed on it and we\'re gonna keep renting." A pending deal falls back a stage.', fx: 'coldFeet' },
-    { id: 'raccoons',   text: 'INSPECTION FOUND RACCOONS. A whole family. They have opinions about the attic. A pending deal needs repairs.', fx: 'inspectionIssue' },
-    { id: 'refuseclean', text: 'SELLER REFUSES TO CLEAN. "Buyers should see the POTENTIAL." The potential smells like walleye. A deal loses 5% value.', fx: 'valueHit5' },
-    { id: 'flood',      text: 'HOUSE FLOODED! The basement is now "lake-adjacent" in the worst way. A deal takes a 15% hit and needs repairs.', fx: 'floodHit' },
-    { id: 'wellfails',  text: 'THE WELL FAILED. The water is technically chewable. A pending deal needs repairs.', fx: 'inspectionIssue' },
-    { id: 'septic',     text: 'SEPTIC FAILED THE TEST. Nobody wants to talk about why. A deal loses 10% and needs repairs.', fx: 'septicHit' },
-    { id: 'mosquito',   text: 'MOSQUITO SWARM AT THE SHOWING. The state bird of Minnesota claims another victim. -3 happiness.', fx: 'unhappy3' },
-    { id: 'mowing',     text: 'THE NEIGHBOR STARTED MOWING DURING YOUR SHOWING. For two hours. One lawn. -2 happiness.', fx: 'unhappy2' },
-    { id: 'powerout',   text: 'POWER WENT OUT DURING A SHOWING. You toured by phone flashlight. "Cozy," said nobody. Buyers cool off.', fx: 'buyersCool' },
-    { id: 'deeropener', text: 'OPENING DAY OF DEER SEASON. Every client in the county is in a tree stand. All leads cool off.', fx: 'allCool' },
-    { id: 'lakefreeze', text: 'THE LAKE FROZE EARLY. Lake buyers suddenly remember they hate winter. Lake deal values -10%.', fx: 'lakeFreeze' },
-    { id: 'moose',      text: 'A MOOSE IS BLOCKING THE DRIVEWAY. He lives here now. You lose an hour tomorrow negotiating with him.', fx: 'snowstorm' },
-    { id: 'blizzcancel', text: 'A BLIZZARD CANCELED EVERY SHOWING. Even the snowplow guy stayed home. Tomorrow starts slow.', fx: 'snowstorm' },
+    { id: 'changemind', w: 0.6, text: 'BUYER CHANGED THEIR MIND! "We prayed on it and we\'re gonna keep renting." A pending deal falls back a stage.', fx: 'coldFeet' },
+    { id: 'raccoons',   w: 0.6, text: 'INSPECTION FOUND RACCOONS. A whole family. They have opinions about the attic. A pending deal needs repairs.', fx: 'inspectionIssue' },
+    { id: 'refuseclean', w: 1.0, text: 'SELLER REFUSES TO CLEAN. "Buyers should see the POTENTIAL." The potential smells like walleye. A deal loses 5% value.', fx: 'valueHit5' },
+    { id: 'flood',      w: 0.2, text: 'HOUSE FLOODED! The basement is now "lake-adjacent" in the worst way. A deal takes a 15% hit and needs repairs.', fx: 'floodHit' },
+    { id: 'wellfails',  w: 0.6, text: 'THE WELL FAILED. The water is technically chewable. A pending deal needs repairs.', fx: 'inspectionIssue' },
+    { id: 'septic',     w: 0.2, text: 'SEPTIC FAILED THE TEST. Nobody wants to talk about why. A deal loses 10% and needs repairs.', fx: 'septicHit' },
+    { id: 'mosquito',   w: 1.0, text: 'MOSQUITO SWARM AT THE SHOWING. The state bird of Minnesota claims another victim. -3 happiness.', fx: 'unhappy3' },
+    { id: 'mowing',     w: 1.0, text: 'THE NEIGHBOR STARTED MOWING DURING YOUR SHOWING. For two hours. One lawn. -2 happiness.', fx: 'unhappy2' },
+    { id: 'powerout',   w: 1.0, text: 'POWER WENT OUT DURING A SHOWING. You toured by phone flashlight. "Cozy," said nobody. Buyers cool off.', fx: 'buyersCool' },
+    { id: 'deeropener', w: 0.6, text: 'OPENING DAY OF DEER SEASON. Every client in the county is in a tree stand. All leads cool off.', fx: 'allCool' },
+    { id: 'lakefreeze', w: 0.6, text: 'THE LAKE FROZE EARLY. Lake buyers suddenly remember they hate winter. Lake deal values -10%.', fx: 'lakeFreeze' },
+    { id: 'moose',      w: 1.0, text: 'A MOOSE IS BLOCKING THE DRIVEWAY. He lives here now. You lose an hour tomorrow negotiating with him.', fx: 'snowstorm' },
+    { id: 'blizzcancel', w: 1.0, text: 'A BLIZZARD CANCELED EVERY SHOWING. Even the snowplow guy stayed home. Tomorrow starts slow.', fx: 'snowstorm' },
+    // --- Funny Minnesota setbacks (always-ish eligible minor pain) ---
+    { id: 'lockbox',    w: 1.0, text: 'LOCKBOX FROZE SHUT! You breathed on it, hit it with your mitten, and questioned your career choices. Your next showing costs one extra energy.', fx: 'lockboxFroze' },
+    { id: 'detour',     w: 1.0, text: 'COUNTY ROAD DETOUR! The "quick alternate route" included eleven miles of gravel and one suspicious bridge. Tomorrow\'s showings and open house are harder.', fx: 'roadDetour' },
+    { id: 'caramel',    w: 0.6, text: 'A COMPETING AGENT BROUGHT FULL-SIZE CARAMEL ROLLS. Your grocery-store cookies never stood a chance. Your warmest prospect cools off.', fx: 'caramelRolls' },
+    { id: 'zestimate',  w: 0.6, text: 'THE SELLER FOUND A SCREENSHOT OF THEIR 2021 ZESTIMATE. It is now framed above the fireplace. Their listing becomes overpriced.', fx: 'zestimateFrame' },
+    { id: 'grouptext',  w: 1.0, text: 'YOU REPLIED ALL TO THE ENTIRE TRANSACTION GROUP. The message was meant for your spouse. Nobody will make eye contact at closing.', fx: 'groupText' },
+    { id: 'notifs',     w: 1.0, text: 'YOUR PHONE UPDATED OVERNIGHT AND TURNED OFF EVERY NOTIFICATION. Three leads believe you moved to Canada.', fx: 'notifyOff' },
   );
 
   D.FUNNY_EVENTS.push(
@@ -329,7 +336,7 @@
       intro: ['A creature made entirely of internet leads.', 'It floods the market. It knows your', 'home value. It is always slightly wrong.'],
       taunt: 'Your listing? I already estimated it. Poorly.',
       rounds: 3, difficulty: 0.5, gimmick: { speed: 1.35 },
-      reward: { cash: 6000, leads: 3, followers: 150 },
+      reward: { cash: 6000, leads: 1, followers: 150 },
       skills: ['PROSPECTING', 'SPEED', 'MARKETING'],
     },
     {
@@ -337,7 +344,7 @@
       intro: ['His listing presentations have intermissions.', 'His brochures are hardcover.', 'His cufflinks cost more than your car.'],
       taunt: 'Darling, your marketing is... rustic.',
       rounds: 3, difficulty: 0.55, gimmick: { zone: 0.8 },
-      reward: { cash: 8000, leads: 2, followers: 200 },
+      reward: { cash: 8000, leads: 1, followers: 200 },
       skills: ['NEGOTIATION', 'CLIENT SERVICE', 'STRATEGY'],
     },
     {
@@ -345,7 +352,7 @@
       intro: ['Offers cash on everything. Sight unseen.', 'Closes in 6 days. Feels nothing.', 'Every round you lose costs you $2,000.'],
       taunt: 'Cash offer, no contingencies. Beat that. You can\'t.',
       rounds: 3, difficulty: 0.55, gimmick: { loseCash: 2000 },
-      reward: { cash: 10000, leads: 2, followers: 100 },
+      reward: { cash: 10000, leads: 1, followers: 100 },
       skills: ['NEGOTIATION', 'STRATEGY', 'SPEED'],
     },
     {
@@ -353,7 +360,7 @@
       intro: ['Convinces sellers they don\'t need Realtors.', 'His yard signs are hand-painted.', 'His paperwork is... also hand-painted.'],
       taunt: 'Six percent?! I\'ll sell it myself with a sign and a dream!',
       rounds: 4, difficulty: 0.5, gimmick: {},
-      reward: { cash: 7000, leads: 3, followers: 120 },
+      reward: { cash: 7000, leads: 1, followers: 120 },
       skills: ['PROSPECTING', 'CLIENT SERVICE', 'NEGOTIATION', 'STRATEGY'],
     },
     {
@@ -361,7 +368,7 @@
       intro: ['Marketing dept. Photographer. Videographer.', 'ISA team. Transaction coordinators. Inside sales.', 'Listing manager. Marketing manager. Buyer specialists.', 'One of them exists only to hold the door.'],
       taunt: 'We are 74 agents. You are one person with a car.',
       rounds: 6, difficulty: 0.72, gimmick: { speed: 1.15 },
-      reward: { cash: 20000, leads: 4, followers: 1000 },
+      reward: { cash: 20000, leads: 2, followers: 1000 },
       skills: ['PROSPECTING', 'MARKETING', 'NEGOTIATION', 'CLIENT SERVICE', 'SPEED', 'STRATEGY'],
       final: true,
     },
@@ -373,7 +380,7 @@
   D.UPGRADES.push(
     { id: 'matterport',   name: 'MATTERPORT SCANNER',      cost: 7000,  desc: '3D tours! Buyers arrive pre-sold. +10% listing & +5% showing scores.' },
     { id: 'staging',      name: 'PRO STAGING',             cost: 9000,  desc: 'Throw pillows change lives. New listings gain 5% value.' },
-    { id: 'goldensigns',  name: 'GOLDEN OPEN HOUSE SIGNS', cost: 5000,  desc: 'Visible from space. +1 open house lead every time.' },
+    { id: 'goldensigns',  name: 'GOLDEN OPEN HOUSE SIGNS', cost: 5000,  desc: 'Visible from space. Open house attendees more likely to be QUALIFIED, +25% chance of a bonus lead.' },
     { id: 'luxbrochure',  name: 'LUXURY BROCHURE',         cost: 6000,  desc: 'Cardstock so thick it has its own agent. Luxury values +10%.' },
     { id: 'fbads',        name: 'FACEBOOK ADS',            cost: 8000,  desc: 'The algorithm feeds. Daily chance of a Facebook lead.' },
     { id: 'seo',          name: 'GOOGLE SEO',              cost: 10000, desc: 'Page one, baby. Daily chance of a web lead.' },
@@ -400,7 +407,7 @@
     { id: 'pontoon',     name: 'PONTOON',            cost: 35000,  desc: 'The lake limousine. Lake showings +8%.' },
     { id: 'snowmobile',  name: 'SNOWMOBILE',         cost: 18000,  desc: 'Blizzards and ice storms no longer slow you down.' },
     { id: 'atv',         name: 'ATV',                cost: 15000,  desc: 'Show the back 40 properly. Hunting/farm/land leads warmer.' },
-    { id: 'helicopter',  name: 'HELICOPTER',         cost: 150000, desc: 'Aerial arrivals. Open houses draw +2 extra leads.' },
+    { id: 'helicopter',  name: 'HELICOPTER',         cost: 150000, desc: 'Aerial arrivals. A great open house is guaranteed one extra qualified lead.' },
     { id: 'privatejet',  name: 'PRIVATE JET',        cost: 250000, desc: 'Relocation & celebrity buyers flock to you (2x their leads).' },
     { id: 'retreat',     name: 'LAKE CABIN RETREAT', cost: 100000, desc: 'Host clients up north. +2 happiness daily, extra referral chance.' },
   ];
@@ -458,6 +465,37 @@
     ],
   };
 
+  // ----------------------------------------------------------
+  // Follow-up minigame: pick the response that keeps the
+  // relationship alive. The best answer depends on the situation.
+  // ----------------------------------------------------------
+  D.FOLLOWUP_ROUNDS = [
+    { msg: '"Hey, we are probably going to wait until next year."',
+      good: 'Totally fair. What would need to change for sooner to make sense?',
+      bad: ['Okay, let me know.', 'Rates will probably be higher next year. Just saying.'] },
+    { msg: '"We saw a FSBO down the road that looks nice..."',
+      good: 'Want me to pull the history on it? I can show you both options.',
+      bad: ['FSBOs are always haunted. Always.', 'Fine. Go. See what happens.'] },
+    { msg: '"Sorry we missed your call, super busy lately."',
+      good: 'No worries! Texting works too - want a quick market update?',
+      bad: ['I called four times.', 'Busy people still need houses, you know.'] },
+    { msg: '"Is NOW even a good time to buy?"',
+      good: 'Depends on your plans - let\'s look at your numbers together.',
+      bad: ['It is ALWAYS a good time to buy.', 'I have literally no idea.'] },
+    { msg: '"My brother-in-law says the market is about to crash."',
+      good: 'He might be right! Here\'s what the local data actually shows.',
+      bad: ['Your brother-in-law sells vapes.', 'Crashes are a myth invented by renters.'] },
+    { msg: '"We toured an open house this weekend. It was okay."',
+      good: 'Nice! What did you like about it? I\'ll find you a better one.',
+      bad: ['WITHOUT ME?', 'Cool cool cool cool cool.'] },
+    { msg: '"What was that lake house you mentioned again?"',
+      good: 'The one on Gull Lake! Still available - want to see it Saturday?',
+      bad: ['I mention a lot of houses.', 'Buy first, questions later.'] },
+    { msg: '"We need to sell our place before we can buy anything."',
+      good: 'Great news - let\'s get your home ready and time both moves.',
+      bad: ['Everyone says that.', 'Have you tried owning two houses?'] },
+  ];
+
   // Map additions: bank + commercial plaza + growth lab
   D.MAP.locations.bank = { x: 434, y: 168, sprite: 'bank', label: 'FIRST NORTHERN BANK' };
   D.MAP.locations.plaza = { x: 222, y: 218, sprite: 'plaza', label: 'NOBLEZA COMMERCIAL PLAZA' };
@@ -466,6 +504,6 @@
 
   // Hidden actions reached via map visits (not in the sidebar list)
   D.ACTIONS.push(
-    { id: 'commercial', label: 'JEFF\'S COMMERCIAL DEAL', energy: 1, loc: 'plaza', hidden: true, desc: 'Take on one of Jeff\'s monster commercial deals.', minigame: 'negotiateGame' },
+    { id: 'commercial', label: 'JEFF\'S COMMERCIAL DEAL', energy: 2, loc: 'plaza', hidden: true, desc: 'Take on one of Jeff\'s monster commercial deals.', minigame: 'negotiateGame' },
   );
 })();

@@ -52,60 +52,91 @@ G.Engine.register('map', {
     }
   },
 
-  buildMenu() {
-    const items = [];
-    for (const a of G.Data.ACTIONS) {
-      if (a.hidden) continue;
-      const avail = G.State.actionAvailable(a.id);
-      items.push({
-        label: a.label,
-        id: a.id,
-        kind: 'action',
-        disabled: !avail.ok,
-        note: avail.ok ? '-' + G.State.actionCost(a.id) + 'E' : avail.reason,
-        desc: a.desc,
-      });
-    }
-    // legendary visits
+  // Action categories for the touch layout (big, paginated tap targets)
+  CATS: [
+    { id: 'prospect', label: 'PROSPECT', actions: ['call', 'text', 'followup', 'video', 'openhouse'] },
+    { id: 'clients',  label: 'CLIENTS',  actions: ['listing', 'show', 'offer', 'negotiate', 'inspect', 'close'] },
+    { id: 'mentors',  label: 'MENTORS',  actions: [] },
+  ],
+
+  actionItem(a) {
+    const avail = G.State.actionAvailable(a.id);
+    return {
+      label: a.label, id: a.id, kind: 'action',
+      disabled: !avail.ok,
+      note: avail.ok ? '-' + G.State.actionCost(a.id) + 'E' : avail.reason,
+      desc: a.desc,
+    };
+  },
+
+  mentorItems() {
     const s = G.State.s;
+    const items = [];
+    const mentorNote = (openNote) => s.mentorUsedToday ? 'MENTOR USED' : openNote;
+    const mentorLock = s.mentorUsedToday; // one mentor power-up per day
     items.push({
       label: '$ BRAD (BANK)', id: 'brad', kind: 'visit',
-      disabled: s.bradUsed,
-      note: s.bradUsed ? 'GONE' : 'FREE',
-      desc: 'Visit Brad Nolan, The Mortgage Wizard. CLEAR TO CLOSE awaits.',
+      disabled: s.bradUsed || mentorLock,
+      note: s.bradUsed ? 'GONE' : mentorNote('FREE'),
+      desc: 'Visit Brad Nolan, The Mortgage Wizard. CLEAR TO CLOSE awaits. (1 mentor/day)',
     });
-    const jeffAvail = !s.commercialUnlocked || (s.jeffCooldown <= 0 && s.energy >= 1);
+    const jeffAvail = !mentorLock && (!s.commercialUnlocked || (s.jeffCooldown <= 0 && s.energy >= G.State.actionCost('commercial')));
     items.push({
       label: '# JEFF (PLAZA)', id: 'jeff', kind: 'visit',
       disabled: !jeffAvail,
-      note: !s.commercialUnlocked ? 'MEET' : (s.jeffCooldown > 0 ? s.jeffCooldown + 'D' : '-1E'),
-      desc: 'Visit Jeff Nobleza, The Commercial King. Cap rates. Big money.',
+      note: !s.commercialUnlocked ? mentorNote('MEET') : (s.jeffCooldown > 0 ? s.jeffCooldown + 'D' : mentorNote('-2E')),
+      desc: 'Visit Jeff Nobleza, The Commercial King. Big money (not homes sold). (1 mentor/day)',
     });
     items.push({
       label: '> BLAKE (LAB)', id: 'blake', kind: 'visit',
-      disabled: s.blakeCooldown > 0,
-      note: s.blakeCooldown > 0 ? s.blakeCooldown + 'D' : 'FREE',
-      desc: 'Visit Blake Suddath, The Growth Guru. AI OVERDRIVE, or roll SCALE MODE.',
+      disabled: s.blakeCooldown > 0 || mentorLock || s.energy < 1,
+      note: s.blakeCooldown > 0 ? s.blakeCooldown + 'D' : mentorNote('-1E'),
+      desc: 'Visit Blake Suddath, The Growth Guru. AI OVERDRIVE, or roll SCALE MODE. (1 mentor/day)',
     });
     items.push({
       label: '= TYLER (SYS)', id: 'tyler', kind: 'visit',
-      disabled: s.tylerCooldown > 0,
-      note: s.tylerCooldown > 0 ? s.tylerCooldown + 'D' : 'FREE',
-      desc: 'Visit Tyler Lewis, The Systems Architect. Cirql Scan + compounding systems.',
+      disabled: s.tylerCooldown > 0 || mentorLock || s.energy < 1,
+      note: s.tylerCooldown > 0 ? s.tylerCooldown + 'D' : mentorNote('-1E'),
+      desc: 'Visit Tyler Lewis, The Systems Architect. Cirql Scan + compounding systems. (1 mentor/day)',
     });
     const ab = G.State.char().ability;
     items.push({
       label: '* ' + ab.name, id: 'ability', kind: 'ability',
-      disabled: s.abilityUsed && !(s.scaleMode > 0),
-      note: (s.abilityUsed && !(s.scaleMode > 0)) ? 'USED' : 'FREE',
+      disabled: G.State.s.abilityUsed,
+      note: G.State.s.abilityUsed ? 'USED' : 'FREE',
       desc: ab.desc,
     });
+    return items;
+  },
+
+  buildMenu() {
+    const touch = G.Input.touch;
+    let items = [];
+    if (touch) {
+      // categorized, larger rows for fingers
+      this.cat = this.cat || 'prospect';
+      const cat = this.CATS.find(c => c.id === this.cat) || this.CATS[0];
+      if (cat.id === 'mentors') {
+        items = this.mentorItems();
+      } else {
+        for (const id of cat.actions) {
+          const a = G.Data.ACTIONS.find(x => x.id === id);
+          if (a && !a.hidden) items.push(this.actionItem(a));
+        }
+      }
+    } else {
+      for (const a of G.Data.ACTIONS) {
+        if (a.hidden) continue;
+        items.push(this.actionItem(a));
+      }
+      items.push(...this.mentorItems());
+    }
     // SHOP / STATS / PIPELINE / END DAY live as fixed buttons below the list
 
     const keepIndex = this.menu ? this.menu.index : 0;
     this.menu = new G.Menu(items, {
-      x: 4, y: 44, w: 142, rowH: 9,
-      maxVisible: 16,
+      x: 4, y: touch ? 64 : 44, w: 142, rowH: touch ? 20 : 9,
+      maxVisible: touch ? 6 : 16,
       onSelect: (it) => this.onMenuPick(it),
     });
     this.menu.index = Math.min(keepIndex, items.length - 1);
@@ -312,6 +343,16 @@ G.Engine.register('map', {
     }
     const lines = [];
     if (r.passiveLines.length) lines.push(...r.passiveLines, '');
+    // FOLLOW-UP REPORT: who you reached, who is slipping, who you lost
+    const rep2 = r.report;
+    if (rep2 && (rep2.contacted || rep2.due || rep2.atRisk || rep2.lost.length)) {
+      lines.push('--- FOLLOW-UP REPORT ---');
+      lines.push(rep2.contacted + ' lead(s) contacted today.');
+      if (rep2.due) lines.push(rep2.due + ' due for follow-up tomorrow.');
+      if (rep2.atRisk) lines.push(rep2.atRisk + ' AT RISK of walking. Check the PIPELINE!');
+      for (const L of rep2.lost.slice(0, 4)) lines.push('LOST: ' + L);
+      lines.push('');
+    }
     if (r.rivalLines.length) {
       lines.push('MEANWHILE...', ...r.rivalLines);
     } else {
@@ -398,8 +439,15 @@ G.Engine.register('map', {
       if (this.mode === 'pipeline') {
         if (G.Input.up()) { this.pipeScroll = Math.max(0, this.pipeScroll - 1); return; }
         if (G.Input.down()) { this.pipeScroll++; return; }
+        // touch: swipe to scroll the list
+        if (G.Input.touch && G.Input.drag.active) {
+          this._pipeDrag = (this._pipeDrag || 0) - G.Input.drag.frameDY;
+          while (this._pipeDrag >= 15) { this.pipeScroll++; this._pipeDrag -= 15; }
+          while (this._pipeDrag <= -15) { this.pipeScroll = Math.max(0, this.pipeScroll - 1); this._pipeDrag += 15; }
+        }
       }
-      if (G.Input.cancel() || G.Input.confirm() || G.Input.mouse.clicked) {
+      const closeTap = G.Input.touch ? G.Input.mouse.tapped : G.Input.mouse.clicked;
+      if (G.Input.cancel() || G.Input.confirm() || closeTap) {
         this.mode = 'menu'; G.Audio.back();
       }
       return;
@@ -613,18 +661,34 @@ G.Engine.register('map', {
       bx += G.UI.measure(ctx, bf.t, 6) + 5;
     }
 
+    // touch: category tabs above the menu
+    if (G.Input.touch) {
+      let tx = 3;
+      for (const c of this.CATS) {
+        const sel = this.cat === c.id;
+        if (G.UI.button(ctx, c.label, tx, 45, 47, 16, { size: 6, selected: sel, bg: sel ? G.C.blue : G.C.ink })) {
+          if (this.cat !== c.id) { this.cat = c.id; this.buildMenu(); G.Audio.move(); }
+        }
+        tx += 48;
+      }
+    }
+
     this.menu.render(ctx);
 
     // fixed bottom nav: always visible so PIPELINE/STATS/SHOP/END DAY never scroll off
-    if (G.UI.button(ctx, 'SHOP [B]', 4, 202, 70, 13, { size: 7 })) { G.Engine.goto('shop'); G.Audio.select(); }
-    if (G.UI.button(ctx, 'STATS [T]', 77, 202, 69, 13, { size: 7 })) { this.mode = 'stats'; G.Audio.select(); }
-    if (G.UI.button(ctx, 'PIPELINE [P]', 4, 217, 70, 13, { size: 7 })) { this.mode = 'pipeline'; this.pipeScroll = 0; G.Audio.select(); }
-    if (G.UI.button(ctx, 'END DAY [Z]', 77, 217, 69, 13, { size: 7, color: G.C.orange })) { this.endDay(); }
+    const touch = G.Input.touch;
+    const bh = touch ? 17 : 13;
+    const by1 = touch ? 196 : 202;
+    const by2 = touch ? 215 : 217;
+    if (G.UI.button(ctx, touch ? 'SHOP' : 'SHOP [B]', 4, by1, 70, bh, { size: 7 })) { G.Engine.goto('shop'); G.Audio.select(); }
+    if (G.UI.button(ctx, touch ? 'STATS' : 'STATS [T]', 77, by1, 69, bh, { size: 7 })) { this.mode = 'stats'; G.Audio.select(); }
+    if (G.UI.button(ctx, touch ? 'PIPELINE' : 'PIPELINE [P]', 4, by2, 70, bh, { size: 7 })) { this.mode = 'pipeline'; this.pipeScroll = 0; G.Audio.select(); }
+    if (G.UI.button(ctx, touch ? 'END DAY' : 'END DAY [Z]', 77, by2, 69, bh, { size: 7, color: G.C.orange })) { this.endDay(); }
 
     const it = this.menu.items[this.menu.index];
     if (it && it.desc) {
-      const lines = G.UI.wrap(ctx, it.desc, 138, 7).slice(0, 4);
-      let y = 236;
+      const lines = G.UI.wrap(ctx, it.desc, 138, 7).slice(0, touch ? 3 : 4);
+      let y = touch ? 236 : 236;
       ctx.fillStyle = G.C.dusk;
       ctx.fillRect(2, y - 3, this.MAP_X - 6, lines.length * 8 + 6);
       for (const l of lines) {
@@ -646,7 +710,7 @@ G.Engine.register('map', {
     G.UI.text(ctx, 'RIVAL ' + s.rival.homesSold, x + 50, y + 12, { size: 7, color: G.C.red });
     const wd = G.State.weatherData();
     G.UI.text(ctx, wd.label, x + w - 5, y + 3, { align: 'right', size: 7, color: G.C.cyan });
-    G.UI.text(ctx, 'LEADS ' + s.leads.length + '  FLW ' + s.stats.followers, x + w - 5, y + 12, { align: 'right', size: 7, color: G.C.yellow });
+    G.UI.text(ctx, 'LEADS ' + s.leads.length + '/' + G.State.bal().maxActivePipeline + '  FLW ' + s.stats.followers, x + w - 5, y + 12, { align: 'right', size: 7, color: G.C.yellow });
   },
 
   renderStats(ctx) {
@@ -683,34 +747,49 @@ G.Engine.register('map', {
 
   renderPipeline(ctx) {
     const s = G.State.s;
+    const cap = G.State.bal().maxActivePipeline;
     ctx.fillStyle = 'rgba(26,28,44,0.85)';
     ctx.fillRect(0, 0, G.W, G.H);
-    G.UI.panel(ctx, 60, 16, 360, 238, { title: 'LEAD PIPELINE (' + s.leads.length + ')', titleBg: G.C.blue, bg: G.C.ink });
+    G.UI.panel(ctx, 40, 12, 400, 246, { title: 'PIPELINE & FOLLOW-UP (' + s.leads.length + '/' + cap + ')', titleBg: G.C.blue, bg: G.C.ink });
 
+    // sort: most at-risk first, then by stage depth
     const order = G.Data.STAGES;
-    const leads = s.leads.slice().sort((a, b) => order.indexOf(b.stage) - order.indexOf(a.stage));
+    const riskRank = { 'ABOUT TO GHOST': 0, 'AT RISK': 1, 'DUE TODAY': 2, 'SAFE': 3 };
+    const leads = s.leads.slice().sort((a, b) =>
+      (riskRank[G.State.leadRisk(a)] - riskRank[G.State.leadRisk(b)]) ||
+      (order.indexOf(b.stage) - order.indexOf(a.stage)));
     const perPage = 13;
     const maxScroll = Math.max(0, leads.length - perPage);
     this.pipeScroll = G.clamp(this.pipeScroll, 0, maxScroll);
     const visible = leads.slice(this.pipeScroll, this.pipeScroll + perPage);
 
-    let y = 36;
+    // column headers
+    G.UI.text(ctx, 'NAME', 48, 28, { size: 6, color: G.C.slate });
+    G.UI.text(ctx, 'STAGE', 138, 28, { size: 6, color: G.C.slate });
+    G.UI.text(ctx, 'WARMTH', 196, 28, { size: 6, color: G.C.slate });
+    G.UI.text(ctx, 'IDLE', 248, 28, { size: 6, color: G.C.slate });
+    G.UI.text(ctx, 'VALUE', 278, 28, { size: 6, color: G.C.slate });
+    G.UI.text(ctx, 'RISK', 330, 28, { size: 6, color: G.C.slate });
+
+    let y = 38;
     if (!leads.length) {
-      G.UI.text(ctx, 'NO LEADS. GO MAKE A VIDEO OR HOST AN OPEN HOUSE!', G.W / 2, 120, { align: 'center', size: 8, color: G.C.gray });
+      G.UI.text(ctx, 'NO LEADS. HOST AN OPEN HOUSE OR MAKE A VIDEO!', G.W / 2, 120, { align: 'center', size: 8, color: G.C.gray });
     }
     for (const l of visible) {
-      G.UI.text(ctx, l.name, 70, y, { size: 7, color: G.C.white });
-      G.UI.text(ctx, l.label, 165, y, { size: 7, color: l.commercial ? G.C.purple : l.lake ? G.C.cyan : l.luxury ? G.C.yellow : G.C.gray });
-      G.UI.text(ctx, G.money(l.value), 300, y, { size: 7, color: G.C.yellow });
+      const risk = G.State.leadRisk(l);
+      const riskCol = risk === 'SAFE' ? G.C.lime : risk === 'DUE TODAY' ? G.C.yellow : risk === 'AT RISK' ? G.C.orange : G.C.red;
+      G.UI.text(ctx, l.name, 48, y, { size: 6, color: G.C.white });
       const sc = G.Data.STAGE_COLORS[l.stage];
-      ctx.fillStyle = sc;
-      ctx.fillRect(340, y, 4, 6);
-      G.UI.text(ctx, G.Data.STAGE_LABELS[l.stage] + (l.issue ? '!' : ''), 348, y, { size: 7, color: l.issue ? G.C.red : sc });
+      G.UI.text(ctx, G.Data.STAGE_LABELS[l.stage] + (l.issue ? '!' : ''), 138, y, { size: 6, color: l.issue ? G.C.red : sc });
+      G.UI.bar(ctx, 196, y + 1, 40, 5, l.warmth / 100, l.warmth >= 65 ? G.C.lime : l.warmth >= 40 ? G.C.orange : G.C.red);
+      G.UI.text(ctx, (l.daysSinceContact || 0) + 'D', 250, y, { size: 6, color: (l.daysSinceContact || 0) >= 2 ? G.C.red : G.C.gray });
+      G.UI.text(ctx, G.money(l.value), 278, y, { size: 6, color: G.C.yellow });
+      G.UI.text(ctx, l.stage === 'attendee' ? 'FOLLOW UP NOW' : risk, 330, y, { size: 6, color: riskCol });
       y += 15;
     }
     if (maxScroll > 0) {
-      G.UI.text(ctx, 'UP/DOWN TO SCROLL (' + (this.pipeScroll + 1) + '-' + Math.min(leads.length, this.pipeScroll + perPage) + ')', G.W / 2, 236, { align: 'center', size: 6, color: G.C.slate });
+      G.UI.text(ctx, G.CT('UP/DOWN TO SCROLL', 'SWIPE TO SCROLL') + ' (' + (this.pipeScroll + 1) + '-' + Math.min(leads.length, this.pipeScroll + perPage) + ' OF ' + leads.length + ')', G.W / 2, 238, { align: 'center', size: 6, color: G.C.slate });
     }
-    G.UI.text(ctx, '[ESC] CLOSE', G.W / 2, 245, { align: 'center', size: 7, color: G.C.yellow });
+    G.UI.text(ctx, G.CT('[ESC] CLOSE', 'TAP TO CLOSE'), G.W / 2, 247, { align: 'center', size: 7, color: G.C.yellow });
   },
 });

@@ -176,7 +176,7 @@ G.Engine.register('boss', {
       G.UI.text(ctx, '"' + b.taunt + '"', G.W / 2, y + 5, { align: 'center', size: 8, color: G.C.orange });
       G.UI.text(ctx, 'BEST OF ' + b.rounds + ' SKILL CLASHES. STOP THE NEEDLE IN THE GREEN.', G.W / 2, y + 22, { align: 'center', size: 7, color: G.C.cyan });
       if (Math.floor(this.t * 2) % 2 === 0) {
-        G.UI.text(ctx, '- PRESS ENTER TO THROW DOWN -', G.W / 2, y + 38, { align: 'center', size: 9, color: G.C.yellow });
+        G.UI.text(ctx, G.CT('- PRESS ENTER TO THROW DOWN -', '- TAP TO THROW DOWN -'), G.W / 2, y + 38, { align: 'center', size: 9, color: G.C.yellow });
       }
       return;
     }
@@ -210,7 +210,7 @@ G.Engine.register('boss', {
       ctx.fillStyle = G.C.white;
       ctx.fillRect(mx + this.needle * mw - 1, my - 6, 3, mh + 12);
 
-      G.UI.text(ctx, 'SPACE / ENTER / CLICK TO STRIKE', G.W / 2, my + 30, { align: 'center', size: 8, color: G.C.gray });
+      G.UI.text(ctx, G.CT('SPACE / ENTER / CLICK TO STRIKE', 'TAP ANYWHERE TO STRIKE'), G.W / 2, my + 30, { align: 'center', size: 8, color: G.C.gray });
       G.UI.text(ctx, 'YOUR ' + this.skill + ' SKILL WIDENS THE GREEN ZONE', G.W / 2, my + 44, { align: 'center', size: 6, color: G.C.slate });
     }
 
@@ -220,7 +220,7 @@ G.Engine.register('boss', {
       G.UI.text(ctx, 'ROUNDS: YOU ' + this.playerWins + ' - ' + this.bossWins + ' THEM', G.W / 2, 186, { align: 'center', size: 10, color: G.C.white });
       if (won) G.drawSprite(ctx, G.Sprites.trophy, G.W / 2 - 7, 202, 2);
       if (this.t > 0.8 && Math.floor(this.t * 2) % 2 === 0) {
-        G.UI.text(ctx, '- PRESS ENTER -', G.W / 2, 230, { align: 'center', size: 8, color: G.C.yellow });
+        G.UI.text(ctx, G.CT('- PRESS ENTER -', '- TAP -'), G.W / 2, 230, { align: 'center', size: 8, color: G.C.yellow });
       }
     }
 

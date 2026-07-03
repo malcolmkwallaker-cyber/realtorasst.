@@ -99,7 +99,7 @@ G.Engine.register('seasonEnd', {
 
     this.particles.render(ctx);
     if (this.t > 1 && Math.floor(this.t * 2) % 2 === 0) {
-      G.UI.text(ctx, '- PRESS ENTER FOR LEADERBOARD -', G.W / 2, 258, { align: 'center', size: 7, color: G.C.cyan });
+      G.UI.text(ctx, G.CT('- PRESS ENTER FOR LEADERBOARD -', '- TAP FOR LEADERBOARD -'), G.W / 2, 258, { align: 'center', size: 7, color: G.C.cyan });
     }
   },
 });
@@ -150,7 +150,7 @@ G.Engine.register('leaderboard', {
     }
 
     if (Math.floor(this.t * 2) % 2 === 0) {
-      G.UI.text(ctx, '- PRESS ENTER FOR TITLE -', G.W / 2, G.H - 24, { align: 'center', size: 8, color: G.C.cyan });
+      G.UI.text(ctx, G.CT('- PRESS ENTER FOR TITLE -', '- TAP FOR TITLE -'), G.W / 2, G.H - 24, { align: 'center', size: 8, color: G.C.cyan });
     }
   },
 });
