@@ -176,7 +176,10 @@ G.State = {
     return st;
   },
 
-  autosave() { if (this.s && !this.s.seasonOver) G.Save.save(this.s); },
+  autosave() {
+    if (this.s && !this.s.seasonOver) G.Save.save(this.s);
+    if (this.s && G.Cloud && G.Cloud.signedIn()) G.Cloud.push(this.s);
+  },
 
   // ----------------------------------------------------------
   char() { return G.Data.CHARACTERS[this.s.charId]; },

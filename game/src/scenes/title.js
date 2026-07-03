@@ -20,8 +20,12 @@ G.Engine.register('title', {
     items.push({ label: 'HOW TO PLAY', id: 'howto' });
     items.push({ label: 'LEADERBOARD', id: 'leaderboard' });
     items.push({ label: 'ACHIEVEMENTS', id: 'achievements' });
+    // Cloud sign-in (only shown once you've configured Supabase in cloud.js)
+    if (G.Cloud && G.Cloud.enabled()) {
+      items.push({ label: G.Cloud.signedIn() ? 'SIGNED IN' : 'SIGN IN / SAVE', id: 'signin' });
+    }
     this.menu = new G.Menu(items, {
-      x: G.W / 2 - 60, y: 168, w: 120, rowH: 14,
+      x: G.W / 2 - 60, y: 162, w: 120, rowH: 13,
       onSelect: (it) => {
         if (it.id === 'new') G.Engine.goto('select');
         if (it.id === 'continue') {
@@ -31,6 +35,19 @@ G.Engine.register('title', {
         if (it.id === 'howto') G.Engine.goto('howto');
         if (it.id === 'leaderboard') G.Engine.goto('leaderboard');
         if (it.id === 'achievements') G.Engine.goto('achievements');
+        if (it.id === 'signin') {
+          G.Cloud.showSignIn((identity) => {
+            // On sign-in, pull any cloud save down so CONTINUE works cross-device.
+            if (identity && G.Cloud.enabled()) {
+              G.Cloud.pull().then((cloudSave) => {
+                if (cloudSave) { try { G.Save.save(cloudSave); } catch (e) {} }
+                this.buildMenu();
+              }).catch(() => this.buildMenu());
+            } else {
+              this.buildMenu();
+            }
+          });
+        }
       },
     });
   },

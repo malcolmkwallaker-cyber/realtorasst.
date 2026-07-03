@@ -24,6 +24,14 @@ G.Engine.register('seasonEnd', {
         date: new Date().toLocaleDateString(),
       });
     }
+    // Cloud: record the completed season (engagement signal for the agent)
+    if (G.Cloud && G.Cloud.signedIn()) {
+      const id = G.Cloud.loadIdentity();
+      id.seasons = (id.seasons || 0) + 1;
+      G.Cloud.saveIdentity(id);
+      try { G.Cloud.push(s); } catch (e) {}
+    }
+
     if (this.won) G.Audio.fanfare(); else G.Audio.sadTromb();
   },
 
