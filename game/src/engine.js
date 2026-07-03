@@ -121,12 +121,19 @@ G.Engine = {
     ctx.fillStyle = G.C.ink;
     ctx.fillRect(-4, -4, G.W + 8, G.H + 8);
 
-    if (this.current && this.current.render) this.current.render(ctx);
+    // A thrown scene render must NOT blank the screen or unbalance the ctx
+    // stack (that permanently blanks the canvas). Contain it here.
+    try {
+      if (this.current && this.current.render) this.current.render(ctx);
+    } catch (e) {
+      this.reportError('scene.render', e);
+    } finally {
+      ctx.restore();
+    }
 
-    ctx.restore();
-
-    G.Popup.render(ctx);
-    G.Toast.render(ctx);
+    // Popups/toasts always render (they drive the day-end flow and recovery).
+    try { G.Popup.render(ctx); } catch (e) { this.reportError('popup.render', e); }
+    try { G.Toast.render(ctx); } catch (e) { this.reportError('toast.render', e); }
 
     // mute indicator
     if (G.Audio.muted) {

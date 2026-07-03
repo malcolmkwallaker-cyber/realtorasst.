@@ -579,8 +579,8 @@ G.makeSprite = (rows, colors) => {
     '..TTTTDDTTTT..',
   ], { G: C.lime, C: C.cyan, T: C.teal, W: C.sky, D: C.ink });
 
-  // TYLER LEWIS: The Systems Architect - black hair, clean-shaven, black shirt,
-  // glowing tablet + smartwatch (controls his digital assistants)
+  // TYLER LEWIS: The Systems Architect - black hair, clean-shaven, black shirt
+  // with the Cirql logo (cyan "C" + gradient ring dots), tablet + smartwatch
   S.tylerLewis = G.makeSprite([
     '....HHHHHH....',
     '...HHHHHHHH...',
@@ -589,17 +589,17 @@ G.makeSprite = (rows, colors) => {
     '....SSSSSS....',
     '....SSSSSS....',
     '....SSSSSS....',
-    '....ZZZZZZ....',
-    '....ZZZZZZ....',
-    '..T.ZZZZZZ.M..',
-    '..T.ZZZZZZ.S..',
-    '....ZZZZZZ....',
-    '....JJJJJJ....',
+    '....ZZUZZZ....',
+    '....ZZIIZZ....',
+    '..T.UZIZZU.M..',
+    '..T.ZZIZZZ.S..',
+    '....ZZIIZZ....',
+    '....ZZUZZZ....',
     '....JJ..JJ....',
     '....JJ..JJ....',
     '....JJ..JJ....',
     '...NN....NN...',
-  ], { H: '#232433', S: '#e8b796', K: C.ink, Z: '#232433', T: C.cyan, M: C.red, J: '#3a3f52', N: C.white });
+  ], { H: '#232433', S: '#e8b796', K: C.ink, Z: '#232433', I: C.cyan, U: C.blue, T: C.cyan, M: C.red, J: '#3a3f52', N: C.white });
 
   // Systems Lab: dark server building with data lights
   S.systemslab = G.makeSprite([

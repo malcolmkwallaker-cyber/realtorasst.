@@ -1255,6 +1255,8 @@ G.State = {
     s.abilityUsed = false;
     s.bradUsed = false;
     if (s.jeffCooldown > 0) s.jeffCooldown--;
+    if (s.blakeCooldown > 0) s.blakeCooldown--;
+    if (s.tylerCooldown > 0) s.tylerCooldown--;
     const weatherLines = this.rollWeather();
     passiveLines.push(...weatherLines);
 

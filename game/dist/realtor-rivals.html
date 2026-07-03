@@ -939,8 +939,8 @@ G.makeSprite = (rows, colors) => {
     '..TTTTDDTTTT..',
   ], { G: C.lime, C: C.cyan, T: C.teal, W: C.sky, D: C.ink });
 
-  // TYLER LEWIS: The Systems Architect - black hair, clean-shaven, black shirt,
-  // glowing tablet + smartwatch (controls his digital assistants)
+  // TYLER LEWIS: The Systems Architect - black hair, clean-shaven, black shirt
+  // with the Cirql logo (cyan "C" + gradient ring dots), tablet + smartwatch
   S.tylerLewis = G.makeSprite([
     '....HHHHHH....',
     '...HHHHHHHH...',
@@ -949,17 +949,17 @@ G.makeSprite = (rows, colors) => {
     '....SSSSSS....',
     '....SSSSSS....',
     '....SSSSSS....',
-    '....ZZZZZZ....',
-    '....ZZZZZZ....',
-    '..T.ZZZZZZ.M..',
-    '..T.ZZZZZZ.S..',
-    '....ZZZZZZ....',
-    '....JJJJJJ....',
+    '....ZZUZZZ....',
+    '....ZZIIZZ....',
+    '..T.UZIZZU.M..',
+    '..T.ZZIZZZ.S..',
+    '....ZZIIZZ....',
+    '....ZZUZZZ....',
     '....JJ..JJ....',
     '....JJ..JJ....',
     '....JJ..JJ....',
     '...NN....NN...',
-  ], { H: '#232433', S: '#e8b796', K: C.ink, Z: '#232433', T: C.cyan, M: C.red, J: '#3a3f52', N: C.white });
+  ], { H: '#232433', S: '#e8b796', K: C.ink, Z: '#232433', I: C.cyan, U: C.blue, T: C.cyan, M: C.red, J: '#3a3f52', N: C.white });
 
   // Systems Lab: dark server building with data lights
   S.systemslab = G.makeSprite([
@@ -3058,6 +3058,8 @@ G.State = {
     s.abilityUsed = false;
     s.bradUsed = false;
     if (s.jeffCooldown > 0) s.jeffCooldown--;
+    if (s.blakeCooldown > 0) s.blakeCooldown--;
+    if (s.tylerCooldown > 0) s.tylerCooldown--;
     const weatherLines = this.rollWeather();
     passiveLines.push(...weatherLines);
 
@@ -3767,12 +3769,19 @@ G.Engine = {
     ctx.fillStyle = G.C.ink;
     ctx.fillRect(-4, -4, G.W + 8, G.H + 8);
 
-    if (this.current && this.current.render) this.current.render(ctx);
+    // A thrown scene render must NOT blank the screen or unbalance the ctx
+    // stack (that permanently blanks the canvas). Contain it here.
+    try {
+      if (this.current && this.current.render) this.current.render(ctx);
+    } catch (e) {
+      this.reportError('scene.render', e);
+    } finally {
+      ctx.restore();
+    }
 
-    ctx.restore();
-
-    G.Popup.render(ctx);
-    G.Toast.render(ctx);
+    // Popups/toasts always render (they drive the day-end flow and recovery).
+    try { G.Popup.render(ctx); } catch (e) { this.reportError('popup.render', e); }
+    try { G.Toast.render(ctx); } catch (e) { this.reportError('toast.render', e); }
 
     // mute indicator
     if (G.Audio.muted) {
@@ -4367,7 +4376,25 @@ G.Engine.register('map', {
   // ----------------------------------------------------------
   endDay() {
     const s = G.State.s;
-    const r = G.State.endDay();
+    let r;
+    try {
+      r = G.State.endDay();
+    } catch (e) {
+      // Never soft-lock the player if end-of-day processing throws:
+      // force a minimal safe day advance so they can keep playing.
+      G.Engine.reportError('endDay', e);
+      s.dayOfMonth++;
+      let bossTime = false;
+      if (s.dayOfMonth > G.Data.SEASON.daysPerMonth) { s.pendingBoss = true; bossTime = true; }
+      s.energy = G.State.maxEnergy();
+      s.abilityUsed = false; s.bradUsed = false;
+      if (s.jeffCooldown > 0) s.jeffCooldown--;
+      if (s.blakeCooldown > 0) s.blakeCooldown--;
+      if (s.tylerCooldown > 0) s.tylerCooldown--;
+      try { G.State.rollWeather(); } catch (_) {}
+      try { G.State.autosave(); } catch (_) {}
+      r = { passiveLines: ['(An error was caught and the day advanced safely.)'], rivalLines: [], eventText: null, eventGood: false, bossTime };
+    }
     const lines = [];
     if (r.passiveLines.length) lines.push(...r.passiveLines, '');
     if (r.rivalLines.length) {
@@ -4476,6 +4503,9 @@ G.Engine.register('map', {
   render(ctx) {
     const s = G.State.s;
     if (!s) return;
+    // Never render with a missing menu (e.g. if enter() returned early or
+    // threw before buildMenu) - that would blank the screen every frame.
+    if (!this.menu) this.buildMenu();
 
     this.renderMap(ctx);
     this.renderWeather(ctx);

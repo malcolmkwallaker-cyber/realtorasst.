@@ -291,7 +291,25 @@ G.Engine.register('map', {
   // ----------------------------------------------------------
   endDay() {
     const s = G.State.s;
-    const r = G.State.endDay();
+    let r;
+    try {
+      r = G.State.endDay();
+    } catch (e) {
+      // Never soft-lock the player if end-of-day processing throws:
+      // force a minimal safe day advance so they can keep playing.
+      G.Engine.reportError('endDay', e);
+      s.dayOfMonth++;
+      let bossTime = false;
+      if (s.dayOfMonth > G.Data.SEASON.daysPerMonth) { s.pendingBoss = true; bossTime = true; }
+      s.energy = G.State.maxEnergy();
+      s.abilityUsed = false; s.bradUsed = false;
+      if (s.jeffCooldown > 0) s.jeffCooldown--;
+      if (s.blakeCooldown > 0) s.blakeCooldown--;
+      if (s.tylerCooldown > 0) s.tylerCooldown--;
+      try { G.State.rollWeather(); } catch (_) {}
+      try { G.State.autosave(); } catch (_) {}
+      r = { passiveLines: ['(An error was caught and the day advanced safely.)'], rivalLines: [], eventText: null, eventGood: false, bossTime };
+    }
     const lines = [];
     if (r.passiveLines.length) lines.push(...r.passiveLines, '');
     if (r.rivalLines.length) {
@@ -400,6 +418,9 @@ G.Engine.register('map', {
   render(ctx) {
     const s = G.State.s;
     if (!s) return;
+    // Never render with a missing menu (e.g. if enter() returned early or
+    // threw before buildMenu) - that would blank the screen every frame.
+    if (!this.menu) this.buildMenu();
 
     this.renderMap(ctx);
     this.renderWeather(ctx);
