@@ -1,0 +1,38 @@
+{
+  "name": "realtor-rivals",
+  "productName": "Bridger vs. Malcolm: Realtor Rivals",
+  "version": "1.0.0",
+  "description": "16-bit retro real estate showdown set in Northern Minnesota",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "npx --yes serve -l 8080 .",
+    "bundle": "node tools/bundle.js",
+    "desktop": "electron .",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist:all": "electron-builder --mac --win"
+  },
+  "build": {
+    "appId": "com.realtorrivals.game",
+    "productName": "Realtor Rivals",
+    "files": [
+      "index.html",
+      "src/**/*",
+      "electron/**/*"
+    ],
+    "directories": {
+      "output": "dist-desktop"
+    },
+    "mac": {
+      "category": "public.app-category.games",
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    }
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}
