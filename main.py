@@ -1,4 +1,6 @@
 import os
+import json as json_lib
+import datetime
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -40,6 +42,10 @@ class AgentHowToRequest(BaseModel):
     topic: str
     agent_experience: str = "new"
     specific_questions: str = ""
+
+
+class LeadAnalysisRequest(BaseModel):
+    lead: dict
 
 
 def call_claude(prompt: str, max_tokens: int = 2048) -> str:
@@ -152,6 +158,68 @@ This should read like advice from a top-producing mentor, not a textbook."""
     try:
         result = call_claude(prompt, max_tokens=3500)
         return {"guide": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────────
+# FUB LEAD SYSTEM ENDPOINTS
+# ─────────────────────────────────────────────────────────────
+# FUTURE INTEGRATION: Replace local storage with Follow Up Boss API
+#   POST https://api.followupboss.com/v1/people  (create/update leads)
+#   GET  https://api.followupboss.com/v1/people  (fetch leads)
+#   Auth: Basic auth with FUB API key
+# ─────────────────────────────────────────────────────────────
+
+@app.post("/api/fub/analyze-lead")
+async def analyze_lead(req: LeadAnalysisRequest):
+    lead = req.lead
+    agent_name = lead.get("buyerAgentName") or "your buyer agent"
+
+    prompt = f"""You are Malcolm's real estate business assistant. Analyze this lead and return a JSON object.
+
+LEAD:
+Name: {lead.get("name", "Unknown")}
+Source: {lead.get("source", "Unknown")}
+Lead Type: {lead.get("leadType", "unknown")}
+Price Range: {lead.get("priceRange", "Unknown")}
+Desired Area: {lead.get("desiredArea", "Unknown")}
+Timeline: {lead.get("timeline", "Unknown")}
+Motivation: {lead.get("motivationLevel", "unknown")}
+Preapproval: {lead.get("preapprovalStatus", "unknown")}
+Last Contacted: {lead.get("lastContacted") or "Never"}
+Current Status: {lead.get("leadStatus", "New")}
+Assigned Agent: {lead.get("assignedAgent") or "Unassigned"}
+Notes: {lead.get("notes") or "None"}
+
+ASSIGNMENT RULES:
+- Buyer leads, first time buyers, showing requests, lower price point, fast response needed → ownership: buyer_agent
+- Listing leads, high-end lake buyers ($500k+), referral partners, high-value relationships → ownership: malcolm
+- Investors → ownership: malcolm
+
+Return ONLY this JSON (no markdown, no extra text):
+{{
+  "summary": "2-3 sentence lead summary",
+  "bestNextStep": "specific action to take right now",
+  "ownership": "malcolm",
+  "ownershipReason": "one sentence reason",
+  "suggestedClientMessage": "warm casual short text to {lead.get("name", "the client")}",
+  "suggestedAgentMessage": "internal handoff message to {agent_name} (empty string if malcolm owns this lead)",
+  "followUpDaysOut": 1,
+  "riskLevel": "low",
+  "riskReason": "brief reason",
+  "fubNotes": "notes to add to Follow Up Boss"
+}}"""
+
+    try:
+        raw = call_claude(prompt, max_tokens=1200)
+        clean = raw.strip()
+        if clean.startswith("```"):
+            clean = clean.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        data = json_lib.loads(clean)
+        return data
+    except json_lib.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="AI returned an unparseable response — try again.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
