@@ -1488,10 +1488,14 @@ G.Data.FLAVOR = {
     ability: 'AI OVERDRIVE',
     ultimate: 'SCALE MODE',
     scaleChance: 0.08, // chance a visit rolls the ultimate instead
+    talkChance: 0.07,  // RARE: the 22-minute parking lot talk
+    talkDays: 6,
     intro: [
       'Mentor. Rival. Power-up vendor. All at 100 mph.',
       'Laptop in one hand, phone in the other, earbuds in,',
       'coffee that never empties. Holographic charts orbit him.',
+      'The most POSITIVE man in real estate. He believes in you',
+      'harder than you believe in yourself. It\'s a little scary.',
     ],
     // AI Overdrive drone flavor
     drones: [
@@ -1508,6 +1512,11 @@ G.Data.FLAVOR = {
       '"Scale beats hustle."',
       '"Your next client is already looking for you."',
       '"If AI can do it, why are you doing it?"',
+      '"You\'re ONE follow-up away. You\'ve ALWAYS been one follow-up away."',
+      '"Reps. Volume. Outcomes. In that order. LET\'S GO."',
+      '"Nobody\'s coming to save your pipeline. GOOD. More reps for you."',
+      '"Average agents wait for leads. YOU manufacture them."',
+      '"Motivation fades. Systems don\'t. Lucky you - you\'ve got BOTH."',
     ],
     coffee: [
       '*sips the coffee that never empties*',
@@ -1518,6 +1527,21 @@ G.Data.FLAVOR = {
       'SCALE MODE ENGAGED!! The backpack of AI gadgets OPENS.',
       'A swarm of AI agents deploys. Everything speeds up.',
       'Leads double. Deals close faster. Cooldowns melt.',
+    ],
+    // RARE power-up find (submitted by the real Blake): pure analog belief
+    talkLines: [
+      '*** RARE POWER-UP FIND ***',
+      'THE 22-MINUTE PARKING LOT TALK',
+      '',
+      'Blake catches you by your car. Laptop CLOSED. Earbuds OUT.',
+      'No slides. No funnels. Just 22 straight minutes of belief,',
+      'delivered at full volume in a light drizzle.',
+      '"Volume beats talent! Talent that DOES volume is UNSTOPPABLE!',
+      'WHO\'S GONNA CARRY THE LISTINGS?! YOU ARE! LOOK AT YOU!"',
+      'You could cold-call a blizzard right now.',
+      '',
+      'MOTIVATION +100% for a quarter*  (*balance team: 6 days)',
+      '+1 max energy every morning, and every task runs hotter.',
     ],
   };
 
@@ -1856,6 +1880,7 @@ G.Data.FLAVOR = {
     { id: 'squatch',    name: 'SQUATCH SPOTTER',       desc: 'Find Bigfoot in the woods. He is shy.' },
     { id: 'megaslayer', name: 'GIANT SLAYER',          desc: 'Defeat the final boss.' },
     { id: 'scalemode',  name: 'SCALE BEATS HUSTLE',    desc: 'Trigger Blake Suddath\'s Scale Mode ultimate.' },
+    { id: 'parkinglot', name: 'THE 22-MINUTE TALK',    desc: 'Catch Blake\'s rare parking lot talk power-up.' },
     { id: 'sysoverride', name: 'AUTOMATION IS FREEDOM', desc: 'Trigger Tyler Lewis\'s System Override.' },
   ];
 
@@ -2236,6 +2261,7 @@ G.State = {
       blakeCooldown: 0,
       aiOverdrive: 0,
       scaleMode: 0,
+      parkingLotTalk: 0,   // Blake's rare 22-minute motivation buff (days)
       tylerCooldown: 0,
       tylerTier: 0,
       systemOverride: 0,
@@ -2319,6 +2345,7 @@ G.State = {
     st.tylerTier = Math.min(st.tylerTier || 0, 3);
     st.scaleMode = Math.min(st.scaleMode || 0, 1);
     st.aiOverdrive = Math.min(st.aiOverdrive || 0, 2);
+    st.parkingLotTalk = Math.min(st.parkingLotTalk || 0, 6);
     st.systemOverride = Math.min(st.systemOverride || 0, 1);
     st.openHouseEngine = Math.min(st.openHouseEngine || 0, 1);
     const today = st.month * G.Data.SEASON.daysPerMonth + st.dayOfMonth;
@@ -2366,6 +2393,7 @@ G.State = {
     return G.Data.SEASON.baseEnergy
       + (this.has('ai') ? 1 : 0)
       + (this.has('corporateHQ') ? 1 : 0)
+      + (this.s.parkingLotTalk > 0 ? 1 : 0)  // Blake's parking lot talk: motivation +100%
       + (this.perk() === 'blake' && this.s.coffee <= 0 ? -1 : 0)  // out of coffee: slower
       + Math.min(3, this.rookieLevel());
   },
@@ -2378,6 +2406,7 @@ G.State = {
 
   blakeBuff() {
     if (this.s.scaleMode > 0) return { label: 'SCALE MODE', days: this.s.scaleMode, color: G.C.cyan };
+    if (this.s.parkingLotTalk > 0) return { label: 'PARKING LOT TALK', days: this.s.parkingLotTalk, color: G.C.yellow };
     if (this.s.aiOverdrive > 0) return { label: 'AI OVERDRIVE', days: this.s.aiOverdrive, color: G.C.lime };
     return null;
   },
@@ -2387,6 +2416,7 @@ G.State = {
     const s = this.s, out = [];
     if (s.scaleMode > 0) out.push({ t: 'SCALE' + s.scaleMode, c: G.C.cyan });
     else if (s.aiOverdrive > 0) out.push({ t: 'AI' + s.aiOverdrive, c: G.C.lime });
+    if (s.parkingLotTalk > 0) out.push({ t: 'PLT' + s.parkingLotTalk, c: G.C.yellow });
     if (s.systemOverride > 0) out.push({ t: 'SYS' + s.systemOverride, c: G.C.sky });
     else if (s.openHouseEngine > 0) out.push({ t: 'OH' + s.openHouseEngine, c: G.C.orange });
     const dsc = s.tylerTier + this.tylerPassiveTier();
@@ -2685,6 +2715,7 @@ G.State = {
     }
     if ((id === 'negotiate' || id === 'inspect') && this.s.effects.preapproved) adj += 0.15;
     if (this.s.scaleMode > 0) adj += 0.05;   // Scale Mode: everything a touch smoother
+    if (this.s.parkingLotTalk > 0) adj += 0.05; // Parking Lot Talk: you believe, therefore you close
     // county road detour: tomorrow's tours suffer
     if (this.s.effects.detour > 0 && (id === 'show' || id === 'openhouse')) adj -= 0.15;
     // market visibility: known agents draw better open house crowds
@@ -3259,6 +3290,15 @@ G.State = {
     s.mentorUsedToday = true;
     const lines = [B.name + ' - ' + B.title];
 
+    if (G.chance(B.talkChance)) {
+      // RARE FIND: the 22-minute parking lot talk (submitted by the real Blake)
+      s.parkingLotTalk = Math.max(s.parkingLotTalk, B.talkDays);
+      s.energy = Math.min(s.energy + 1, this.maxEnergy());
+      lines.push(...B.talkLines);
+      lines.push(G.choice(B.lines));
+      G.Profile.award('parkinglot');
+      return { lines };
+    }
     if (G.chance(B.scaleChance)) {
       // ULTIMATE: Scale Mode (1 day)
       s.scaleMode = Math.max(s.scaleMode, 1);
@@ -3758,6 +3798,10 @@ G.State = {
     if (s.jeffCooldown > 0) s.jeffCooldown--;
     if (s.blakeCooldown > 0) s.blakeCooldown--;
     if (s.tylerCooldown > 0) s.tylerCooldown--;
+    if (s.parkingLotTalk > 0) {
+      s.parkingLotTalk--;
+      if (s.parkingLotTalk === 0) passiveLines.push('The parking lot talk wore off. The belief? Permanent. The +1 energy? Not.');
+    }
     const weatherLines = this.rollWeather();
     passiveLines.push(...weatherLines);
 
@@ -4496,6 +4540,16 @@ G.Engine = {
     const vp = window.visualViewport;
     const vw = vp ? vp.width : window.innerWidth;
     const vh = vp ? vp.height : window.innerHeight;
+    // Adaptive logical height: width stays 480, but the canvas grows taller
+    // (up to 4:3) toward the screen's aspect so portrait phones get a big
+    // play area instead of a letterboxed 16:9 strip. Bottom-anchored UI
+    // reads G.H every frame, so scenes follow along live.
+    const H = G.clamp(Math.round(G.W * (vh / vw)), 270, 360);
+    if (H !== G.H) {
+      G.H = H;
+      this.canvas.height = H;
+      this.ctx.imageSmoothingEnabled = false; // canvas resize resets ctx state
+    }
     const rawScale = Math.min(vw / G.W, vh / G.H);
     const scale = rawScale >= 1 ? Math.floor(rawScale) : rawScale;
     this.cssScale = scale;
@@ -4601,8 +4655,8 @@ G.Engine = {
       ctx.fillRect(G.W / 2 - 110, 30, 220, 24);
       ctx.strokeStyle = G.C.yellow;
       ctx.strokeRect(G.W / 2 - 109.5, 30.5, 219, 23);
-      G.UI.text(ctx, 'LANDSCAPE RECOMMENDED', G.W / 2, 35, { align: 'center', size: 8, color: G.C.yellow });
-      G.UI.text(ctx, '(rotate your phone - but you CAN keep playing)', G.W / 2, 45, { align: 'center', size: 6, color: G.C.gray });
+      G.UI.text(ctx, 'PORTRAIT TALL MODE', G.W / 2, 35, { align: 'center', size: 8, color: G.C.yellow });
+      G.UI.text(ctx, '(rotate for bigger text - both ways work)', G.W / 2, 45, { align: 'center', size: 6, color: G.C.gray });
     }
 
     if (this.fade > 0) {
@@ -4882,7 +4936,7 @@ G.Engine.register('select', {
       }
     }
 
-    G.UI.text(ctx, G.CT('MOST HOMES SOLD BY END OF JUNE WINS. [ESC] BACK', 'MOST HOMES SOLD BY END OF JUNE WINS.'), G.W / 2, 262, { align: 'center', size: 6, color: G.C.gray });
+    G.UI.text(ctx, G.CT('MOST HOMES SOLD BY END OF JUNE WINS. [ESC] BACK', 'MOST HOMES SOLD BY END OF JUNE WINS.'), G.W / 2, G.H - 8, { align: 'center', size: 6, color: G.C.gray });
   },
 
   renderDifficulty(ctx) {
@@ -5082,7 +5136,7 @@ G.Engine.register('map', {
       label: '> BLAKE (LAB)', id: 'blake', kind: 'visit',
       disabled: s.blakeCooldown > 0 || mentorLock || s.energy < 1,
       note: s.blakeCooldown > 0 ? s.blakeCooldown + 'D' : mentorNote('-1E'),
-      desc: 'Visit Blake Suddath, The Growth Guru. AI OVERDRIVE, or roll SCALE MODE. (1 mentor/day)',
+      desc: 'Visit Blake Suddath, The Growth Guru. AI OVERDRIVE, SCALE MODE, or the RARE 22-min parking lot talk. (1 mentor/day)',
     });
     items.push({
       label: '= TYLER (SYS)', id: 'tyler', kind: 'visit',
@@ -5125,11 +5179,16 @@ G.Engine.register('map', {
     // SHOP / STATS / PIPELINE / END DAY live as fixed buttons below the list
 
     const keepIndex = this.menu ? this.menu.index : 0;
+    // fit as many rows as the canvas allows above the fixed bottom nav
+    const menuY = touch ? 64 : 44;
+    const rowH = touch ? 20 : 9;
+    const navTop = G.H - (touch ? 74 : 68);
     this.menu = new G.Menu(items, {
-      x: 4, y: touch ? 64 : 44, w: 142, rowH: touch ? 20 : 9,
-      maxVisible: touch ? 6 : 16,
+      x: 4, y: menuY, w: 142, rowH,
+      maxVisible: Math.max(3, Math.floor((navTop - menuY - 2) / rowH)),
       onSelect: (it) => this.onMenuPick(it),
     });
+    this._builtH = G.H;
     this.menu.index = Math.min(keepIndex, items.length - 1);
     this.menu.skipDisabled(1);
   },
@@ -5374,6 +5433,8 @@ G.Engine.register('map', {
   // ----------------------------------------------------------
   update(dt) {
     this.t += dt;
+    // canvas height changes live on rotation; refit the action menu
+    if (this._builtH !== G.H) this.buildMenu();
     this.particles.update(dt);
     if (this.banner) { this.banner.t -= dt; if (this.banner.t <= 0) this.banner = null; }
 
@@ -5669,8 +5730,8 @@ G.Engine.register('map', {
     // fixed bottom nav: always visible so PIPELINE/STATS/SHOP/END DAY never scroll off
     const touch = G.Input.touch;
     const bh = touch ? 17 : 13;
-    const by1 = touch ? 196 : 202;
-    const by2 = touch ? 215 : 217;
+    const by1 = G.H - (touch ? 74 : 68);
+    const by2 = G.H - (touch ? 55 : 53);
     if (G.UI.button(ctx, touch ? 'SHOP' : 'SHOP [B]', 4, by1, 70, bh, { size: 7 })) { G.Engine.goto('shop'); G.Audio.select(); }
     if (G.UI.button(ctx, touch ? 'STATS' : 'STATS [T]', 77, by1, 69, bh, { size: 7 })) { this.mode = 'stats'; G.Audio.select(); }
     if (G.UI.button(ctx, touch ? 'PIPELINE' : 'PIPELINE [P]', 4, by2, 70, bh, { size: 7 })) { this.mode = 'pipeline'; this.pipeScroll = 0; G.Audio.select(); }
@@ -5679,7 +5740,7 @@ G.Engine.register('map', {
     const it = this.menu.items[this.menu.index];
     if (it && it.desc) {
       const lines = G.UI.wrap(ctx, it.desc, 138, 7).slice(0, touch ? 3 : 4);
-      let y = touch ? 236 : 236;
+      let y = G.H - 34;
       ctx.fillStyle = G.C.dusk;
       ctx.fillRect(2, y - 3, this.MAP_X - 6, lines.length * 8 + 6);
       for (const l of lines) {
@@ -5708,7 +5769,7 @@ G.Engine.register('map', {
     const s = G.State.s;
     ctx.fillStyle = 'rgba(26,28,44,0.85)';
     ctx.fillRect(0, 0, G.W, G.H);
-    G.UI.panel(ctx, 90, 14, 300, 244, { title: 'SEASON STAT SHEET', titleBg: G.C.teal, bg: G.C.ink });
+    G.UI.panel(ctx, 90, 14, 300, G.H - 26, { title: 'SEASON STAT SHEET', titleBg: G.C.teal, bg: G.C.ink });
 
     const rows = [
       ['HOMES SOLD', s.stats.homesSold, G.C.lime],
@@ -5741,7 +5802,7 @@ G.Engine.register('map', {
     const cap = G.State.bal().maxActivePipeline;
     ctx.fillStyle = 'rgba(26,28,44,0.85)';
     ctx.fillRect(0, 0, G.W, G.H);
-    G.UI.panel(ctx, 40, 12, 400, 246, { title: 'PIPELINE & FOLLOW-UP (' + s.leads.length + '/' + cap + ')', titleBg: G.C.blue, bg: G.C.ink });
+    G.UI.panel(ctx, 40, 12, 400, G.H - 24, { title: 'PIPELINE & FOLLOW-UP (' + s.leads.length + '/' + cap + ')', titleBg: G.C.blue, bg: G.C.ink });
 
     // sort: most at-risk first, then by stage depth
     const order = G.Data.STAGES;
@@ -5749,7 +5810,7 @@ G.Engine.register('map', {
     const leads = s.leads.slice().sort((a, b) =>
       (riskRank[G.State.leadRisk(a)] - riskRank[G.State.leadRisk(b)]) ||
       (order.indexOf(b.stage) - order.indexOf(a.stage)));
-    const perPage = 13;
+    const perPage = Math.floor((G.H - 70) / 15); // rows fit above the footer
     const maxScroll = Math.max(0, leads.length - perPage);
     this.pipeScroll = G.clamp(this.pipeScroll, 0, maxScroll);
     const visible = leads.slice(this.pipeScroll, this.pipeScroll + perPage);
@@ -5779,9 +5840,9 @@ G.Engine.register('map', {
       y += 15;
     }
     if (maxScroll > 0) {
-      G.UI.text(ctx, G.CT('UP/DOWN TO SCROLL', 'SWIPE TO SCROLL') + ' (' + (this.pipeScroll + 1) + '-' + Math.min(leads.length, this.pipeScroll + perPage) + ' OF ' + leads.length + ')', G.W / 2, 238, { align: 'center', size: 6, color: G.C.slate });
+      G.UI.text(ctx, G.CT('UP/DOWN TO SCROLL', 'SWIPE TO SCROLL') + ' (' + (this.pipeScroll + 1) + '-' + Math.min(leads.length, this.pipeScroll + perPage) + ' OF ' + leads.length + ')', G.W / 2, G.H - 32, { align: 'center', size: 6, color: G.C.slate });
     }
-    G.UI.text(ctx, G.CT('[ESC] CLOSE', 'TAP TO CLOSE'), G.W / 2, 247, { align: 'center', size: 7, color: G.C.yellow });
+    G.UI.text(ctx, G.CT('[ESC] CLOSE', 'TAP TO CLOSE'), G.W / 2, G.H - 23, { align: 'center', size: 7, color: G.C.yellow });
   },
 });
 
@@ -5894,8 +5955,8 @@ G.Engine.register('shop', {
     }
 
     const ownedCount = G.State.allShopItems().filter(u => G.State.has(u.id)).length;
-    G.UI.text(ctx, 'OWNED: ' + ownedCount + '/' + G.State.allShopItems().length + ' UPGRADES', 240, 200, { size: 7, color: G.C.gray });
-    G.UI.text(ctx, '[ESC] BACK', 240, 212, { size: 7, color: G.C.slate });
+    G.UI.text(ctx, 'OWNED: ' + ownedCount + '/' + G.State.allShopItems().length + ' UPGRADES', 240, G.H - 70, { size: 7, color: G.C.gray });
+    G.UI.text(ctx, '[ESC] BACK', 240, G.H - 58, { size: 7, color: G.C.slate });
   },
 });
 
@@ -5914,13 +5975,17 @@ G.Engine.register('shop', {
 // { label, key, x, y, w, h }
 // ------------------------------------------------------------
 G.TouchBtns = {
+  // Layouts are authored for the base 480x270 canvas and all live in the
+  // lower half, so on taller (portrait) canvases keep them glued to the
+  // bottom edge instead of floating mid-screen.
+  y(b) { return b.y + (G.H - 270); },
   // call from play(): taps inject virtual key presses
   check(btns) {
     const I = G.Input;
     if (!I.touch) return false;
     let hit = false;
     for (const b of btns) {
-      if (I.clickedRect(b.x, b.y, b.w, b.h, 4)) {
+      if (I.clickedRect(b.x, this.y(b), b.w, b.h, 4)) {
         I.pressVirtual(b.key);
         I.vibrate(10);
         hit = true;
@@ -5931,17 +5996,18 @@ G.TouchBtns = {
   // did this frame's tap land on any button? (so games don't double-count)
   hitAny(btns) {
     const I = G.Input;
-    return I.touch && I.mouse.clicked && btns.some(b => I.inRect(b.x, b.y, b.w, b.h, 4));
+    return I.touch && I.mouse.clicked && btns.some(b => I.inRect(b.x, this.y(b), b.w, b.h, 4));
   },
   draw(ctx, btns) {
     if (!G.Input.touch) return;
     for (const b of btns) {
-      const held = G.Input.mouse.down && G.Input.inRect(b.x, b.y, b.w, b.h, 4);
+      const by = this.y(b);
+      const held = G.Input.mouse.down && G.Input.inRect(b.x, by, b.w, b.h, 4);
       ctx.fillStyle = held ? G.C.blue : 'rgba(26,28,44,0.82)';
-      ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.fillRect(b.x, by, b.w, b.h);
       ctx.strokeStyle = held ? G.C.yellow : G.C.gray;
-      ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
-      G.UI.text(ctx, b.label, b.x + b.w / 2, b.y + (b.h - (b.size || 12)) / 2 + 1, { align: 'center', size: b.size || 12, color: held ? G.C.white : G.C.cyan });
+      ctx.strokeRect(b.x + 0.5, by + 0.5, b.w - 1, b.h - 1);
+      G.UI.text(ctx, b.label, b.x + b.w / 2, by + (b.h - (b.size || 12)) / 2 + 1, { align: 'center', size: b.size || 12, color: held ? G.C.white : G.C.cyan });
     }
   },
 };
@@ -6752,10 +6818,11 @@ G.makeMinigame('videoGame', {
     this.hits = 0;
     this.combo = 0;
     this.FALL = 3.0;   // seconds from top to line
-    this.LINE_Y = 200;
+    this.LINE_Y = G.H - 70;
   },
 
   play(dt) {
+    this.LINE_Y = G.H - 70; // track live height (rotation mid-game)
     G.TouchBtns.check(this.LANE_BTNS);
     const inputs = [G.Input.left(), G.Input.down(), G.Input.right()];
     for (let lane = 0; lane < 3; lane++) {
@@ -6986,7 +7053,7 @@ G.makeMinigame('openHouseGame', {
       }
     }
     // optional hold zones: press-and-hold the bottom corners to steer
-    if (G.Input.touch && G.Input.mouse.down && G.Input.mouse.y > 240) {
+    if (G.Input.touch && G.Input.mouse.down && G.Input.mouse.y > G.H - 30) {
       if (G.Input.mouse.x < 60) this.px -= sp;
       if (G.Input.mouse.x > G.W - 60) this.px += sp;
     }
@@ -7009,7 +7076,7 @@ G.makeMinigame('openHouseGame', {
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i];
       it.y += it.v * dt;
-      if (it.y > 228 && it.y < 248 && Math.abs(it.x - this.px) < 30) {
+      if (it.y > G.H - 42 && it.y < G.H - 22 && Math.abs(it.x - this.px) < 30) {
         if (it.kind === 'star') { this.points += 2; this.pop('HOT LEAD! +2', G.C.yellow); G.Audio.great(); }
         else if (it.kind === 'guest') { this.points += 1; this.pop('SIGNED IN! +1', G.C.lime); G.Audio.good(); }
         else { this.points = Math.max(0, this.points - 1); this.pop('"JUST LOOKING" -1', G.C.red); G.Audio.bad(); }
@@ -7040,10 +7107,10 @@ G.makeMinigame('openHouseGame', {
     }
 
     // player + clipboard
-    G.drawSprite(ctx, G.Sprites[G.State.char().sprite], this.px - 14, 224, 2);
+    G.drawSprite(ctx, G.Sprites[G.State.char().sprite], this.px - 14, G.H - 46, 2);
     ctx.fillStyle = G.C.yellow;
-    ctx.fillRect(this.px - 30, 236, 60, 5);
-    G.UI.text(ctx, 'SIGN-IN', this.px, 243, { align: 'center', size: 6, color: G.C.ink });
+    ctx.fillRect(this.px - 30, G.H - 34, 60, 5);
+    G.UI.text(ctx, 'SIGN-IN', this.px, G.H - 27, { align: 'center', size: 6, color: G.C.ink });
   },
 
   bonus() { return G.State.char().openHouseBonus || 0; },
@@ -7494,7 +7561,7 @@ G.Engine.register('battle', {
         ctx.strokeRect(60.5, y + 0.5, 359, 25);
         G.UI.text(ctx, (sel ? '> ' : '  ') + this.opts[i].t, 68, y + 9, { size: 8, color: sel ? G.C.white : G.C.gray });
       }
-      G.UI.text(ctx, G.CT('UP/DOWN + ENTER (OR CLICK)', 'TAP AN ANSWER'), G.W / 2, 226, { align: 'center', size: 7, color: G.C.slate });
+      G.UI.text(ctx, G.CT('UP/DOWN + ENTER (OR CLICK)', 'TAP AN ANSWER'), G.W / 2, G.H - 44, { align: 'center', size: 7, color: G.C.slate });
     }
 
     if (this.phase === 'simon') {
@@ -7559,10 +7626,13 @@ G.Engine.register('achievements', {
     this.scroll = 0;
   },
 
+  // rows that fit between the header (y=26) and the roster footer
+  perPage() { return Math.floor((G.H - 26 - 56) / 17); },
+
   update(dt) {
     this.t += dt;
     const list = G.Data.ACHIEVEMENTS;
-    const maxScroll = Math.max(0, list.length - 11);
+    const maxScroll = Math.max(0, list.length - this.perPage());
     if (G.Input.up()) this.scroll = Math.max(0, this.scroll - 1);
     else if (G.Input.down()) this.scroll = Math.min(maxScroll, this.scroll + 1);
     else if (G.Input.cancel() || G.Input.confirm() || G.Input.mouse.clicked) {
@@ -7583,7 +7653,7 @@ G.Engine.register('achievements', {
     });
 
     let y = 26;
-    const list = G.Data.ACHIEVEMENTS.slice(this.scroll, this.scroll + 11);
+    const list = G.Data.ACHIEVEMENTS.slice(this.scroll, this.scroll + this.perPage());
     for (const a of list) {
       const got = !!p.achievements[a.id];
       ctx.fillStyle = got ? 'rgba(56,183,100,0.15)' : 'rgba(26,28,44,0.6)';
@@ -7600,8 +7670,8 @@ G.Engine.register('achievements', {
 
     // secret agent roster
     const unlockedChars = Object.keys(G.Data.SECRET_CHARACTERS).filter(id => p.unlocks[id]).length;
-    G.UI.text(ctx, 'SECRET AGENTS UNLOCKED: ' + unlockedChars + '/4', G.W / 2, 218, { align: 'center', size: 8, color: G.C.cyan });
-    G.UI.text(ctx, 'UP/DOWN SCROLL - [ESC] BACK', G.W / 2, 244, { align: 'center', size: 7, color: G.C.yellow });
+    G.UI.text(ctx, 'SECRET AGENTS UNLOCKED: ' + unlockedChars + '/4', G.W / 2, G.H - 52, { align: 'center', size: 8, color: G.C.cyan });
+    G.UI.text(ctx, 'UP/DOWN SCROLL - [ESC] BACK', G.W / 2, G.H - 26, { align: 'center', size: 7, color: G.C.yellow });
   },
 });
 
@@ -7704,11 +7774,11 @@ G.Engine.register('seasonEnd', {
       G.UI.text(ctx, String(rows[i][1]), cx, cy + 9, { size: 9, color: G.C.white });
     }
 
-    G.UI.text(ctx, 'FINAL SCORE: ' + this.score.toLocaleString('en-US'), G.W / 2, 244, { align: 'center', size: 11, color: G.C.yellow, shadow: true });
+    G.UI.text(ctx, 'FINAL SCORE: ' + this.score.toLocaleString('en-US'), G.W / 2, G.H - 26, { align: 'center', size: 11, color: G.C.yellow, shadow: true });
 
     this.particles.render(ctx);
     if (this.t > 1 && Math.floor(this.t * 2) % 2 === 0) {
-      G.UI.text(ctx, G.CT('- PRESS ENTER FOR LEADERBOARD -', '- TAP FOR LEADERBOARD -'), G.W / 2, 258, { align: 'center', size: 7, color: G.C.cyan });
+      G.UI.text(ctx, G.CT('- PRESS ENTER FOR LEADERBOARD -', '- TAP FOR LEADERBOARD -'), G.W / 2, G.H - 12, { align: 'center', size: 7, color: G.C.cyan });
     }
   },
 });

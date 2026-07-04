@@ -105,7 +105,7 @@ G.Engine.register('shop', {
     }
 
     const ownedCount = G.State.allShopItems().filter(u => G.State.has(u.id)).length;
-    G.UI.text(ctx, 'OWNED: ' + ownedCount + '/' + G.State.allShopItems().length + ' UPGRADES', 240, 200, { size: 7, color: G.C.gray });
-    G.UI.text(ctx, '[ESC] BACK', 240, 212, { size: 7, color: G.C.slate });
+    G.UI.text(ctx, 'OWNED: ' + ownedCount + '/' + G.State.allShopItems().length + ' UPGRADES', 240, G.H - 70, { size: 7, color: G.C.gray });
+    G.UI.text(ctx, '[ESC] BACK', 240, G.H - 58, { size: 7, color: G.C.slate });
   },
 });

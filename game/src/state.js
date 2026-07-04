@@ -103,6 +103,7 @@ G.State = {
       blakeCooldown: 0,
       aiOverdrive: 0,
       scaleMode: 0,
+      parkingLotTalk: 0,   // Blake's rare 22-minute motivation buff (days)
       tylerCooldown: 0,
       tylerTier: 0,
       systemOverride: 0,
@@ -186,6 +187,7 @@ G.State = {
     st.tylerTier = Math.min(st.tylerTier || 0, 3);
     st.scaleMode = Math.min(st.scaleMode || 0, 1);
     st.aiOverdrive = Math.min(st.aiOverdrive || 0, 2);
+    st.parkingLotTalk = Math.min(st.parkingLotTalk || 0, 6);
     st.systemOverride = Math.min(st.systemOverride || 0, 1);
     st.openHouseEngine = Math.min(st.openHouseEngine || 0, 1);
     const today = st.month * G.Data.SEASON.daysPerMonth + st.dayOfMonth;
@@ -233,6 +235,7 @@ G.State = {
     return G.Data.SEASON.baseEnergy
       + (this.has('ai') ? 1 : 0)
       + (this.has('corporateHQ') ? 1 : 0)
+      + (this.s.parkingLotTalk > 0 ? 1 : 0)  // Blake's parking lot talk: motivation +100%
       + (this.perk() === 'blake' && this.s.coffee <= 0 ? -1 : 0)  // out of coffee: slower
       + Math.min(3, this.rookieLevel());
   },
@@ -245,6 +248,7 @@ G.State = {
 
   blakeBuff() {
     if (this.s.scaleMode > 0) return { label: 'SCALE MODE', days: this.s.scaleMode, color: G.C.cyan };
+    if (this.s.parkingLotTalk > 0) return { label: 'PARKING LOT TALK', days: this.s.parkingLotTalk, color: G.C.yellow };
     if (this.s.aiOverdrive > 0) return { label: 'AI OVERDRIVE', days: this.s.aiOverdrive, color: G.C.lime };
     return null;
   },
@@ -254,6 +258,7 @@ G.State = {
     const s = this.s, out = [];
     if (s.scaleMode > 0) out.push({ t: 'SCALE' + s.scaleMode, c: G.C.cyan });
     else if (s.aiOverdrive > 0) out.push({ t: 'AI' + s.aiOverdrive, c: G.C.lime });
+    if (s.parkingLotTalk > 0) out.push({ t: 'PLT' + s.parkingLotTalk, c: G.C.yellow });
     if (s.systemOverride > 0) out.push({ t: 'SYS' + s.systemOverride, c: G.C.sky });
     else if (s.openHouseEngine > 0) out.push({ t: 'OH' + s.openHouseEngine, c: G.C.orange });
     const dsc = s.tylerTier + this.tylerPassiveTier();
@@ -552,6 +557,7 @@ G.State = {
     }
     if ((id === 'negotiate' || id === 'inspect') && this.s.effects.preapproved) adj += 0.15;
     if (this.s.scaleMode > 0) adj += 0.05;   // Scale Mode: everything a touch smoother
+    if (this.s.parkingLotTalk > 0) adj += 0.05; // Parking Lot Talk: you believe, therefore you close
     // county road detour: tomorrow's tours suffer
     if (this.s.effects.detour > 0 && (id === 'show' || id === 'openhouse')) adj -= 0.15;
     // market visibility: known agents draw better open house crowds
@@ -1126,6 +1132,15 @@ G.State = {
     s.mentorUsedToday = true;
     const lines = [B.name + ' - ' + B.title];
 
+    if (G.chance(B.talkChance)) {
+      // RARE FIND: the 22-minute parking lot talk (submitted by the real Blake)
+      s.parkingLotTalk = Math.max(s.parkingLotTalk, B.talkDays);
+      s.energy = Math.min(s.energy + 1, this.maxEnergy());
+      lines.push(...B.talkLines);
+      lines.push(G.choice(B.lines));
+      G.Profile.award('parkinglot');
+      return { lines };
+    }
     if (G.chance(B.scaleChance)) {
       // ULTIMATE: Scale Mode (1 day)
       s.scaleMode = Math.max(s.scaleMode, 1);
@@ -1625,6 +1640,10 @@ G.State = {
     if (s.jeffCooldown > 0) s.jeffCooldown--;
     if (s.blakeCooldown > 0) s.blakeCooldown--;
     if (s.tylerCooldown > 0) s.tylerCooldown--;
+    if (s.parkingLotTalk > 0) {
+      s.parkingLotTalk--;
+      if (s.parkingLotTalk === 0) passiveLines.push('The parking lot talk wore off. The belief? Permanent. The +1 energy? Not.');
+    }
     const weatherLines = this.rollWeather();
     passiveLines.push(...weatherLines);
 

@@ -65,10 +65,14 @@
     ability: 'AI OVERDRIVE',
     ultimate: 'SCALE MODE',
     scaleChance: 0.08, // chance a visit rolls the ultimate instead
+    talkChance: 0.07,  // RARE: the 22-minute parking lot talk
+    talkDays: 6,
     intro: [
       'Mentor. Rival. Power-up vendor. All at 100 mph.',
       'Laptop in one hand, phone in the other, earbuds in,',
       'coffee that never empties. Holographic charts orbit him.',
+      'The most POSITIVE man in real estate. He believes in you',
+      'harder than you believe in yourself. It\'s a little scary.',
     ],
     // AI Overdrive drone flavor
     drones: [
@@ -85,6 +89,11 @@
       '"Scale beats hustle."',
       '"Your next client is already looking for you."',
       '"If AI can do it, why are you doing it?"',
+      '"You\'re ONE follow-up away. You\'ve ALWAYS been one follow-up away."',
+      '"Reps. Volume. Outcomes. In that order. LET\'S GO."',
+      '"Nobody\'s coming to save your pipeline. GOOD. More reps for you."',
+      '"Average agents wait for leads. YOU manufacture them."',
+      '"Motivation fades. Systems don\'t. Lucky you - you\'ve got BOTH."',
     ],
     coffee: [
       '*sips the coffee that never empties*',
@@ -95,6 +104,21 @@
       'SCALE MODE ENGAGED!! The backpack of AI gadgets OPENS.',
       'A swarm of AI agents deploys. Everything speeds up.',
       'Leads double. Deals close faster. Cooldowns melt.',
+    ],
+    // RARE power-up find (submitted by the real Blake): pure analog belief
+    talkLines: [
+      '*** RARE POWER-UP FIND ***',
+      'THE 22-MINUTE PARKING LOT TALK',
+      '',
+      'Blake catches you by your car. Laptop CLOSED. Earbuds OUT.',
+      'No slides. No funnels. Just 22 straight minutes of belief,',
+      'delivered at full volume in a light drizzle.',
+      '"Volume beats talent! Talent that DOES volume is UNSTOPPABLE!',
+      'WHO\'S GONNA CARRY THE LISTINGS?! YOU ARE! LOOK AT YOU!"',
+      'You could cold-call a blizzard right now.',
+      '',
+      'MOTIVATION +100% for a quarter*  (*balance team: 6 days)',
+      '+1 max energy every morning, and every task runs hotter.',
     ],
   };
 
@@ -433,6 +457,7 @@
     { id: 'squatch',    name: 'SQUATCH SPOTTER',       desc: 'Find Bigfoot in the woods. He is shy.' },
     { id: 'megaslayer', name: 'GIANT SLAYER',          desc: 'Defeat the final boss.' },
     { id: 'scalemode',  name: 'SCALE BEATS HUSTLE',    desc: 'Trigger Blake Suddath\'s Scale Mode ultimate.' },
+    { id: 'parkinglot', name: 'THE 22-MINUTE TALK',    desc: 'Catch Blake\'s rare parking lot talk power-up.' },
     { id: 'sysoverride', name: 'AUTOMATION IS FREEDOM', desc: 'Trigger Tyler Lewis\'s System Override.' },
   ];
 

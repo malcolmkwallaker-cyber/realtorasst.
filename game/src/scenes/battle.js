@@ -205,7 +205,7 @@ G.Engine.register('battle', {
         ctx.strokeRect(60.5, y + 0.5, 359, 25);
         G.UI.text(ctx, (sel ? '> ' : '  ') + this.opts[i].t, 68, y + 9, { size: 8, color: sel ? G.C.white : G.C.gray });
       }
-      G.UI.text(ctx, G.CT('UP/DOWN + ENTER (OR CLICK)', 'TAP AN ANSWER'), G.W / 2, 226, { align: 'center', size: 7, color: G.C.slate });
+      G.UI.text(ctx, G.CT('UP/DOWN + ENTER (OR CLICK)', 'TAP AN ANSWER'), G.W / 2, G.H - 44, { align: 'center', size: 7, color: G.C.slate });
     }
 
     if (this.phase === 'simon') {

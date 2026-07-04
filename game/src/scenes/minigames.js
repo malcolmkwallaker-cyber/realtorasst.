@@ -11,13 +11,17 @@
 // { label, key, x, y, w, h }
 // ------------------------------------------------------------
 G.TouchBtns = {
+  // Layouts are authored for the base 480x270 canvas and all live in the
+  // lower half, so on taller (portrait) canvases keep them glued to the
+  // bottom edge instead of floating mid-screen.
+  y(b) { return b.y + (G.H - 270); },
   // call from play(): taps inject virtual key presses
   check(btns) {
     const I = G.Input;
     if (!I.touch) return false;
     let hit = false;
     for (const b of btns) {
-      if (I.clickedRect(b.x, b.y, b.w, b.h, 4)) {
+      if (I.clickedRect(b.x, this.y(b), b.w, b.h, 4)) {
         I.pressVirtual(b.key);
         I.vibrate(10);
         hit = true;
@@ -28,17 +32,18 @@ G.TouchBtns = {
   // did this frame's tap land on any button? (so games don't double-count)
   hitAny(btns) {
     const I = G.Input;
-    return I.touch && I.mouse.clicked && btns.some(b => I.inRect(b.x, b.y, b.w, b.h, 4));
+    return I.touch && I.mouse.clicked && btns.some(b => I.inRect(b.x, this.y(b), b.w, b.h, 4));
   },
   draw(ctx, btns) {
     if (!G.Input.touch) return;
     for (const b of btns) {
-      const held = G.Input.mouse.down && G.Input.inRect(b.x, b.y, b.w, b.h, 4);
+      const by = this.y(b);
+      const held = G.Input.mouse.down && G.Input.inRect(b.x, by, b.w, b.h, 4);
       ctx.fillStyle = held ? G.C.blue : 'rgba(26,28,44,0.82)';
-      ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.fillRect(b.x, by, b.w, b.h);
       ctx.strokeStyle = held ? G.C.yellow : G.C.gray;
-      ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
-      G.UI.text(ctx, b.label, b.x + b.w / 2, b.y + (b.h - (b.size || 12)) / 2 + 1, { align: 'center', size: b.size || 12, color: held ? G.C.white : G.C.cyan });
+      ctx.strokeRect(b.x + 0.5, by + 0.5, b.w - 1, b.h - 1);
+      G.UI.text(ctx, b.label, b.x + b.w / 2, by + (b.h - (b.size || 12)) / 2 + 1, { align: 'center', size: b.size || 12, color: held ? G.C.white : G.C.cyan });
     }
   },
 };
@@ -849,10 +854,11 @@ G.makeMinigame('videoGame', {
     this.hits = 0;
     this.combo = 0;
     this.FALL = 3.0;   // seconds from top to line
-    this.LINE_Y = 200;
+    this.LINE_Y = G.H - 70;
   },
 
   play(dt) {
+    this.LINE_Y = G.H - 70; // track live height (rotation mid-game)
     G.TouchBtns.check(this.LANE_BTNS);
     const inputs = [G.Input.left(), G.Input.down(), G.Input.right()];
     for (let lane = 0; lane < 3; lane++) {
@@ -1083,7 +1089,7 @@ G.makeMinigame('openHouseGame', {
       }
     }
     // optional hold zones: press-and-hold the bottom corners to steer
-    if (G.Input.touch && G.Input.mouse.down && G.Input.mouse.y > 240) {
+    if (G.Input.touch && G.Input.mouse.down && G.Input.mouse.y > G.H - 30) {
       if (G.Input.mouse.x < 60) this.px -= sp;
       if (G.Input.mouse.x > G.W - 60) this.px += sp;
     }
@@ -1106,7 +1112,7 @@ G.makeMinigame('openHouseGame', {
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i];
       it.y += it.v * dt;
-      if (it.y > 228 && it.y < 248 && Math.abs(it.x - this.px) < 30) {
+      if (it.y > G.H - 42 && it.y < G.H - 22 && Math.abs(it.x - this.px) < 30) {
         if (it.kind === 'star') { this.points += 2; this.pop('HOT LEAD! +2', G.C.yellow); G.Audio.great(); }
         else if (it.kind === 'guest') { this.points += 1; this.pop('SIGNED IN! +1', G.C.lime); G.Audio.good(); }
         else { this.points = Math.max(0, this.points - 1); this.pop('"JUST LOOKING" -1', G.C.red); G.Audio.bad(); }
@@ -1137,10 +1143,10 @@ G.makeMinigame('openHouseGame', {
     }
 
     // player + clipboard
-    G.drawSprite(ctx, G.Sprites[G.State.char().sprite], this.px - 14, 224, 2);
+    G.drawSprite(ctx, G.Sprites[G.State.char().sprite], this.px - 14, G.H - 46, 2);
     ctx.fillStyle = G.C.yellow;
-    ctx.fillRect(this.px - 30, 236, 60, 5);
-    G.UI.text(ctx, 'SIGN-IN', this.px, 243, { align: 'center', size: 6, color: G.C.ink });
+    ctx.fillRect(this.px - 30, G.H - 34, 60, 5);
+    G.UI.text(ctx, 'SIGN-IN', this.px, G.H - 27, { align: 'center', size: 6, color: G.C.ink });
   },
 
   bonus() { return G.State.char().openHouseBonus || 0; },

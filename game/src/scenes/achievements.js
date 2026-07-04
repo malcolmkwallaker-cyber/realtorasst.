@@ -9,10 +9,13 @@ G.Engine.register('achievements', {
     this.scroll = 0;
   },
 
+  // rows that fit between the header (y=26) and the roster footer
+  perPage() { return Math.floor((G.H - 26 - 56) / 17); },
+
   update(dt) {
     this.t += dt;
     const list = G.Data.ACHIEVEMENTS;
-    const maxScroll = Math.max(0, list.length - 11);
+    const maxScroll = Math.max(0, list.length - this.perPage());
     if (G.Input.up()) this.scroll = Math.max(0, this.scroll - 1);
     else if (G.Input.down()) this.scroll = Math.min(maxScroll, this.scroll + 1);
     else if (G.Input.cancel() || G.Input.confirm() || G.Input.mouse.clicked) {
@@ -33,7 +36,7 @@ G.Engine.register('achievements', {
     });
 
     let y = 26;
-    const list = G.Data.ACHIEVEMENTS.slice(this.scroll, this.scroll + 11);
+    const list = G.Data.ACHIEVEMENTS.slice(this.scroll, this.scroll + this.perPage());
     for (const a of list) {
       const got = !!p.achievements[a.id];
       ctx.fillStyle = got ? 'rgba(56,183,100,0.15)' : 'rgba(26,28,44,0.6)';
@@ -50,7 +53,7 @@ G.Engine.register('achievements', {
 
     // secret agent roster
     const unlockedChars = Object.keys(G.Data.SECRET_CHARACTERS).filter(id => p.unlocks[id]).length;
-    G.UI.text(ctx, 'SECRET AGENTS UNLOCKED: ' + unlockedChars + '/4', G.W / 2, 218, { align: 'center', size: 8, color: G.C.cyan });
-    G.UI.text(ctx, 'UP/DOWN SCROLL - [ESC] BACK', G.W / 2, 244, { align: 'center', size: 7, color: G.C.yellow });
+    G.UI.text(ctx, 'SECRET AGENTS UNLOCKED: ' + unlockedChars + '/4', G.W / 2, G.H - 52, { align: 'center', size: 8, color: G.C.cyan });
+    G.UI.text(ctx, 'UP/DOWN SCROLL - [ESC] BACK', G.W / 2, G.H - 26, { align: 'center', size: 7, color: G.C.yellow });
   },
 });

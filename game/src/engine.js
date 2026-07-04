@@ -69,6 +69,16 @@ G.Engine = {
     const vp = window.visualViewport;
     const vw = vp ? vp.width : window.innerWidth;
     const vh = vp ? vp.height : window.innerHeight;
+    // Adaptive logical height: width stays 480, but the canvas grows taller
+    // (up to 4:3) toward the screen's aspect so portrait phones get a big
+    // play area instead of a letterboxed 16:9 strip. Bottom-anchored UI
+    // reads G.H every frame, so scenes follow along live.
+    const H = G.clamp(Math.round(G.W * (vh / vw)), 270, 360);
+    if (H !== G.H) {
+      G.H = H;
+      this.canvas.height = H;
+      this.ctx.imageSmoothingEnabled = false; // canvas resize resets ctx state
+    }
     const rawScale = Math.min(vw / G.W, vh / G.H);
     const scale = rawScale >= 1 ? Math.floor(rawScale) : rawScale;
     this.cssScale = scale;
@@ -174,8 +184,8 @@ G.Engine = {
       ctx.fillRect(G.W / 2 - 110, 30, 220, 24);
       ctx.strokeStyle = G.C.yellow;
       ctx.strokeRect(G.W / 2 - 109.5, 30.5, 219, 23);
-      G.UI.text(ctx, 'LANDSCAPE RECOMMENDED', G.W / 2, 35, { align: 'center', size: 8, color: G.C.yellow });
-      G.UI.text(ctx, '(rotate your phone - but you CAN keep playing)', G.W / 2, 45, { align: 'center', size: 6, color: G.C.gray });
+      G.UI.text(ctx, 'PORTRAIT TALL MODE', G.W / 2, 35, { align: 'center', size: 8, color: G.C.yellow });
+      G.UI.text(ctx, '(rotate for bigger text - both ways work)', G.W / 2, 45, { align: 'center', size: 6, color: G.C.gray });
     }
 
     if (this.fade > 0) {

@@ -145,7 +145,7 @@ G.Engine.register('select', {
       }
     }
 
-    G.UI.text(ctx, G.CT('MOST HOMES SOLD BY END OF JUNE WINS. [ESC] BACK', 'MOST HOMES SOLD BY END OF JUNE WINS.'), G.W / 2, 262, { align: 'center', size: 6, color: G.C.gray });
+    G.UI.text(ctx, G.CT('MOST HOMES SOLD BY END OF JUNE WINS. [ESC] BACK', 'MOST HOMES SOLD BY END OF JUNE WINS.'), G.W / 2, G.H - 8, { align: 'center', size: 6, color: G.C.gray });
   },
 
   renderDifficulty(ctx) {

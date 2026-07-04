@@ -95,11 +95,11 @@ G.Engine.register('seasonEnd', {
       G.UI.text(ctx, String(rows[i][1]), cx, cy + 9, { size: 9, color: G.C.white });
     }
 
-    G.UI.text(ctx, 'FINAL SCORE: ' + this.score.toLocaleString('en-US'), G.W / 2, 244, { align: 'center', size: 11, color: G.C.yellow, shadow: true });
+    G.UI.text(ctx, 'FINAL SCORE: ' + this.score.toLocaleString('en-US'), G.W / 2, G.H - 26, { align: 'center', size: 11, color: G.C.yellow, shadow: true });
 
     this.particles.render(ctx);
     if (this.t > 1 && Math.floor(this.t * 2) % 2 === 0) {
-      G.UI.text(ctx, G.CT('- PRESS ENTER FOR LEADERBOARD -', '- TAP FOR LEADERBOARD -'), G.W / 2, 258, { align: 'center', size: 7, color: G.C.cyan });
+      G.UI.text(ctx, G.CT('- PRESS ENTER FOR LEADERBOARD -', '- TAP FOR LEADERBOARD -'), G.W / 2, G.H - 12, { align: 'center', size: 7, color: G.C.cyan });
     }
   },
 });

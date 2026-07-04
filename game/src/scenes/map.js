@@ -91,7 +91,7 @@ G.Engine.register('map', {
       label: '> BLAKE (LAB)', id: 'blake', kind: 'visit',
       disabled: s.blakeCooldown > 0 || mentorLock || s.energy < 1,
       note: s.blakeCooldown > 0 ? s.blakeCooldown + 'D' : mentorNote('-1E'),
-      desc: 'Visit Blake Suddath, The Growth Guru. AI OVERDRIVE, or roll SCALE MODE. (1 mentor/day)',
+      desc: 'Visit Blake Suddath, The Growth Guru. AI OVERDRIVE, SCALE MODE, or the RARE 22-min parking lot talk. (1 mentor/day)',
     });
     items.push({
       label: '= TYLER (SYS)', id: 'tyler', kind: 'visit',
@@ -134,11 +134,16 @@ G.Engine.register('map', {
     // SHOP / STATS / PIPELINE / END DAY live as fixed buttons below the list
 
     const keepIndex = this.menu ? this.menu.index : 0;
+    // fit as many rows as the canvas allows above the fixed bottom nav
+    const menuY = touch ? 64 : 44;
+    const rowH = touch ? 20 : 9;
+    const navTop = G.H - (touch ? 74 : 68);
     this.menu = new G.Menu(items, {
-      x: 4, y: touch ? 64 : 44, w: 142, rowH: touch ? 20 : 9,
-      maxVisible: touch ? 6 : 16,
+      x: 4, y: menuY, w: 142, rowH,
+      maxVisible: Math.max(3, Math.floor((navTop - menuY - 2) / rowH)),
       onSelect: (it) => this.onMenuPick(it),
     });
+    this._builtH = G.H;
     this.menu.index = Math.min(keepIndex, items.length - 1);
     this.menu.skipDisabled(1);
   },
@@ -383,6 +388,8 @@ G.Engine.register('map', {
   // ----------------------------------------------------------
   update(dt) {
     this.t += dt;
+    // canvas height changes live on rotation; refit the action menu
+    if (this._builtH !== G.H) this.buildMenu();
     this.particles.update(dt);
     if (this.banner) { this.banner.t -= dt; if (this.banner.t <= 0) this.banner = null; }
 
@@ -678,8 +685,8 @@ G.Engine.register('map', {
     // fixed bottom nav: always visible so PIPELINE/STATS/SHOP/END DAY never scroll off
     const touch = G.Input.touch;
     const bh = touch ? 17 : 13;
-    const by1 = touch ? 196 : 202;
-    const by2 = touch ? 215 : 217;
+    const by1 = G.H - (touch ? 74 : 68);
+    const by2 = G.H - (touch ? 55 : 53);
     if (G.UI.button(ctx, touch ? 'SHOP' : 'SHOP [B]', 4, by1, 70, bh, { size: 7 })) { G.Engine.goto('shop'); G.Audio.select(); }
     if (G.UI.button(ctx, touch ? 'STATS' : 'STATS [T]', 77, by1, 69, bh, { size: 7 })) { this.mode = 'stats'; G.Audio.select(); }
     if (G.UI.button(ctx, touch ? 'PIPELINE' : 'PIPELINE [P]', 4, by2, 70, bh, { size: 7 })) { this.mode = 'pipeline'; this.pipeScroll = 0; G.Audio.select(); }
@@ -688,7 +695,7 @@ G.Engine.register('map', {
     const it = this.menu.items[this.menu.index];
     if (it && it.desc) {
       const lines = G.UI.wrap(ctx, it.desc, 138, 7).slice(0, touch ? 3 : 4);
-      let y = touch ? 236 : 236;
+      let y = G.H - 34;
       ctx.fillStyle = G.C.dusk;
       ctx.fillRect(2, y - 3, this.MAP_X - 6, lines.length * 8 + 6);
       for (const l of lines) {
@@ -717,7 +724,7 @@ G.Engine.register('map', {
     const s = G.State.s;
     ctx.fillStyle = 'rgba(26,28,44,0.85)';
     ctx.fillRect(0, 0, G.W, G.H);
-    G.UI.panel(ctx, 90, 14, 300, 244, { title: 'SEASON STAT SHEET', titleBg: G.C.teal, bg: G.C.ink });
+    G.UI.panel(ctx, 90, 14, 300, G.H - 26, { title: 'SEASON STAT SHEET', titleBg: G.C.teal, bg: G.C.ink });
 
     const rows = [
       ['HOMES SOLD', s.stats.homesSold, G.C.lime],
@@ -750,7 +757,7 @@ G.Engine.register('map', {
     const cap = G.State.bal().maxActivePipeline;
     ctx.fillStyle = 'rgba(26,28,44,0.85)';
     ctx.fillRect(0, 0, G.W, G.H);
-    G.UI.panel(ctx, 40, 12, 400, 246, { title: 'PIPELINE & FOLLOW-UP (' + s.leads.length + '/' + cap + ')', titleBg: G.C.blue, bg: G.C.ink });
+    G.UI.panel(ctx, 40, 12, 400, G.H - 24, { title: 'PIPELINE & FOLLOW-UP (' + s.leads.length + '/' + cap + ')', titleBg: G.C.blue, bg: G.C.ink });
 
     // sort: most at-risk first, then by stage depth
     const order = G.Data.STAGES;
@@ -758,7 +765,7 @@ G.Engine.register('map', {
     const leads = s.leads.slice().sort((a, b) =>
       (riskRank[G.State.leadRisk(a)] - riskRank[G.State.leadRisk(b)]) ||
       (order.indexOf(b.stage) - order.indexOf(a.stage)));
-    const perPage = 13;
+    const perPage = Math.floor((G.H - 70) / 15); // rows fit above the footer
     const maxScroll = Math.max(0, leads.length - perPage);
     this.pipeScroll = G.clamp(this.pipeScroll, 0, maxScroll);
     const visible = leads.slice(this.pipeScroll, this.pipeScroll + perPage);
@@ -788,8 +795,8 @@ G.Engine.register('map', {
       y += 15;
     }
     if (maxScroll > 0) {
-      G.UI.text(ctx, G.CT('UP/DOWN TO SCROLL', 'SWIPE TO SCROLL') + ' (' + (this.pipeScroll + 1) + '-' + Math.min(leads.length, this.pipeScroll + perPage) + ' OF ' + leads.length + ')', G.W / 2, 238, { align: 'center', size: 6, color: G.C.slate });
+      G.UI.text(ctx, G.CT('UP/DOWN TO SCROLL', 'SWIPE TO SCROLL') + ' (' + (this.pipeScroll + 1) + '-' + Math.min(leads.length, this.pipeScroll + perPage) + ' OF ' + leads.length + ')', G.W / 2, G.H - 32, { align: 'center', size: 6, color: G.C.slate });
     }
-    G.UI.text(ctx, G.CT('[ESC] CLOSE', 'TAP TO CLOSE'), G.W / 2, 247, { align: 'center', size: 7, color: G.C.yellow });
+    G.UI.text(ctx, G.CT('[ESC] CLOSE', 'TAP TO CLOSE'), G.W / 2, G.H - 23, { align: 'center', size: 7, color: G.C.yellow });
   },
 });
