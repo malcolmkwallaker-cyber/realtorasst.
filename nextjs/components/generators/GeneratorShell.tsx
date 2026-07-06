@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Tabs from '@/components/ui/Tabs'
 import OutputCard from '@/components/ui/OutputCard'
 import Button from '@/components/ui/Button'
+import CopyButton from '@/components/ui/CopyButton'
 import type { OutputTab, UserSettings } from '@/types'
 
 interface Props {
@@ -27,6 +28,8 @@ export default function GeneratorShell({
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState(0)
 
+  const pageUrl = typeof window !== 'undefined' ? window.location.href : ''
+
   async function handleGenerate() {
     setLoading(true)
     setError('')
@@ -49,9 +52,12 @@ export default function GeneratorShell({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">{title}</h1>
-        <p className="text-slate-500 mt-1 text-sm">{description}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">{title}</h1>
+          <p className="text-slate-500 mt-1 text-sm">{description}</p>
+        </div>
+        <CopyButton url={pageUrl} />
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4">
