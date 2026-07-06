@@ -1,17 +1,27 @@
 'use client'
 
 import { useState } from 'react'
-import { Copy, Check } from 'lucide-react'
+import { Copy, Check, Link } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export default function CopyButton({ text }: { text: string }) {
+interface Props {
+  text?: string
+  url?: string
+  label?: string
+}
+
+export default function CopyButton({ text, url, label }: Props) {
   const [copied, setCopied] = useState(false)
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(text)
+    const value = url ?? text ?? ''
+    await navigator.clipboard.writeText(value)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  const isUrlMode = !!url
+  const defaultLabel = isUrlMode ? 'Copy Link' : 'Copy'
 
   return (
     <button
@@ -21,8 +31,8 @@ export default function CopyButton({ text }: { text: string }) {
         copied ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
       )}
     >
-      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-      {copied ? 'Copied' : 'Copy'}
+      {copied ? <Check className="w-3 h-3" /> : isUrlMode ? <Link className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+      {copied ? 'Copied!' : label ?? defaultLabel}
     </button>
   )
 }
