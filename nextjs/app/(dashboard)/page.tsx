@@ -9,15 +9,13 @@ export default async function DashboardPage() {
   const supabase = await createClient()
 
   const [
-    { data: tasks },
-    { count: taskCount },
+    { data: tasks, count: taskCount },
     { count: listingCount },
     { count: contactCount },
     { count: contentCount },
     { data: settings },
   ] = await Promise.all([
-    supabase.from('tasks').select('*').eq('completed', false).order('due_date').limit(5),
-    supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('completed', false),
+    supabase.from('tasks').select('*', { count: 'exact' }).eq('completed', false).order('due_date').limit(5),
     supabase.from('properties').select('*', { count: 'exact', head: true }).eq('status', 'active'),
     supabase.from('contacts').select('*', { count: 'exact', head: true }),
     supabase.from('generated_content').select('*', { count: 'exact', head: true }),

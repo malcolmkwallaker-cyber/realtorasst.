@@ -29,6 +29,7 @@ export default function TasksPage() {
     template: 'new_buyer', client_name: '', address: '', price: '',
     recruit_name: '', market_area: '', tasks: '', priority: 'normal',
   })
+  const [boardError, setBoardError] = useState('')
   const supabase = createClient()
 
   useEffect(() => {
@@ -37,7 +38,12 @@ export default function TasksPage() {
   }, [])
 
   async function toggleTask(id: string) {
-    await supabase.from('tasks').update({ completed: true }).eq('id', id)
+    const { error } = await supabase.from('tasks').update({ completed: true }).eq('id', id)
+    if (error) {
+      setBoardError(`Could not complete the task: ${error.message}`)
+      return
+    }
+    setBoardError('')
     setTasks(prev => prev.filter(t => t.id !== id))
   }
 
@@ -58,6 +64,7 @@ export default function TasksPage() {
 
       {activeTab === 'board' && (
         <Card>
+          {boardError && <p className="text-red-600 text-sm mb-3">{boardError}</p>}
           {tasks.length > 0 ? (
             <div className="space-y-2">
               {tasks.map(task => (
@@ -77,7 +84,8 @@ export default function TasksPage() {
         </Card>
       )}
 
-      {activeTab === 'generate' && (
+      {/* Kept mounted (hidden) so generated output survives tab switches. */}
+      <div className={activeTab === 'generate' ? '' : 'hidden'}>
         <GeneratorShell
           title="Task Template Generator"
           description="Pick a template and get a full step-by-step task checklist."
@@ -89,7 +97,7 @@ export default function TasksPage() {
             {(inputs.template === 'new_buyer' || inputs.template === 'new_seller') && (
               <Input label="Client Name" value={inputs.client_name} onChange={e => set('client_name', e.target.value)} placeholder="Sarah Johnson" />
             )}
-            {(inputs.template === 'new_listing' || inputs.template === 'pending_transaction' || inputs.template === 'open_house_followup') && (
+            {(inputs.template === 'new_seller' || inputs.template === 'new_listing' || inputs.template === 'pending_transaction' || inputs.template === 'open_house_followup') && (
               <Input label="Property Address" value={inputs.address} onChange={e => set('address', e.target.value)} placeholder="123 Lakeview Dr" />
             )}
             {inputs.template === 'new_listing' && (
@@ -111,7 +119,7 @@ export default function TasksPage() {
             )}
           </div>
         </GeneratorShell>
-      )}
+      </div>
     </div>
   )
 }

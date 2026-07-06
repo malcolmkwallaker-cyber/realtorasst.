@@ -41,7 +41,8 @@ export default function AssistantPage() {
       const res = await fetch('/api/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: nextMessages }),
+        // The server only reads the last 30 messages; do not upload more.
+        body: JSON.stringify({ messages: nextMessages.slice(-30) }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'The assistant is unavailable right now.')

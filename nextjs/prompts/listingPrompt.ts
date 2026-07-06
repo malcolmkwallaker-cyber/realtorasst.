@@ -3,9 +3,10 @@ import { identity, text, type Inputs, type PromptSpec } from './common'
 
 export function buildListingPrompt(inputs: Inputs, settings: Partial<UserSettings>): PromptSpec[] {
   const { agent, brokerage } = identity(settings)
+  const price = text(inputs.list_price, '')
 
   const ctx = `Property: ${text(inputs.address, '[Address]')}, ${text(inputs.city, '[City]')}, MN
-Price: $${text(inputs.list_price, 'TBD')}
+Price: ${price ? `$${price.replace(/^\$/, '')}` : 'to be determined'}
 Type: ${text(inputs.property_type, 'Residential')}
 Beds: ${text(inputs.beds, '?')} | Baths: ${text(inputs.baths, '?')}
 Sq Ft: ${text(inputs.square_feet, 'unknown')} | Acres: ${text(inputs.acres, 'N/A')}${inputs.waterfront ? `\nWaterfront: Yes, on ${text(inputs.lake_name, 'a lake')}` : ''}

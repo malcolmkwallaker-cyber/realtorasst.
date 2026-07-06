@@ -3,11 +3,9 @@
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
 import Textarea from '@/components/ui/Textarea'
+import { MARKET_OPTIONS } from '@/lib/constants'
 
-const MARKETS = [
-  'Grand Rapids','Itasca County','Iron Range','Duluth','Brainerd',
-  'Ely','Babbitt','Tower','Orr','Cook','Walker','Aitkin','Lake Home Area',
-].map(m => ({ value: m, label: m }))
+const MARKETS = MARKET_OPTIONS
 
 const SOURCES = [
   { value: 'Zillow', label: 'Zillow' },

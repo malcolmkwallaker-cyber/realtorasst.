@@ -35,7 +35,9 @@ function showError(outputId, message) {
   box.style.display = 'block';
   box.innerHTML =
     '<div class="output-header"><h3>Error</h3></div>' +
-    '<div class="output-text" style="color:#f87171;">' + message + '</div>';
+    '<div class="output-text" style="color:#f87171;"></div>';
+  // textContent so API-supplied error strings render as text, not HTML.
+  box.querySelector('.output-text').textContent = message;
 }
 
 // ── Daily Planner ─────────────────────────────────────────────────────────

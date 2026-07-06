@@ -6,18 +6,19 @@ import { createClient } from '@/lib/supabase/client'
 import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
 import Button from '@/components/ui/Button'
+import { DEFAULT_AGENT_NAME, DEFAULT_BROKERAGE_NAME, DEFAULT_VA_NAME, DEFAULT_MARKETS } from '@/lib/constants'
 
 const DEFAULTS = {
-  agent_name: 'Malcolm Wallaker',
-  brokerage_name: 'Pemberton Real Estate',
+  agent_name: DEFAULT_AGENT_NAME,
+  brokerage_name: DEFAULT_BROKERAGE_NAME,
   phone: '',
   email: '',
   website: '',
   default_tone: 'friendly, local, and confident',
-  primary_markets: 'Grand Rapids, Itasca County, Iron Range, Duluth, Brainerd, Ely, Babbitt, Tower, Orr, Cook, Walker, Aitkin',
+  primary_markets: DEFAULT_MARKETS.join(', '),
   recruiting_value_prop: 'I help agents grow through better systems, stronger support, lead generation, social media, AI tools, training, and a collaborative office culture.',
   preferred_lenders: '',
-  va_name: 'Dan',
+  va_name: DEFAULT_VA_NAME,
 }
 
 export default function SettingsPage() {
@@ -41,7 +42,7 @@ export default function SettingsPage() {
           primary_markets: (data.primary_markets ?? []).join(', '),
           recruiting_value_prop: data.recruiting_value_prop ?? DEFAULTS.recruiting_value_prop,
           preferred_lenders: (data.preferred_lenders ?? []).join(', '),
-          va_name: data.va_name ?? 'Dan',
+          va_name: data.va_name ?? DEFAULT_VA_NAME,
         })
       }
     })

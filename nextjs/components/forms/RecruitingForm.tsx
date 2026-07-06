@@ -3,6 +3,7 @@
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
 import Textarea from '@/components/ui/Textarea'
+import { MARKET_OPTIONS } from '@/lib/constants'
 
 const AGENT_TYPES = [
   { value: 'experienced agent', label: 'Experienced Agent' },
@@ -10,10 +11,7 @@ const AGENT_TYPES = [
   { value: 'broker-owner', label: 'Broker-Owner / Team Leader' },
 ]
 
-const MARKETS = [
-  'Grand Rapids','Itasca County','Iron Range','Duluth','Brainerd',
-  'Ely','Babbitt','Tower','Orr','Cook','Walker','Aitkin',
-].map(m => ({ value: m, label: m }))
+const MARKETS = MARKET_OPTIONS
 
 interface Values {
   first_name: string; last_name: string; current_brokerage: string

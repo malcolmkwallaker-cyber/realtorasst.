@@ -33,16 +33,22 @@ export async function middleware(request: NextRequest) {
 
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login')
 
-  if (!user && !isAuthRoute) {
+  // Redirects must carry any session cookies getUser() just rotated,
+  // or the browser keeps a consumed refresh token and gets logged out.
+  const redirectTo = (pathname: string) => {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+    url.pathname = pathname
+    const response = NextResponse.redirect(url)
+    supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie))
+    return response
+  }
+
+  if (!user && !isAuthRoute) {
+    return redirectTo('/login')
   }
 
   if (user && isAuthRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/'
-    return NextResponse.redirect(url)
+    return redirectTo('/')
   }
 
   return supabaseResponse

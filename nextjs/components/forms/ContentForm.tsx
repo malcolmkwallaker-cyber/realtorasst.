@@ -2,7 +2,6 @@
 
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
-import Textarea from '@/components/ui/Textarea'
 
 const CONTENT_TYPES = [
   { value: 'fb_post', label: 'Facebook Post' },

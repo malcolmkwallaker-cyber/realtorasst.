@@ -12,15 +12,13 @@ interface Props {
   generatorType: string
   promptInput: Record<string, string | boolean | number>
   children: React.ReactNode
-  relatedContactId?: string
-  relatedPropertyId?: string
 }
 
 export default function GeneratorShell({
-  title, description, generatorType, promptInput,
-  children, relatedContactId, relatedPropertyId,
+  title, description, generatorType, promptInput, children,
 }: Props) {
   const [outputTabs, setOutputTabs] = useState<OutputTab[]>([])
+  const [generation, setGeneration] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState(0)
@@ -37,6 +35,7 @@ export default function GeneratorShell({
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Generation failed')
       setOutputTabs(data.outputs)
+      setGeneration(g => g + 1)
       setActiveTab(0)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -70,13 +69,11 @@ export default function GeneratorShell({
             />
           )}
           <OutputCard
-            key={outputTabs[activeTab].id}
+            key={`${generation}-${outputTabs[activeTab].id}`}
             label={outputTabs[activeTab].label}
             content={outputTabs[activeTab].content}
             contentType={`${generatorType}_${outputTabs[activeTab].id}`}
             promptInput={promptInput as Record<string, unknown>}
-            relatedContactId={relatedContactId}
-            relatedPropertyId={relatedPropertyId}
           />
         </div>
       )}

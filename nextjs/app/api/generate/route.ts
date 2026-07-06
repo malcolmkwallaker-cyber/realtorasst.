@@ -33,6 +33,12 @@ export async function POST(request: NextRequest) {
     if (!builder) {
       return NextResponse.json({ error: `Unknown type: ${type}` }, { status: 400 })
     }
+    if (!inputs || typeof inputs !== 'object' || Array.isArray(inputs)) {
+      return NextResponse.json({ error: 'inputs must be an object of form fields.' }, { status: 400 })
+    }
+    if (JSON.stringify(inputs).length > 20000) {
+      return NextResponse.json({ error: 'Inputs are too long. Trim the form fields.' }, { status: 400 })
+    }
 
     // Settings are server state; never trust a client-supplied copy.
     const { data: settings } = await supabase
@@ -41,7 +47,7 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    const prompts = builder(inputs ?? {}, settings ?? {})
+    const prompts = builder(inputs, settings ?? {})
     const anthropic = getAnthropic()
     const system = buildSystemPrompt(settings ?? {})
 

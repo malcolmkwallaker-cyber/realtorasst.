@@ -23,7 +23,7 @@ function doGet() {
     .evaluate()
     .setTitle("Realtor Daily Assistant")
     .addMetaTag("viewport", "width=device-width, initial-scale=1.0")
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 
 // Called by <?!= include('Style'); ?> and <?!= include('JavaScript'); ?> in Index.html

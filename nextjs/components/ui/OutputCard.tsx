@@ -10,11 +10,9 @@ interface Props {
   content: string
   contentType: string
   promptInput: Record<string, unknown>
-  relatedContactId?: string
-  relatedPropertyId?: string
 }
 
-export default function OutputCard({ label, content, contentType, promptInput, relatedContactId, relatedPropertyId }: Props) {
+export default function OutputCard({ label, content, contentType, promptInput }: Props) {
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -34,8 +32,8 @@ export default function OutputCard({ label, content, contentType, promptInput, r
         content_type: contentType,
         prompt_input: promptInput,
         output: content,
-        related_contact_id: relatedContactId ?? null,
-        related_property_id: relatedPropertyId ?? null,
+        related_contact_id: null,
+        related_property_id: null,
       })
       if (insertError) {
         setError(`Save failed: ${insertError.message}`)

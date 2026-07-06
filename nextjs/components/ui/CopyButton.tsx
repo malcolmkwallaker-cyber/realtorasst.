@@ -4,13 +4,39 @@ import { useState } from 'react'
 import { Copy, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+function fallbackCopy(text: string): boolean {
+  const ta = document.createElement('textarea')
+  ta.value = text
+  ta.style.position = 'fixed'
+  ta.style.opacity = '0'
+  document.body.appendChild(ta)
+  ta.select()
+  let ok = false
+  try {
+    ok = document.execCommand('copy')
+  } catch {
+    ok = false
+  }
+  document.body.removeChild(ta)
+  return ok
+}
+
 export default function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    // The async Clipboard API is unavailable over plain http and can be
+    // permission-denied in embedded webviews; fall back to execCommand.
+    let ok: boolean
+    if (navigator.clipboard?.writeText) {
+      ok = await navigator.clipboard.writeText(text).then(() => true, () => fallbackCopy(text))
+    } else {
+      ok = fallbackCopy(text)
+    }
+    if (ok) {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
   }
 
   return (

@@ -1,4 +1,5 @@
 import type { UserSettings } from '@/types'
+import { DEFAULT_AGENT_NAME, DEFAULT_BROKERAGE_NAME, DEFAULT_VA_NAME, DEFAULT_MARKETS } from '@/lib/constants'
 
 export type Inputs = Record<string, string | boolean | number>
 
@@ -21,9 +22,9 @@ export function list(values: string[] | null | undefined, fallback: string): str
 
 export function identity(settings: Partial<UserSettings>) {
   return {
-    agent: text(settings.agent_name, 'Malcolm Wallaker'),
-    brokerage: text(settings.brokerage_name, 'Pemberton Real Estate'),
-    vaName: text(settings.va_name, 'your VA'),
-    markets: list(settings.primary_markets, 'Northern Minnesota'),
+    agent: text(settings.agent_name, DEFAULT_AGENT_NAME),
+    brokerage: text(settings.brokerage_name, DEFAULT_BROKERAGE_NAME),
+    vaName: text(settings.va_name, DEFAULT_VA_NAME),
+    markets: list(settings.primary_markets, DEFAULT_MARKETS.join(', ')),
   }
 }

@@ -11,7 +11,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
     .from('user_settings')
     .select('*')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   return <DashboardLayout settings={settings}>{children}</DashboardLayout>
 }
