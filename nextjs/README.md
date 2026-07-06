@@ -4,6 +4,7 @@ AI-powered real estate assistant for Malcolm Wallaker, Pemberton Real Estate, No
 
 ## Features
 
+- **AI Assistant** - Chat with a personalized assistant for daily planning, VA handoff briefs, new agent how-to guides, and drafting anything on the fly
 - **Listings** - Generate MLS descriptions, Facebook posts, Instagram captions, email blasts, video scripts, hooks, buyer avatars, and showing instructions
 - **Buyers** - First response texts, follow-ups, showing confirmations, buyer agreement explanations, lender referrals
 - **Sellers** - CMA follow-ups, listing confirmations, pre-listing checklists, price reduction scripts, expired and FSBO outreach
@@ -26,12 +27,11 @@ npm install
 cp .env.example .env.local
 ```
 
-Fill in all four values:
+Fill in all three values:
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=       # from Supabase project settings
 NEXT_PUBLIC_SUPABASE_ANON_KEY=  # from Supabase project settings
-SUPABASE_SERVICE_ROLE_KEY=      # from Supabase project settings
 ANTHROPIC_API_KEY=              # from console.anthropic.com
 ```
 

@@ -53,8 +53,17 @@ function callClaude(prompt, maxTokens) {
     muteHttpExceptions: true
   });
 
-  const data = JSON.parse(response.getContentText());
+  const status = response.getResponseCode();
+  let data;
+  try {
+    data = JSON.parse(response.getContentText());
+  } catch (e) {
+    throw new Error("The Claude API returned an unexpected response (HTTP " + status + "). Try again in a moment.");
+  }
   if (data.error) throw new Error(data.error.message);
+  if (!data.content || !data.content[0] || !data.content[0].text) {
+    throw new Error("The Claude API returned no content (HTTP " + status + "). Try again in a moment.");
+  }
   return data.content[0].text;
 }
 

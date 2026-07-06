@@ -1,18 +1,16 @@
 import type { UserSettings } from '@/types'
+import { identity, text, type Inputs, type PromptSpec } from './common'
 
-type Inputs = Record<string, string | boolean | number>
+export function buildListingPrompt(inputs: Inputs, settings: Partial<UserSettings>): PromptSpec[] {
+  const { agent, brokerage } = identity(settings)
 
-export function buildListingPrompt(inputs: Inputs, settings: Partial<UserSettings>) {
-  const agent = settings.agent_name ?? 'Malcolm Wallaker'
-  const brokerage = settings.brokerage_name ?? 'Pemberton Real Estate'
-
-  const ctx = `Property: ${inputs.address}, ${inputs.city}, MN
-Price: $${inputs.list_price ?? 'TBD'}
-Type: ${inputs.property_type ?? 'Residential'}
-Beds: ${inputs.beds ?? '?'} | Baths: ${inputs.baths ?? '?'}
-Sq Ft: ${inputs.square_feet ?? 'unknown'} | Acres: ${inputs.acres ?? 'N/A'}${inputs.waterfront ? `\nWaterfront: Yes, on ${inputs.lake_name ?? 'a lake'}` : ''}
-Key Features: ${inputs.key_features ?? 'not provided'}
-Additional Notes: ${inputs.description ?? 'none'}
+  const ctx = `Property: ${text(inputs.address, '[Address]')}, ${text(inputs.city, '[City]')}, MN
+Price: $${text(inputs.list_price, 'TBD')}
+Type: ${text(inputs.property_type, 'Residential')}
+Beds: ${text(inputs.beds, '?')} | Baths: ${text(inputs.baths, '?')}
+Sq Ft: ${text(inputs.square_feet, 'unknown')} | Acres: ${text(inputs.acres, 'N/A')}${inputs.waterfront ? `\nWaterfront: Yes, on ${text(inputs.lake_name, 'a lake')}` : ''}
+Key Features: ${text(inputs.key_features, 'not provided')}
+Additional Notes: ${text(inputs.description, 'none')}
 Agent: ${agent}, ${brokerage}`
 
   return [

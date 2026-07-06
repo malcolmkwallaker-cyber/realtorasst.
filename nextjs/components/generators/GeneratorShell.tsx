@@ -4,25 +4,23 @@ import { useState } from 'react'
 import Tabs from '@/components/ui/Tabs'
 import OutputCard from '@/components/ui/OutputCard'
 import Button from '@/components/ui/Button'
-import type { OutputTab, UserSettings } from '@/types'
+import type { OutputTab } from '@/types'
 
 interface Props {
   title: string
   description: string
   generatorType: string
   promptInput: Record<string, string | boolean | number>
-  settings: Partial<UserSettings>
   children: React.ReactNode
-  outputTabs: OutputTab[]
-  setOutputTabs: (tabs: OutputTab[]) => void
   relatedContactId?: string
   relatedPropertyId?: string
 }
 
 export default function GeneratorShell({
-  title, description, generatorType, promptInput, settings,
-  children, outputTabs, setOutputTabs, relatedContactId, relatedPropertyId,
+  title, description, generatorType, promptInput,
+  children, relatedContactId, relatedPropertyId,
 }: Props) {
+  const [outputTabs, setOutputTabs] = useState<OutputTab[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState(0)
@@ -34,7 +32,7 @@ export default function GeneratorShell({
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: generatorType, inputs: promptInput, settings }),
+        body: JSON.stringify({ type: generatorType, inputs: promptInput }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Generation failed')

@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useSettings } from '@/hooks/useSettings'
 import GeneratorShell from '@/components/generators/GeneratorShell'
 import Select from '@/components/ui/Select'
 import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
 import Card from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
-import type { Task, OutputTab } from '@/types'
+import { PRIORITY_COLORS } from '@/lib/constants'
+import type { Task } from '@/types'
 
 const TEMPLATES = [
   { value: 'new_buyer', label: 'New Buyer Lead' },
@@ -19,18 +19,12 @@ const TEMPLATES = [
   { value: 'open_house_followup', label: 'Open House Follow-Up' },
   { value: 'new_recruit', label: 'New Agent Recruit' },
   { value: 'weekly_accountability', label: 'Weekly Accountability' },
-  { value: 'va_handoff', label: 'VA Handoff for Dan' },
+  { value: 'va_handoff', label: 'VA Handoff' },
 ]
 
-const PRIORITY_COLORS: Record<string, 'red' | 'yellow' | 'blue' | 'slate'> = {
-  urgent: 'red', high: 'yellow', medium: 'blue', low: 'slate',
-}
-
 export default function TasksPage() {
-  const { settings } = useSettings()
   const [activeTab, setActiveTab] = useState<'board' | 'generate'>('board')
   const [tasks, setTasks] = useState<Task[]>([])
-  const [outputs, setOutputs] = useState<OutputTab[]>([])
   const [inputs, setInputs] = useState({
     template: 'new_buyer', client_name: '', address: '', price: '',
     recruit_name: '', market_area: '', tasks: '', priority: 'normal',
@@ -89,9 +83,6 @@ export default function TasksPage() {
           description="Pick a template and get a full step-by-step task checklist."
           generatorType="task"
           promptInput={inputs}
-          settings={settings ?? {}}
-          outputTabs={outputs}
-          setOutputTabs={setOutputs}
         >
           <div className="space-y-4">
             <Select label="Task Template" value={inputs.template} onChange={e => set('template', e.target.value)} options={TEMPLATES} />
@@ -109,7 +100,7 @@ export default function TasksPage() {
             )}
             {inputs.template === 'va_handoff' && (
               <>
-                <Textarea label="Tasks for Dan" value={inputs.tasks} onChange={e => set('tasks', e.target.value)} placeholder="Follow up with open house leads, update CRM, schedule lender call..." rows={4} />
+                <Textarea label="Tasks to Delegate" value={inputs.tasks} onChange={e => set('tasks', e.target.value)} placeholder="Follow up with open house leads, update CRM, schedule lender call..." rows={4} />
                 <Select label="Priority" value={inputs.priority} onChange={e => set('priority', e.target.value)} options={[
                   { value: 'urgent', label: 'Urgent' },
                   { value: 'high', label: 'High' },

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
@@ -23,10 +24,12 @@ export default function SettingsPage() {
   const [form, setForm] = useState(DEFAULTS)
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.from('user_settings').select('*').single().then(({ data }) => {
+    supabase.from('user_settings').select('*').maybeSingle().then(({ data }) => {
       if (data) {
         setForm({
           agent_name: data.agent_name ?? DEFAULTS.agent_name,
@@ -48,25 +51,37 @@ export default function SettingsPage() {
 
   async function handleSave() {
     setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    await supabase.from('user_settings').upsert({
-      user_id: user.id,
-      agent_name: form.agent_name,
-      brokerage_name: form.brokerage_name,
-      phone: form.phone || null,
-      email: form.email || null,
-      website: form.website || null,
-      default_tone: form.default_tone,
-      primary_markets: form.primary_markets.split(',').map(s => s.trim()).filter(Boolean),
-      recruiting_value_prop: form.recruiting_value_prop || null,
-      preferred_lenders: form.preferred_lenders.split(',').map(s => s.trim()).filter(Boolean),
-      va_name: form.va_name || null,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' })
-    setSaved(true)
-    setSaving(false)
-    setTimeout(() => setSaved(false), 3000)
+    setError('')
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setError('Your session expired. Refresh the page and sign in again.')
+        return
+      }
+      const { error: upsertError } = await supabase.from('user_settings').upsert({
+        user_id: user.id,
+        agent_name: form.agent_name,
+        brokerage_name: form.brokerage_name,
+        phone: form.phone || null,
+        email: form.email || null,
+        website: form.website || null,
+        default_tone: form.default_tone,
+        primary_markets: form.primary_markets.split(',').map(s => s.trim()).filter(Boolean),
+        recruiting_value_prop: form.recruiting_value_prop || null,
+        preferred_lenders: form.preferred_lenders.split(',').map(s => s.trim()).filter(Boolean),
+        va_name: form.va_name || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' })
+      if (upsertError) {
+        setError(`Save failed: ${upsertError.message}`)
+        return
+      }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+      router.refresh()
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -94,6 +109,7 @@ export default function SettingsPage() {
         <Input label="VA Name" value={form.va_name} onChange={e => set('va_name', e.target.value)} placeholder="Dan" />
       </div>
 
+      {error && <p className="text-red-600 text-sm">{error}</p>}
       <Button onClick={handleSave} disabled={saving} size="lg">
         {saved ? 'Settings Saved' : saving ? 'Saving...' : 'Save Settings'}
       </Button>

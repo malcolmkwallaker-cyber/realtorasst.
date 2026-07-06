@@ -103,7 +103,6 @@ export type GeneratorType = 'listing' | 'buyer' | 'seller' | 'recruiting' | 'con
 export interface GenerateRequest {
   type: GeneratorType
   inputs: Record<string, string | boolean | number>
-  settings: Partial<UserSettings>
 }
 
 export interface OutputTab {

@@ -17,19 +17,34 @@ interface Props {
 export default function OutputCard({ label, content, contentType, promptInput, relatedContactId, relatedPropertyId }: Props) {
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const supabase = createClient()
 
   async function handleSave() {
     setSaving(true)
-    await supabase.from('generated_content').insert({
-      content_type: contentType,
-      prompt_input: promptInput,
-      output: content,
-      related_contact_id: relatedContactId ?? null,
-      related_property_id: relatedPropertyId ?? null,
-    })
-    setSaved(true)
-    setSaving(false)
+    setError('')
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setError('Your session expired. Sign in again to save.')
+        return
+      }
+      const { error: insertError } = await supabase.from('generated_content').insert({
+        user_id: user.id,
+        content_type: contentType,
+        prompt_input: promptInput,
+        output: content,
+        related_contact_id: relatedContactId ?? null,
+        related_property_id: relatedPropertyId ?? null,
+      })
+      if (insertError) {
+        setError(`Save failed: ${insertError.message}`)
+        return
+      }
+      setSaved(true)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -43,6 +58,7 @@ export default function OutputCard({ label, content, contentType, promptInput, r
           </Button>
         </div>
       </div>
+      {error && <p className="text-red-600 text-xs mb-2">{error}</p>}
       <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans leading-relaxed">{content}</pre>
     </div>
   )

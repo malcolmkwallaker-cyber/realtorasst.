@@ -1,10 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useSettings } from '@/hooks/useSettings'
 import GeneratorShell from '@/components/generators/GeneratorShell'
 import ListingForm from '@/components/forms/ListingForm'
-import type { OutputTab } from '@/types'
 
 const defaults = {
   address: '', city: '', list_price: '', property_type: 'Single Family',
@@ -13,8 +11,6 @@ const defaults = {
 }
 
 export default function ListingsPage() {
-  const { settings } = useSettings()
-  const [outputs, setOutputs] = useState<OutputTab[]>([])
   const [inputs, setInputs] = useState(defaults)
 
   return (
@@ -23,9 +19,6 @@ export default function ListingsPage() {
       description="Fill in the property details and generate 10 pieces of copy-paste ready marketing content."
       generatorType="listing"
       promptInput={inputs as unknown as Record<string, string | boolean | number>}
-      settings={settings ?? {}}
-      outputTabs={outputs}
-      setOutputTabs={setOutputs}
     >
       <ListingForm values={inputs} onChange={setInputs} />
     </GeneratorShell>

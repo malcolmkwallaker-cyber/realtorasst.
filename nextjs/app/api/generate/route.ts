@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { anthropic, REAL_ESTATE_SYSTEM } from '@/lib/anthropic'
+import { getAnthropic, buildSystemPrompt } from '@/lib/anthropic'
+import { createClient } from '@/lib/supabase/server'
 import { buildListingPrompt } from '@/prompts/listingPrompt'
 import { buildBuyerPrompt } from '@/prompts/buyerPrompt'
 import { buildSellerPrompt } from '@/prompts/sellerPrompt'
@@ -19,29 +20,45 @@ const BUILDERS = {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'You must be signed in to generate content.' }, { status: 401 })
+    }
+
     const body: GenerateRequest = await request.json()
-    const { type, inputs, settings } = body
+    const { type, inputs } = body
 
     const builder = BUILDERS[type as keyof typeof BUILDERS]
     if (!builder) {
       return NextResponse.json({ error: `Unknown type: ${type}` }, { status: 400 })
     }
 
-    const prompts = builder(inputs, settings)
+    // Settings are server state; never trust a client-supplied copy.
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    const prompts = builder(inputs ?? {}, settings ?? {})
+    const anthropic = getAnthropic()
+    const system = buildSystemPrompt(settings ?? {})
 
     const results = await Promise.all(
       prompts.map(async ({ id, label, prompt }) => {
         const message = await anthropic.messages.create({
           model: 'claude-sonnet-4-6',
-          max_tokens: 1500,
-          system: REAL_ESTATE_SYSTEM,
+          max_tokens: 3000,
+          system,
           messages: [{ role: 'user', content: prompt }],
         })
-        return {
-          id,
-          label,
-          content: (message.content[0] as { type: 'text'; text: string }).text,
+        const block = message.content[0]
+        let content = block?.type === 'text' ? block.text : ''
+        if (message.stop_reason === 'max_tokens') {
+          content += '\n\n[This output hit the length limit and may be incomplete. Generate again or trim the inputs.]'
         }
+        return { id, label, content }
       })
     )
 

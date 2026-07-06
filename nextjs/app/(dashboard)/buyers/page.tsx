@@ -1,10 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useSettings } from '@/hooks/useSettings'
 import GeneratorShell from '@/components/generators/GeneratorShell'
 import BuyerForm from '@/components/forms/BuyerForm'
-import type { OutputTab } from '@/types'
 
 const defaults = {
   first_name: '', last_name: '', phone: '',
@@ -12,8 +10,6 @@ const defaults = {
 }
 
 export default function BuyersPage() {
-  const { settings } = useSettings()
-  const [outputs, setOutputs] = useState<OutputTab[]>([])
   const [inputs, setInputs] = useState(defaults)
 
   return (
@@ -21,10 +17,7 @@ export default function BuyersPage() {
       title="Buyer Message Generator"
       description="Enter buyer details and generate 7 ready-to-send messages."
       generatorType="buyer"
-      promptInput={inputs}
-      settings={settings ?? {}}
-      outputTabs={outputs}
-      setOutputTabs={setOutputs}
+      promptInput={inputs as unknown as Record<string, string | boolean | number>}
     >
       <BuyerForm values={inputs} onChange={setInputs} />
     </GeneratorShell>

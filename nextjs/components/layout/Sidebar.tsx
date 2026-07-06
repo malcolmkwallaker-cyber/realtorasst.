@@ -6,12 +6,13 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Home, Users, UserCheck, UserPlus,
-  FileText, CheckSquare, Settings, X, Building2
+  FileText, CheckSquare, Settings, X, Building2, Sparkles
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/assistant', label: 'AI Assistant', icon: Sparkles },
   { href: '/listings', label: 'Listings', icon: Home },
   { href: '/buyers', label: 'Buyers', icon: Users },
   { href: '/sellers', label: 'Sellers', icon: UserCheck },

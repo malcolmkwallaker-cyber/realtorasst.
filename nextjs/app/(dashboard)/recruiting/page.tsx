@@ -1,10 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useSettings } from '@/hooks/useSettings'
 import GeneratorShell from '@/components/generators/GeneratorShell'
 import RecruitingForm from '@/components/forms/RecruitingForm'
-import type { OutputTab } from '@/types'
 
 const defaults = {
   first_name: '', last_name: '', current_brokerage: '',
@@ -13,8 +11,6 @@ const defaults = {
 }
 
 export default function RecruitingPage() {
-  const { settings } = useSettings()
-  const [outputs, setOutputs] = useState<OutputTab[]>([])
   const [inputs, setInputs] = useState(defaults)
 
   return (
@@ -22,10 +18,7 @@ export default function RecruitingPage() {
       title="Recruiting Message Generator"
       description="Enter agent details and generate 8 recruiting messages and scripts."
       generatorType="recruiting"
-      promptInput={inputs}
-      settings={settings ?? {}}
-      outputTabs={outputs}
-      setOutputTabs={setOutputs}
+      promptInput={inputs as unknown as Record<string, string | boolean | number>}
     >
       <RecruitingForm values={inputs} onChange={setInputs} />
     </GeneratorShell>

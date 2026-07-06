@@ -1,18 +1,16 @@
 import type { UserSettings } from '@/types'
+import { identity, text, type Inputs, type PromptSpec } from './common'
 
-type Inputs = Record<string, string | boolean | number>
+export function buildContentPrompt(inputs: Inputs, settings: Partial<UserSettings>): PromptSpec[] {
+  const { agent, brokerage, markets } = identity(settings)
 
-export function buildContentPrompt(inputs: Inputs, settings: Partial<UserSettings>) {
-  const agent = settings.agent_name ?? 'Malcolm Wallaker'
-  const brokerage = settings.brokerage_name ?? 'Pemberton Real Estate'
-  const markets = (settings.primary_markets ?? ['Northern Minnesota']).join(', ')
-
-  const topic = inputs.topic as string ?? ''
+  const topic = text(inputs.topic, 'something valuable for local buyers and sellers this week')
+  const audience = text(inputs.audience, `homeowners, buyers, and agents in ${markets}`)
 
   const ctx = `Topic: ${topic}
 Agent: ${agent}, ${brokerage}
 Markets: ${markets}
-Audience: ${inputs.audience ?? `homeowners, buyers, and agents in ${markets}`}`
+Audience: ${audience}`
 
   const contentTypeMap: Record<string, { label: string; prompt: string }> = {
     fb_post: { label: 'Facebook Post', prompt: `Write a Facebook post for ${agent} about: ${topic}. 3 to 5 sentences. Conversational, adds value, has a question or call to action at the end. No hashtags.\n\n${ctx}` },
@@ -26,7 +24,7 @@ Audience: ${inputs.audience ?? `homeowners, buyers, and agents in ${markets}`}`
     blog_outline: { label: 'Blog Outline', prompt: `Write a blog post outline for ${agent}'s website about: ${topic}. Include a title, meta description under 155 characters, intro paragraph, 4 to 5 section headers with bullet point sub-topics, and a conclusion with a call to action. SEO-friendly for ${markets} real estate searches.\n\n${ctx}` },
   }
 
-  const selectedType = (inputs.content_type as string) ?? 'fb_post'
+  const selectedType = text(inputs.content_type, 'fb_post')
   const selected = contentTypeMap[selectedType] ?? contentTypeMap['fb_post']
 
   return [{ id: selectedType, label: selected.label, prompt: selected.prompt }]

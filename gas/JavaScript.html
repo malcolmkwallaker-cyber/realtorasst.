@@ -131,7 +131,7 @@ function setTopic(topic) {
 function copyOutput(textId) {
   var el = document.getElementById(textId);
   if (!el) return;
-  navigator.clipboard.writeText(el.textContent).then(function() {
+  var markCopied = function() {
     var btn = el.closest('.output-box').querySelector('.btn-copy');
     btn.textContent = 'Copied!';
     btn.classList.add('copied');
@@ -139,6 +139,25 @@ function copyOutput(textId) {
       btn.textContent = 'Copy';
       btn.classList.remove('copied');
     }, 2000);
-  });
+  };
+  // The async Clipboard API is often blocked inside the Apps Script
+  // sandbox iframe, so fall back to a hidden textarea + execCommand.
+  var fallbackCopy = function() {
+    var ta = document.createElement('textarea');
+    ta.value = el.textContent;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    if (ok) markCopied();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(el.textContent).then(markCopied, fallbackCopy);
+  } else {
+    fallbackCopy();
+  }
 }
 </script>
