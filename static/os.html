@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Realtor OS — Mission Control</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e; --accent: #2f81f7; --green: #3fb950;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column;
+  }
+  header {
+    padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--panel);
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 16px; font-weight: 600; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  header a { color: var(--accent); font-size: 13px; margin-left: auto; text-decoration: none; }
+  main { flex: 1; display: flex; min-height: 0; }
+  #left { flex: 2; display: flex; flex-direction: column; min-width: 0; }
+  #right {
+    flex: 1; max-width: 380px; border-left: 1px solid var(--border); overflow-y: auto;
+    padding: 14px; background: var(--panel); display: flex; flex-direction: column; gap: 16px;
+  }
+  #agents { display: flex; gap: 8px; padding: 10px 16px; overflow-x: auto; border-bottom: 1px solid var(--border); }
+  .agent-chip {
+    border: 1px solid var(--border); background: var(--panel); color: var(--text);
+    border-radius: 16px; padding: 6px 12px; font-size: 13px; cursor: pointer; white-space: nowrap;
+  }
+  .agent-chip.active { border-color: var(--accent); background: rgba(47,129,247,.15); }
+  #chat { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 10px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.user { align-self: flex-end; background: var(--accent); color: #fff; }
+  .msg.assistant { align-self: flex-start; background: var(--panel); border: 1px solid var(--border); }
+  .msg .who { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .msg .steps { font-size: 12px; color: var(--muted); margin-top: 8px; border-top: 1px solid var(--border); padding-top: 6px; }
+  #composer { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--panel); }
+  #composer textarea {
+    flex: 1; resize: none; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 10px; font-size: 14px; font-family: inherit; height: 60px;
+  }
+  #composer button {
+    background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0 22px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  #composer button:disabled { opacity: .5; cursor: wait; }
+  .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
+  .card { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px; margin-bottom: 6px; background: var(--bg); }
+  .card .meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .pill { display: inline-block; font-size: 11px; border: 1px solid var(--border); border-radius: 10px; padding: 1px 8px; color: var(--muted); margin-left: 6px; }
+  .pill.high, .pill.urgent { color: #f85149; border-color: #f85149; }
+  .empty { color: var(--muted); font-size: 13px; }
+  @media (max-width: 800px) { #right { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛰️ Realtor OS — Mission Control</h1>
+  <span class="sub">One request in, the right specialists on it, shared memory throughout.</span>
+  <a href="/">Classic tools →</a>
+</header>
+<main>
+  <div id="left">
+    <div id="agents"></div>
+    <div id="chat">
+      <div class="msg assistant">
+        <div class="who">🛰️ Mission Control</div>
+        Welcome to your agentic OS. Tell me anything — a new lead, a deal going under contract, content you need, or just "plan my day" — and I'll route it to the right specialist. Pick an agent above to talk to one directly.
+      </div>
+    </div>
+    <div id="composer">
+      <textarea id="input" placeholder="e.g. New lead: Sarah Kim from the Oak St open house, wants a 3BR under 600k. Follow up and plan my afternoon."></textarea>
+      <button id="send">Send</button>
+    </div>
+  </div>
+  <div id="right">
+    <div class="panel"><h2>Lead pipeline</h2><div id="leads"><span class="empty">No leads yet.</span></div></div>
+    <div class="panel"><h2>Task queue</h2><div id="tasks"><span class="empty">No open tasks.</span></div></div>
+    <div class="panel"><h2>Agent activity</h2><div id="activity"><span class="empty">Nothing yet.</span></div></div>
+  </div>
+</main>
+<script>
+const chat = document.getElementById('chat');
+const input = document.getElementById('input');
+const sendBtn = document.getElementById('send');
+const agentsBar = document.getElementById('agents');
+let currentAgent = '';        // '' = Mission Control
+let history = [];             // [{role, content}]
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function addMsg(role, who, text, steps) {
+  const m = el('div', 'msg ' + role);
+  if (who) m.appendChild(el('div', 'who', who));
+  m.appendChild(document.createTextNode(text));
+  if (steps && steps.length) {
+    m.appendChild(el('div', 'steps', '⚙ ' + steps.join('  ·  ')));
+  }
+  chat.appendChild(m);
+  chat.scrollTop = chat.scrollHeight;
+  return m;
+}
+
+async function loadAgents() {
+  const res = await fetch('/api/os/agents');
+  const data = await res.json();
+  const mc = el('button', 'agent-chip active', '🛰️ Mission Control');
+  mc.onclick = () => selectAgent('', mc);
+  agentsBar.appendChild(mc);
+  for (const a of data.agents) {
+    const chip = el('button', 'agent-chip', a.emoji + ' ' + a.title);
+    chip.title = a.description;
+    chip.onclick = () => selectAgent(a.name, chip);
+    agentsBar.appendChild(chip);
+  }
+}
+
+function selectAgent(name, chip) {
+  currentAgent = name;
+  document.querySelectorAll('.agent-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+}
+
+async function refreshState() {
+  try {
+    const res = await fetch('/api/os/state');
+    const s = await res.json();
+    const leads = document.getElementById('leads');
+    leads.innerHTML = '';
+    const activeLeads = s.leads.filter(l => !['closed','lost'].includes(l.stage));
+    if (!activeLeads.length) leads.appendChild(el('span','empty','No leads yet.'));
+    for (const l of activeLeads.slice(-12).reverse()) {
+      const c = el('div','card');
+      c.appendChild(el('strong','', l.name));
+      c.appendChild(el('span','pill', l.stage.replace('_',' ')));
+      if (l.next_action) c.appendChild(el('div','meta','Next: ' + l.next_action));
+      leads.appendChild(c);
+    }
+    const tasks = document.getElementById('tasks');
+    tasks.innerHTML = '';
+    const open = s.tasks.filter(t => ['open','in_progress'].includes(t.status));
+    if (!open.length) tasks.appendChild(el('span','empty','No open tasks.'));
+    for (const t of open.slice(-12).reverse()) {
+      const c = el('div','card');
+      c.appendChild(el('strong','', t.title));
+      c.appendChild(el('span','pill ' + t.priority, t.priority));
+      c.appendChild(el('div','meta', 'owner: ' + t.owner + (t.due ? ' · due: ' + t.due : '')));
+      tasks.appendChild(c);
+    }
+    const act = document.getElementById('activity');
+    act.innerHTML = '';
+    if (!s.activity.length) act.appendChild(el('span','empty','Nothing yet.'));
+    for (const a of s.activity.slice().reverse()) {
+      const c = el('div','card');
+      c.appendChild(el('strong','', a.agent));
+      c.appendChild(el('div','meta', a.summary));
+      act.appendChild(c);
+    }
+  } catch (e) { /* panel refresh is best-effort */ }
+}
+
+async function send() {
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  sendBtn.disabled = true;
+  addMsg('user', '', text);
+  history.push({role: 'user', content: text});
+  const thinking = addMsg('assistant', '', '…working (agents may make several tool calls)…');
+  try {
+    const res = await fetch('/api/os/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: text, agent: currentAgent, history: history.slice(0, -1)}),
+    });
+    const data = await res.json();
+    thinking.remove();
+    if (!res.ok) {
+      addMsg('assistant', '⚠️ Error', data.detail || 'Request failed');
+    } else {
+      const steps = (data.trace || []).map(t => t.agent + ':' + t.tool);
+      addMsg('assistant', data.agent.emoji + ' ' + data.agent.title, data.reply, steps);
+      history.push({role: 'assistant', content: data.reply});
+    }
+  } catch (e) {
+    thinking.remove();
+    addMsg('assistant', '⚠️ Error', String(e));
+  }
+  sendBtn.disabled = false;
+  refreshState();
+}
+
+sendBtn.onclick = send;
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+loadAgents();
+refreshState();
+</script>
+</body>
+</html>

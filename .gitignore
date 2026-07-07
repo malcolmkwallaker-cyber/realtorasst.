@@ -1,0 +1,10 @@
+# local state written by the agentic OS
+data/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+
+# env
+.env
