@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAnthropic, buildAssistantSystemPrompt } from '@/lib/anthropic'
+import { getAnthropic, buildAssistantSystemPrompt, MODEL } from '@/lib/anthropic'
 import { createClient } from '@/lib/supabase/server'
 
 const MAX_HISTORY = 30
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     const anthropic = getAnthropic()
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: MODEL,
       max_tokens: 3000,
       system: buildAssistantSystemPrompt(settings ?? {}),
       messages: history,

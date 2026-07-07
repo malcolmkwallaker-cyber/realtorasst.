@@ -37,6 +37,9 @@ function callClaude(prompt, maxTokens) {
   const apiKey = PropertiesService.getScriptProperties().getProperty("ANTHROPIC_API_KEY");
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set in Script Properties.");
 
+  // Optional Script Property ANTHROPIC_MODEL swaps engines without a code push.
+  const model = PropertiesService.getScriptProperties().getProperty("ANTHROPIC_MODEL") || "claude-sonnet-4-6";
+
   const response = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", {
     method: "post",
     headers: {
@@ -45,7 +48,7 @@ function callClaude(prompt, maxTokens) {
       "anthropic-version": "2023-06-01"
     },
     payload: JSON.stringify({
-      model: "claude-sonnet-4-6",
+      model: model,
       max_tokens: maxTokens || 2048,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: prompt }]

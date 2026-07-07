@@ -3,6 +3,11 @@ import type { UserSettings } from '@/types'
 
 let client: Anthropic | null = null
 
+// Swap engines without code changes: set ANTHROPIC_MODEL in the environment.
+// claude-sonnet-4-6 is the quality default; claude-haiku-4-5 runs the same
+// prompts at roughly a third of the cost for short marketing copy.
+export const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'
+
 export function getAnthropic(): Anthropic {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error(

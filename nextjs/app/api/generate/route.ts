@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAnthropic, buildSystemPrompt } from '@/lib/anthropic'
+import { getAnthropic, buildSystemPrompt, MODEL } from '@/lib/anthropic'
 import { createClient } from '@/lib/supabase/server'
 import { buildListingPrompt } from '@/prompts/listingPrompt'
 import { buildBuyerPrompt } from '@/prompts/buyerPrompt'
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     const results = await Promise.all(
       prompts.map(async ({ id, label, prompt }) => {
         const message = await anthropic.messages.create({
-          model: 'claude-sonnet-4-6',
+          model: MODEL,
           max_tokens: 3000,
           system,
           messages: [{ role: 'user', content: prompt }],
