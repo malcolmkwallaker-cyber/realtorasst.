@@ -6,6 +6,10 @@ from pydantic import BaseModel
 import anthropic
 from dotenv import load_dotenv
 
+from agentic import memory as os_memory
+from agentic import orchestrator
+from agentic.registry import roster
+
 load_dotenv()
 
 app = FastAPI(title="Realtor Daily Assistant")
@@ -152,6 +156,54 @@ This should read like advice from a top-producing mentor, not a textbook."""
     try:
         result = call_claude(prompt, max_tokens=3500)
         return {"guide": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------- agentic OS
+
+
+class OSChatRequest(BaseModel):
+    message: str
+    agent: str = ""  # empty = Mission Control (orchestrator)
+    history: list = []  # prior [{role, content}] turns from this chat session
+
+
+@app.get("/os")
+async def os_home():
+    return FileResponse("static/os.html")
+
+
+@app.get("/api/os/agents")
+async def os_agents():
+    return {"agents": roster()}
+
+
+@app.get("/api/os/state")
+async def os_state():
+    return {
+        "snapshot": os_memory.snapshot(),
+        "leads": os_memory.list_leads()["leads"],
+        "tasks": os_memory.list_tasks()["tasks"],
+        "activity": os_memory.recent_activity(15)["entries"],
+    }
+
+
+@app.post("/api/os/chat")
+async def os_chat(req: OSChatRequest):
+    history = [
+        {"role": m["role"], "content": m["content"]}
+        for m in req.history
+        if m.get("role") in ("user", "assistant") and m.get("content")
+    ][-12:]
+    try:
+        if req.agent:
+            result = orchestrator.run_agent(req.agent, req.message, history)
+        else:
+            result = orchestrator.run_mission_control(req.message, history)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
