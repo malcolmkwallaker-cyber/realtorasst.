@@ -4,10 +4,21 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="Realtor Daily Assistant")
 
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+_api_key = os.environ.get("ANTHROPIC_API_KEY")
+if not _api_key:
+    raise RuntimeError("ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add your key.")
+
+client = anthropic.Anthropic(api_key=_api_key)
+
+# Swap engines without code changes: set ANTHROPIC_MODEL in .env.
+# claude-sonnet-4-6 is the quality default; claude-haiku-4-5 is the budget option.
+MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
 
 SYSTEM_PROMPT = """You are a highly experienced real estate coach and operations expert.
 You help realtors run their business efficiently. Your tone is professional, practical,
@@ -37,12 +48,17 @@ class AgentHowToRequest(BaseModel):
 
 def call_claude(prompt: str, max_tokens: int = 2048) -> str:
     message = client.messages.create(
-        model="claude-sonnet-4-6",
+        model=MODEL,
         max_tokens=max_tokens,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
     )
     return message.content[0].text
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
 
 @app.get("/")
