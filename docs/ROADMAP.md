@@ -1,5 +1,9 @@
 # Roadmap — The Consultant Audit
 
+Execution-ready briefs for every move below live in `docs/plans/` — hand a plan
+file to any model and it has everything: exact files, code shapes, guardrails,
+and acceptance criteria. Start with `docs/plans/README.md`.
+
 Ranked moves for this product, highest ROI first, with the reasoning written down so a
 cheaper model (or a person) can execute each one without re-deriving the strategy.
 Each move includes "what to tell a weaker model" — a paste-ready brief.
