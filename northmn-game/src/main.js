@@ -182,11 +182,15 @@
 
   function renderPlay() {
     const a = G.agentById(state.agentId);
-    const season = G.Flavor.season(state.week);
+    const shownWeek = Math.min(state.week, G.BALANCE.weeks - 1);
+    const season = G.Flavor.season(shownWeek);
+    const weekLabel = state.phase === 'done'
+      ? 'SEASON OVER'
+      : season.name.toUpperCase() + ' · WEEK ' + (shownWeek + 1) + '/' + G.BALANCE.weeks;
     mount('<div id="top"></div><div id="body"></div>');
     const top = document.getElementById('top');
     top.innerHTML =
-      '<div class="meta"><span>' + esc(season.name.toUpperCase()) + ' · WEEK ' + (state.week + 1) + '/12</span>' +
+      '<div class="meta"><span>' + esc(weekLabel) + '</span>' +
       '<span>' + esc(season.line) + '</span></div>' +
       scoreBlock() +
       '<div class="who" id="who"></div>' +
@@ -306,7 +310,9 @@
     const score = G.Rules.officeScore(state);
     const headline = state.won
       ? 'The Grand Rapids desk takes the season.'
-      : 'Another desk finishes ahead. The corridor is still the office\'s.';
+      : state.tied
+        ? 'The Grand Rapids desk finishes level for the season.'
+        : 'Another desk finishes ahead. The corridor is still the office\'s.';
     body.innerHTML =
       '<h2>' + esc(headline) + '</h2>' +
       '<p class="lede">You played as ' + esc(a.name) + '. Story: ' + esc(a.storyTitle) + ' (' + state.storyBeats + '/4).</p>' +

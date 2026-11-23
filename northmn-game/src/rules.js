@@ -35,6 +35,16 @@
       return state.units + state.teammates + story;
     },
 
+    // win: ahead of both desks. tie: level with the leader, behind nobody.
+    // Matching one desk while trailing the other is a loss.
+    place(state) {
+      const score = Rules.officeScore(state);
+      const best = Math.max(state.rangeUnits, state.duluthUnits);
+      if (score > best) return 'win';
+      if (score === best) return 'tie';
+      return 'loss';
+    },
+
     skillFor(state, job) {
       const r = rule(state);
       let skill = G.BALANCE.skill;
@@ -168,9 +178,9 @@
       }
       state.week += 1;
       if (state.week >= G.BALANCE.weeks) {
-        const score = Rules.officeScore(state);
-        state.won = score > state.rangeUnits && score > state.duluthUnits;
-        state.tied = !state.won && (score === state.rangeUnits || score === state.duluthUnits);
+        const place = Rules.place(state);
+        state.won = place === 'win';
+        state.tied = place === 'tie';
         state.phase = 'done';
         return;
       }
