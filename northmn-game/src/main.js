@@ -450,11 +450,15 @@
   const keyMap = {
     ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down',
     a: 'left', d: 'right', w: 'up', s: 'down',
+    A: 'left', D: 'right', W: 'up', S: 'down',
   };
   window.addEventListener('keydown', function (e) {
     const name = keyMap[e.key];
     if (name) { keys[name] = true; e.preventDefault(); }
-    if (e.key === ' ' || e.key === 'e' || e.key === 'E') { keys.throw = true; e.preventDefault(); }
+    if (!e.repeat && (e.key === ' ' || e.key === 'e' || e.key === 'E')) {
+      keys.throw = true;
+      e.preventDefault();
+    }
   });
   window.addEventListener('keyup', function (e) {
     const name = keyMap[e.key];
