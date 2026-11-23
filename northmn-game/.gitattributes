@@ -1,0 +1,2 @@
+# Packed raster and map data are generated assets.
+assets/*.js linguist-generated=true -diff

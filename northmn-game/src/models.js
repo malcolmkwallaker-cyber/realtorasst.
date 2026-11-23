@@ -1,0 +1,444 @@
+'use strict';
+
+(() => {
+  const ND = globalThis.ND;
+  const { Mesh, color, SURFACE: M } = ND;
+  const c = color;
+  const ivory = c('#e2dccc');
+  const wood = c('#be9a6e');
+  const charcoal = c('#222a29');
+  const steel = c('#626d69');
+  const glass = c('#273f42');
+
+  function beam(mesh, a, b, width, tint, material = -1) {
+    const along = b.map((n, i) => n - a[i]);
+    const len = Math.hypot(...along) || 1;
+    const side = Math.abs(along[1] / len) > .9 ? [1, 0, 0] : [-along[2], 0, along[0]];
+    const sideLength = Math.hypot(...side) || 1;
+    const [i, j, k] = side.map((n) => n / sideLength * width / 2);
+    const [u, v, w] = [
+      (along[1] * k - along[2] * j) / len,
+      (along[2] * i - along[0] * k) / len,
+      (along[0] * j - along[1] * i) / len,
+    ];
+    const corner = (p, s, t) => [p[0] + i * s + u * t, p[1] + j * s + v * t, p[2] + k * s + w * t];
+    for (const [s, t, s2, t2] of [[1, 1, 1, -1], [1, -1, -1, -1], [-1, -1, -1, 1], [-1, 1, 1, 1]]) {
+      mesh.quad(corner(a, s, t), corner(a, s2, t2), corner(b, s2, t2), corner(b, s, t), tint, material, 1, len);
+    }
+  }
+
+  function roof(mesh, w, d, h, rise, tint = [.84, .88, .89]) {
+    const x = w / 2 + .32;
+    const z = d / 2 + .42;
+    mesh.quad([-x, h, z], [-x, h, -z], [0, h + rise, -z], [0, h + rise, z],
+      tint, M.shingles, d / 1.35, w / 3);
+    mesh.quad([0, h + rise, z], [0, h + rise, -z], [x, h, -z], [x, h, z],
+      tint, M.shingles, d / 1.35, w / 3);
+    for (const s of [-1, 1]) {
+      mesh.box(s * x - .07, h - .105, -z, .14, .13, z * 2, ivory);
+      mesh.triangle([-x, h, z * s], [x, h, z * s], [0, h + rise, z * s], tint, M.siding,
+        [[0, 0], [w / 1.8, 0], [w / 3.6, rise / .9]]);
+    }
+  }
+
+  function window(mesh, x, y, z, w, h, lit = false) {
+    mesh.box(x - .045, y - .06, z - .023, w + .09, h + .12, .09, ivory);
+    mesh.box(x + .045, y + .045, z - .032, w - .09, h - .09, .02,
+      lit ? c('#71664a') : glass, lit ? -1 : M.glass);
+    mesh.box(x + w / 2 - .023, y, z - .05, .046, h, .039, ivory);
+    mesh.box(x, y + h / 2 - .018, z - .05, w, .036, .037, ivory);
+    mesh.box(x - .10, y - .08, z - .09, w + .20, .07, .14, ivory);
+  }
+
+  function landing(mesh, w, z, height = .32, deep = 1.22) {
+    mesh.box(-w / 2, -.52, z - deep, w, height + .52, deep, [.80, .80, .77], M.concrete);
+    mesh.box(-w / 2 - .035, -.16, z - deep - .38, w + .07, height / 2 + .16, .43,
+      [.79, .79, .76], M.concrete);
+  }
+
+  function door(mesh, x, z, w, tint, open = false, height = 2.14) {
+    for (const side of [x - .06, x + w]) mesh.box(side, 0, z - .02, .06, height + .06, .10, ivory);
+    mesh.box(x - .06, height, z - .02, w + .12, .075, .10, ivory);
+    if (open) {
+      mesh.box(x + w - .04, .015, z, .049, height - .01, w * .92, tint, M.oak);
+      mesh.box(x + w - .071, .97, z + w * .81, .065, .06, .15, steel);
+    } else {
+      mesh.box(x, 0, z + .007, w, height, .06, tint, M.oak);
+      mesh.box(x + .13, 1.29, z - .015, w - .26, .60, .025, glass, M.glass);
+      mesh.box(x + w - .17, .93, z - .027, .09, .065, .07, steel);
+    }
+  }
+
+  function table(mesh, x, y, z, w, d, tall = .75, tint = wood) {
+    mesh.box(x - w / 2, y + tall, z - d / 2, w, .07, d, tint, M.oak);
+    for (const a of [-1, 1]) {
+      for (const b of [-1, 1]) {
+        mesh.box(x + (w / 2 - .085) * a - .027, y, z + (d / 2 - .085) * b - .027,
+          .055, tall, .055, steel);
+      }
+    }
+  }
+
+  function chair(mesh, x, y, z, yaw, tint) {
+    mesh.at(x, y, z, yaw, () => {
+      for (const a of [-1, 1]) {
+        for (const b of [-1, 1]) mesh.box(a * .20 - .024, 0, b * .18 - .024, .048, .48, .048, steel);
+      }
+      mesh.box(-.25, .46, -.24, .50, .085, .48, tint, M.cloth);
+      mesh.box(-.25, .54, .17, .50, .43, .081, tint, M.cloth);
+    });
+  }
+
+  function plant(mesh, x, y, z, scale = 1) {
+    mesh.round(x, y, z, .17 * scale, .21 * scale, .27 * scale, c('#877d64'), M.concrete, 9);
+    for (let i = 0; i < 7; i++) {
+      const a = i * 2.3999;
+      const point = [x + Math.cos(a) * .29 * scale, y + (.59 + i % 4 * .11) * scale, z + Math.sin(a) * .29 * scale];
+      beam(mesh, [x, y + .25 * scale, z], point, .024 * scale, c('#4c6749'));
+      mesh.ellipsoid(...point, .19 * scale, .11 * scale, .17 * scale, [.7, .94, .63], M.needles, 6, 3);
+    }
+  }
+
+  function papers(mesh, x, y, z) {
+    mesh.box(x, y, z, .30, .012, .23, ivory);
+    for (let i = 0; i < 4; i++) mesh.box(x + .035, y + .013, z + .047 + i * .034, .19, .002, .004, steel);
+  }
+
+  function officeInterior(mesh) {
+    const w = c('#9e9b8b');
+    mesh.box(-7.1, 0, 1.2, 4.7, 2.95, .12, w, M.drywall);
+    mesh.box(2.45, 0, 1.2, 4.65, 2.95, .12, w, M.drywall);
+    for (const x of [-5.1, .3, 5.1]) {
+      mesh.box(x - .70, 2.81, -3.44, 1.4, .033, .34, c('#f5ebce'), M.lamp);
+      mesh.box(x - .70, 2.81, 2.56, 1.4, .033, .34, c('#f5ebce'), M.lamp);
+    }
+    table(mesh, 3.72, 0, -1.93, 2.50, .93, .91);
+    mesh.box(3.25, .98, -1.72, .59, .37, .052, charcoal);
+    mesh.box(3.30, 1.02, -1.781, .47, .28, .018, c('#44665f'), M.lamp);
+    mesh.box(3.51, .92, -1.72, .078, .12, .09, steel);
+    papers(mesh, 4.1, .985, -2.22);
+    chair(mesh, 3.75, 0, -1.15, Math.PI, [.85, .87, .85]);
+    table(mesh, -3.6, 0, -2.05, 2.1, .76, .72);
+    papers(mesh, -3.95, .8, -2.26);
+    chair(mesh, -3.62, 0, -1.31, Math.PI, [.77, .76, .71]);
+    table(mesh, -.1, 0, 3.2, 3.34, 1.22, .74);
+    for (const x of [-1.15, .12, 1.23]) {
+      chair(mesh, x, 0, 2.29, Math.PI, [.80, .78, .71]);
+      chair(mesh, x, 0, 4.11, 0, [.80, .78, .71]);
+    }
+    papers(mesh, -.52, .814, 2.90);
+    for (const x of [-6.64, 6.66]) {
+      plant(mesh, x, 0, -4.35, 1.5);
+      mesh.box(x - .57, 0, 3.80, 1.1, .96, .59, wood, M.oak);
+      mesh.box(x - .55, .35, 3.766, 1.06, .04, .045, charcoal);
+      mesh.box(x - .55, .66, 3.766, 1.06, .04, .045, charcoal);
+    }
+  }
+
+  function homeInterior(mesh, w, d, cabin) {
+    const paint = cabin ? wood : c('#ddd4c4');
+    const mat = cabin ? M.cedar : M.drywall;
+    mesh.box(-w / 2 + .24, 0, .6, w / 2 - .98, 2.47, .12, paint, mat);
+    mesh.box(.84, 0, .6, w / 2 - 1.08, 2.47, .12, paint, mat);
+    mesh.box(-w / 2 + .25, .01, -d / 2 + .76, 2.63, .61, .81, [.78, .82, .76], M.cloth);
+    mesh.box(-w / 2 + .25, .53, -d / 2 + .76, 2.63, .42, .27, [.78, .82, .76], M.cloth);
+    mesh.box(-w / 2 + .25, .55, -d / 2 + 1.01, .23, .23, .55, [.80, .85, .81], M.cloth);
+    mesh.box(-w / 2 + 2.65, .55, -d / 2 + 1.01, .23, .23, .55, [.80, .85, .81], M.cloth);
+    table(mesh, -w / 2 + 2.3, 0, -.88, 1.28, .62, .44);
+    mesh.floor(-w / 2 + .55, .021, -2.12, 3.12, 1.85, c('#b79574'), M.cloth);
+    const counterX = w / 2 - 2.8;
+    mesh.box(counterX, 0, -d / 2 + .2, 2.59, .89, .61, c('#d1c2af'), M.siding);
+    mesh.box(counterX - .03, .89, -d / 2 + .18, 2.64, .063, .66, [.75, .75, .72], M.granite);
+    mesh.box(counterX + 1.14, .953, -d / 2 + .32, .64, .016, .32, steel);
+    mesh.round(counterX + 1.46, .96, -d / 2 + .33, .027, .027, .17, steel);
+    table(mesh, w / 2 - 2.38, 0, -1.11, 1.37, .84);
+    chair(mesh, w / 2 - 2.4, 0, -.39, 0, [.94, .86, .76]);
+    papers(mesh, w / 2 - 2.69, .826, -1.13);
+    plant(mesh, w / 2 - .58, 0, d / 2 - .74, 1.25);
+    mesh.box(-w / 2 + .41, .05, d / 2 - 2.20, 1.62, .37, 1.87, wood, M.oak);
+    mesh.box(-w / 2 + .42, .41, d / 2 - 2.19, 1.60, .20, 1.84, c('#b3b7a8'), M.cloth);
+    mesh.box(-w / 2 + .51, .61, d / 2 - 2.03, .62, .12, .37, ivory, M.drywall);
+  }
+
+
+  function officePorch(mesh, front, width) {
+    const z = front - 2.16;
+    const planks = [.71,.63,.52];
+    const painted = c('#83928b');
+    const fascia = c('#c3cab9');
+    mesh.box(-3.36,-.29,z,6.72,.29,2.24,planks,M.cedar);
+    mesh.box(-1.04,-.55,z-.52,2.08,.32,.55,[.88,.85,.79],M.concrete);
+    mesh.box(-1.11,-.62,z-.92,2.22,.24,.43,[.88,.85,.79],M.concrete);
+    mesh.box(-1.24,-.71,z-2.50,2.48,.15,1.68,[.94,.91,.83],M.concrete);
+    for (const side of [-1,1]) {
+      mesh.box(side*3.10-.10,0,z+.09,.20,2.27,.20,painted,M.siding);
+      mesh.box(side*2.1-1.05,.86,z+.13,2.1,.095,.102,painted,M.siding);
+      for (let i=0;i<6;i++) {
+        mesh.box(side*(1.17+i*.35)-.029,.10,z+.155,.058,.78,.06,painted,M.siding);
+      }
+    }
+    // A gabled shelter and a side ramp are characteristic of the Pokegama storefront.
+    mesh.quad([-3.6,2.26,z-.15],[-3.6,2.26,front+.25],[0,3.55,front+.25],[0,3.55,z-.15],
+      [.80,.84,.82],M.shingles,2.15,2.8);
+    mesh.quad([0,3.55,z-.15],[0,3.55,front+.25],[3.6,2.26,front+.25],[3.6,2.26,z-.15],
+      [.80,.84,.82],M.shingles,2.15,2.8);
+    const signZ = z-.18;
+    mesh.triangle([-3.54,2.26,z-.13],[3.54,2.26,z-.13],[0,3.55,z-.13],painted,M.siding,
+      [[0,0],[4.4,0],[2.2,1.8]]);
+    beam(mesh,[-3.62,2.24,signZ],[0,3.57,signZ],.14,fascia);
+    beam(mesh,[3.62,2.24,signZ],[0,3.57,signZ],.14,fascia);
+    mesh.quad([2.03,2.30,signZ],[-2.03,2.30,signZ],[-2.03,2.96,signZ],[2.03,2.96,signZ],
+      ivory,M.sign);
+    const end = width/2+1.9;
+    mesh.quad([3.32,0,z+.28],[end,-.58,z+.28],[end,-.58,z+1.73],[3.32,0,z+1.73],planks,M.cedar,3,1);
+    for (const k of [z+.29,z+1.72]) {
+      beam(mesh,[3.35,.93,k],[end,.35,k],.105,painted);
+      for (let x = 3.55; x < end; x += .67) {
+        const y = -.58*(x-3.32)/(end-3.32);
+        mesh.box(x,y+.019,k-.043,.08,.92,.08,painted,M.siding);
+      }
+    }
+    for (const x of [-5.7,5.65]) {
+      mesh.box(x-1.60,-.60,front-1.7,3.20,.55,1.40,[.83,.84,.80], M.granite);
+      mesh.box(x-1.54,-.084,front-1.62,3.08,.046,1.22,[.51,.49,.42],M.gravel);
+      for (let i=0;i<3;i++) plant(mesh,x-1+i*.93,-.12,front-.91,.66);
+    }
+  }
+
+  function featured(mesh, lot) {
+    const { w, d, type } = lot;
+    const office = type === 'office';
+    const cabin = type === 'cabin';
+    const brick = type === 'brick';
+    const h = office ? 3.11 : type === 'brick' ? 5.60 : 2.74;
+    const wall = lot.id === 'range' ? [.94,.88,.78] : lot.id === 'hoyt' ? [.51,.63,.66] : office ? [.58,.64,.64] : brick ? [.97,.90,.85] : cabin ? [.86,.68,.48] : [.80,.88,.76];
+    const material = brick ? M.brick : cabin ? M.cedar : M.siding;
+    const width = office ? 1.62 : 1.04;
+    const wallDepth = .21;
+    const front = -d / 2;
+    mesh.box(-w / 2, -1.55, front, w, 1.55, d, [.78,.77,.73], M.concrete);
+    mesh.floor(-w / 2 + .14, .003, front + .16, w - .28, d - .32,
+      office ? [.82,.73,.61] : [.92,.83,.70], M.oak, 1.55);
+    mesh.box(-w / 2, 0, d / 2 - wallDepth, w, h, wallDepth, wall, material, 1.25);
+    for (const x of [-w / 2, w / 2 - wallDepth]) {
+      mesh.box(x, 0, front, wallDepth, h, d, wall, material, 1.25);
+    }
+    for (const x of [-w / 2, width / 2]) {
+      mesh.box(x, 0, front, (w - width) / 2, h, wallDepth, wall, material, 1.25);
+    }
+    mesh.box(-width / 2, 2.16, front, width, h - 2.16, wallDepth, wall, material, 1.25);
+    mesh.box(-w / 2 + .18, .08, front + .221, (w - width) / 2 - .18, h - .2, .027,
+      [.88,.84,.76], M.drywall);
+    mesh.box(width / 2, .08, front + .221, (w - width) / 2 - .18, h - .2, .027,
+      [.88,.84,.76], M.drywall);
+    door(mesh, -width / 2, front + .038, width, cabin ? c('#715c46') : c('#556058'), true);
+    if (!office) landing(mesh, width + .77, front, 0, 1.38);
+    for (const s of [-1, 1]) {
+      const windowWidth = office ? 3.88 : 2.02;
+      window(mesh, s * w * .27 - windowWidth / 2, office ? .83 : .92, front, windowWidth, office ? 1.39 : 1.02);
+      if (type === 'brick') window(mesh, s * w * .27 - 1.0, 3.43, front, 2, 1.25);
+      mesh.at(s * (w / 2 + .01), 0, .14, -s * Math.PI / 2, () => {
+        window(mesh, -1.32, 1.06, 0, 2.64, 1.1);
+      });
+    }
+    if (office) {
+      roof(mesh, w, d, h, 2.0, [.74,.80,.82]);
+      officePorch(mesh,front,w);
+      mesh.box(-w / 2 + .23, 2.89, front + .19, w - .46, .062, d - .42, [.84,.83,.78], M.drywall);
+      mesh.box(-w / 2 + .23, .075, d / 2 - .28, w - .46, 2.78, .065, [.87,.85,.79], M.drywall);
+      for (const x of [-w/2+.239,w/2-.283]) {
+        mesh.box(x,.075,front+.239,.045,2.78,d-.48,[.86,.84,.78],M.drywall);
+      }
+      officeInterior(mesh);
+    } else {
+      roof(mesh, w, d, h, cabin ? 2.5 : 1.68);
+      mesh.box(2.19, h + .29, 1.9, .55, 1.80, .52, [.80,.83,.79], M.brick, .84);
+      mesh.box(-w / 2 + .14, 2.49, front + .18, w - .28, .06, d - .29, [.76,.77,.73], M.drywall);
+      homeInterior(mesh, w, d, cabin);
+      if (cabin) {
+        mesh.box(-w / 2 + .16, -.27, front - 2.5, w - .32, .27, 2.64, wood, M.cedar);
+        for (const x of [-w / 2 + .42, w / 2 - .42]) mesh.box(x, 0, front - 2.21, .16, 2.37, .16, wood, M.oak);
+        mesh.quad([-w / 2, 2.22, front - 2.55], [w / 2, 2.22, front - 2.55],
+          [w / 2, 2.59, front + .03], [-w / 2, 2.59, front + .03], [.87,.88,.83], M.shingles, w, 2);
+      }
+    }
+    if (!office) {
+      mesh.box(-1.25,-.18,front-3.76,2.5,.15,2.45,[.88,.88,.83],M.concrete);
+      const x = w / 2 + 1.3;
+      mesh.box(x, -.06, front - 4.12, .085, 1.48, .085, ivory);
+      mesh.box(x - .49, 1.21, front - 4.13, 1.0, .07, .08, ivory);
+      mesh.box(x - .37, .80, front - 4.15, .74, .38, .065, c('#587d70'));
+    }
+  }
+
+  const houseTints = ['#d5cbb5','#b4c3be','#d4d6ce','#b5a696','#d9dac3','#92a4a1'].map(c);
+
+  function house(mesh, r, dense) {
+    const w = 6.9 + r() * 5.0;
+    const d = 6.8 + r() * 3.4;
+    const h = r() < .24 ? (dense ? 6.05 : 4.65) : 2.67 + r() * .63;
+    const brick = dense && r() < .48;
+    const tint = houseTints[Math.floor(r() * houseTints.length)];
+    const mat = brick ? M.brick : M.siding;
+    mesh.box(-w / 2, -1.17, -d / 2, w, 1.52, d, [.81,.79,.73], M.concrete);
+    mesh.box(-w / 2, .35, -d / 2, w, h - .35, d, tint, mat, 1.37);
+    roof(mesh, w, d, h, 1.37 + r() * 1.13, [.78 + r() * .19,.88,.86]);
+    const z = -d / 2;
+    door(mesh, -.46, z - .03, .92, c('#68726a'));
+    landing(mesh, 1.49, z);
+    window(mesh, -w * .34, 1.03, z - .025, 1.21 + r() * .5, .93);
+    window(mesh, w * .23, 1.03, z - .025, 1.23 + r() * .54, .93);
+    if (h > 4) {
+      window(mesh, -w * .34, 3.35, z - .03, 1.21, .96);
+      window(mesh, w * .23, 3.35, z - .03, 1.23, .96);
+    }
+    if (r() < .4) {
+      mesh.box(w * .26, h - .10, d * .19, .54, 1.84, .47, [.90,.84,.77], M.brick, .86);
+    }
+    return { w, d };
+  }
+
+  function pine(mesh, h, r) {
+    const width = h * (.17 + r() * .059);
+    mesh.round(0, -.21, 0, h * .034, h * .009, h * .91, [.80,.80,.72], M.bark, 6);
+    const shades = [[.87,1.10,.80], [.93,1.20,.89], [.94,1.13,.80]];
+    const offset = r() * 6.28;
+    for (let tier = 0; tier < 5; tier++) {
+      const y = h * (.35 + tier * .105);
+      const rad = width * (1 - tier * .148);
+      const top = h * (.68 + tier * .081);
+      const n = 8;
+      for (let i = 0; i < n; i++) {
+        const a = offset + (i + tier / 3) * Math.PI * 2 / n;
+        const b = a + Math.PI * 2 / n;
+        const t = [.88,.58,1,.71][i % 4];
+        const u = [.88,.58,1,.71][(i + 1) % 4];
+        mesh.triangle([Math.cos(b) * rad * u, y + h * (.03 + .035 * u), Math.sin(b) * rad * u],
+          [Math.cos(a) * rad * t, y + h * (.03 + .035 * t), Math.sin(a) * rad * t],
+          [0, top, 0], shades[tier % 3], M.needles, [[0,0],[.91,0],[.54,1.17]]);
+      }
+    }
+  }
+
+  function birch(mesh, h, r) {
+    mesh.round(0, -.15, 0, .17, .07, h * .87, [.85,.82,.74], M.drywall, 5);
+    for (let i = 0; i < 5; i++) {
+      const a = i * 2.399;
+      const end = [Math.cos(a) * h * .126, h * (.58 + r() * .32), Math.sin(a) * h * .126];
+      beam(mesh, [0,h * (.34 + i * .07),0], end, .08, [.72,.70,.62]);
+      mesh.ellipsoid(...end, h*.17, h*.17, h*.16, [.98,1.30,.79], M.needles, 6, 3);
+    }
+  }
+
+  function pole(mesh, tall = 7.0, power = false) {
+    mesh.round(0, -.15, 0, .13, .068, tall, power ? [.67,.68,.58] : steel, power ? M.bark : -1, 7);
+    if (power) {
+      mesh.box(-.99, tall - .54, -.049, 1.98, .10, .10, steel);
+      for (const s of [-1, 1]) mesh.round(s * .86, tall - .44, 0, .085, .06, .18, steel, -1, 5);
+    } else {
+      beam(mesh, [0,tall-.43,0], [0,tall-.12,-1.28], .073, steel);
+      mesh.box(-.11, tall - .187, -1.52, .22, .086, .47, steel);
+      mesh.box(-.079, tall - .202, -1.47, .158, .016, .36, c('#e0cf9c'), M.lamp);
+    }
+  }
+
+  function suv(tint, compact = false) {
+    const mesh = new Mesh();
+    const width = compact ? .87 : .98;
+    const long = compact ? 1.93 : 2.26;
+    const base = compact ? .68 : .91;
+    const top = compact ? 1.39 : 1.74;
+    const hood = long * .59;
+    const darkTrim = c('#303432');
+    mesh.box(-width, .34, -long, width * 2, base - .34, long * 2, tint);
+    mesh.box(-width * .97, .30, -long - .079, width * 1.94, .16, .17, darkTrim);
+    mesh.box(-width * .96, .29, long - .068, width * 1.92, .16, .17, darkTrim);
+    mesh.box(-width * .94, base - .12, -long - .014, width * 1.88, .12, .068, darkTrim);
+    mesh.box(-.33, base - .10, -long - .054, .66, .093, .067, steel);
+    mesh.box(-.152, .44, -long - .052, .304, .10, .016, ivory);
+    mesh.box(-.152, .49, long + .012, .304, .10, .016, ivory);
+    mesh.quad([-width*.93,base,-hood], [width*.93,base,-hood], [width*.73,top,-hood+.57],
+      [-width*.73,top,-hood+.57], glass, M.glass);
+    mesh.quad([width*.93,base,long-.15], [-width*.93,base,long-.15], [-width*.73,top,long-.49],
+      [width*.73,top,long-.49], glass, M.glass);
+    mesh.box(-width*.74, top - .02, -hood+.55, width*1.48, .081, long+hood-.97, tint);
+    for (const side of [-1,1]) {
+      const x = side * width;
+      mesh.quad([x*.93,base,-hood],[x*.73,top,-hood+.57],[x*.73,top,long-.49],[x*.93,base,long-.15],
+        glass, M.glass);
+      beam(mesh, [x*.94,base,.19],[x*.735,top,.25],.079,tint);
+      mesh.box(x - .065, .35, -long+.3, .13, .14, long * 2 - .6, darkTrim);
+      mesh.box(side * (width - .19) - .13, base-.075, -long-.06, .26, .11, .045, c('#f2efdd'), M.lamp);
+      mesh.box(side * (width - .135) - .10, base-.05, long-.03, .20, .145, .085, c('#902e23'), M.lamp);
+      mesh.box(x * 1.05 - .08, base+.20, -hood+.44, .16, .10, .20, tint);
+      for (const t of [-1,1]) {
+        const z = t * long * .632;
+        mesh.ellipsoid(x * .91, .365, z, .169,.368,.368, c('#242726'), M.cloth, 12, 6);
+        mesh.ellipsoid(x * 1.047, .365, z, .035,.207,.207, steel, -1, 12, 6);
+        mesh.ellipsoid(x * 1.074, .365, z, .017,.077,.077, darkTrim, -1, 8, 4);
+      }
+    }
+    return mesh;
+  }
+
+  function person(agent) {
+    const mesh = new Mesh();
+    const short = agent.style === 'small';
+    const h = short ? .86 : agent.id === 'gaige' ? 1.045 : 1;
+    const jacket = c(agent.shirt);
+    const hair = c(agent.hair);
+    const skin = c('#c69173');
+    const denim = c('#384653');
+    const shoe = c('#3a3532');
+    const torso = agent.style === 'long' || agent.style === 'bob' || short ? .195 : .215;
+    for (const side of [-1, 1]) {
+      const x = side * .10;
+      mesh.ellipsoid(x, .076, -.044, .087, .071, .153, shoe, -1, 8, 4);
+      mesh.ellipsoid(x, .47 * h, 0, .091, .37 * h, .091, denim, -1, 8, 4);
+      mesh.ellipsoid(side * (torso + .034), 1.04 * h, -.015, .064, .27 * h, .068, jacket, -1, 8, 5);
+      mesh.ellipsoid(side * (torso + .038), .795 * h, -.026, .048, .078 * h, .041, skin, -1, 8, 5);
+    }
+    mesh.ellipsoid(0, 1.067 * h, 0, torso, .313 * h, .131, jacket, -1, 12, 7);
+    mesh.round(0, 1.268 * h, -.008, .066, .059, .236 * h, skin, -1, 8);
+    mesh.ellipsoid(0, 1.55 * h, -.005, .101, .139 * h, .112, skin, -1, 14, 8);
+    mesh.ellipsoid(0, 1.555*h, -.112, .027, .037, .037, skin, -1, 8, 5);
+    for (const side of [-1, 1]) {
+      mesh.ellipsoid(side * .102, 1.55*h, -.004, .024, .043, .025, skin, -1, 6, 4);
+      mesh.ellipsoid(side * .040, 1.574*h, -.103, .018, .009, .008, c('#463a33'), -1, 6, 4);
+    }
+    if (agent.style === 'bald') {
+      for (const side of [-1,1]) mesh.ellipsoid(side * .087, 1.583*h, .033, .027,.076,.079,hair,-1,8,5);
+    } else {
+      mesh.ellipsoid(0, 1.648*h, .015, .107,.067,.110,hair,-1,12,6);
+      if (['long','bob','small'].includes(agent.style)) {
+        mesh.ellipsoid(0, 1.498*h, .066, .103, agent.style === 'long' ? .218 : .127, .067, hair,-1,12,6);
+        for (const side of [-1,1]) mesh.ellipsoid(side*.083,1.522*h,.024,.039,.132,.091,hair,-1,8,5);
+      }
+    }
+    if (agent.style === 'broccoli') {
+      for (const [x, y, z] of [[-.063,.011,-.045],[.048,.032,-.047],[-.006,.059,.006],[.068,-.01,.004],[-.067,.019,.048]]) {
+        mesh.ellipsoid(x, 1.677*h+y,z,.065,.063,.069,hair,-1,8,5);
+      }
+      mesh.ellipsoid(-.118,1.516*h,-.005,.009,.011,.010,ivory,-1,6,4);
+    }
+    if (agent.style === 'beard' || agent.style === 'shortbeard') {
+      mesh.ellipsoid(0,1.475*h,-.052,.090,.073,.082,
+        agent.style === 'beard' ? c('#261f1c') : c('#9b795c'), -1,12,6);
+    }
+    return mesh;
+  }
+
+  function lockedDoor(lot) {
+    const mesh = new Mesh();
+    mesh.at(lot.x,lot.y,lot.z,lot.yaw,() => {
+      const z = -lot.d / 2 + .035;
+      mesh.box(-.52, .012, z, 1.04, 2.15, .063, lot.type === 'cabin' ? c('#6e5136') : c('#58635b'), M.oak);
+      mesh.box(-.37, 1.23, z-.025, .74, .68, .027, glass, M.glass);
+      mesh.box(.34, .96, z-.035, .085, .068, .068, steel);
+      mesh.box(.37, .82, z-.053, .075, .083, .056, charcoal);
+    });
+    return mesh;
+  }
+
+  Object.assign(ND, { Models: { beam, featured, house, pine, birch, pole, suv, person, lockedDoor } });
+})();
