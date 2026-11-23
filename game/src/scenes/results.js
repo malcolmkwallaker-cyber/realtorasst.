@@ -74,7 +74,7 @@ G.Engine.register('seasonEnd', {
     else if (!this.tied) G.drawSprite(ctx, G.Sprites.trophy, themX + 42, 60, 2);
 
     G.UI.text(ctx, 'YOU: ' + s.stats.homesSold + ' HOMES', 170, 148, { align: 'center', size: 9, color: G.C.lime });
-    G.UI.text(ctx, rc.name + ': ' + s.rival.homesSold + ' HOMES', 310, 148, { align: 'center', size: 9, color: G.C.red });
+    G.UI.text(ctx, (rc.short || rc.name) + ': ' + s.rival.homesSold + ' HOMES', 310, 148, { align: 'center', size: 9, color: G.C.red });
 
     // stat strip (3 columns x 3 rows)
     const rows = [
@@ -140,7 +140,7 @@ G.Engine.register('leaderboard', {
       this.entries.forEach((e, i) => {
         const rowCol = i === 0 ? G.C.yellow : i === 1 ? G.C.gray : i === 2 ? G.C.orange : G.C.white;
         G.UI.text(ctx, String(i + 1), 56, y, { size: 8, color: rowCol });
-        G.UI.text(ctx, e.name, 76, y, { size: 8, color: e.name === 'BRIDGER' ? '#c0562f' : G.C.lime });
+        G.UI.text(ctx, e.name, 76, y, { size: 7, color: G.C.white });
         G.UI.text(ctx, String(e.homesSold), 170, y, { size: 8, color: rowCol });
         G.UI.text(ctx, G.money(e.commission), 220, y, { size: 8, color: G.C.yellow });
         G.UI.text(ctx, e.score.toLocaleString('en-US'), 330, y, { size: 8, color: rowCol });

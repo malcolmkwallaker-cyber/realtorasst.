@@ -92,16 +92,18 @@ G.Engine.register('title', {
 
     // title
     const bounce = Math.sin(this.t * 2) * 2;
-    G.UI.text(ctx, 'BRIDGER', G.W / 2 - 64, 48 + bounce, { align: 'center', size: 22, color: '#c0562f', shadow: true });
-    G.UI.text(ctx, 'vs', G.W / 2, 56 + bounce, { align: 'center', size: 12, color: G.C.yellow, shadow: true });
-    G.UI.text(ctx, 'MALCOLM', G.W / 2 + 66, 48 + bounce, { align: 'center', size: 22, color: G.C.lime, shadow: true });
-    G.UI.text(ctx, '- REALTOR RIVALS -', G.W / 2, 80, { align: 'center', size: 12, color: G.C.white, shadow: true });
-    G.UI.text(ctx, 'A NORTHERN MINNESOTA SALES SHOWDOWN', G.W / 2, 98, { align: 'center', size: 7, color: G.C.gray });
+    G.UI.text(ctx, 'MALCOLM', G.W / 2 - 78, 36 + bounce, { align: 'center', size: 18, color: G.C.lime, shadow: true });
+    G.UI.text(ctx, 'VS', G.W / 2, 42 + bounce, { align: 'center', size: 12, color: G.C.yellow, shadow: true });
+    G.UI.text(ctx, 'BRIDGER', G.W / 2 + 78, 36 + bounce, { align: 'center', size: 18, color: '#e7a07a', shadow: true });
+    G.UI.text(ctx, 'PEMBERTON  -  GRAND RAPIDS', G.W / 2, 64, { align: 'center', size: 9, color: G.C.white, shadow: true });
+    G.UI.text(ctx, 'THE SEASON IS THIS RIVALRY', G.W / 2, 78, { align: 'center', size: 7, color: G.C.gray });
 
     // characters flanking the menu
     const hop = Math.abs(Math.sin(this.t * 3)) * 3;
-    G.drawSprite(ctx, G.Sprites.bridger, 120, 190 - hop, 3);
-    G.drawSprite(ctx, G.Sprites.malcolm, 318, 190 - (3 - hop), 3, true);
+    const left = G.Sprites.agent_malcolm || G.Sprites.malcolm;
+    const right = G.Sprites.agent_bridger || G.Sprites.bridger || G.Sprites.malcolm;
+    G.drawSprite(ctx, left, 120, 190 - hop, 3);
+    G.drawSprite(ctx, right, 318, 190 - (3 - hop), 3, true);
     G.drawSprite(ctx, G.Sprites.soldSign, 90, 216, 2);
     G.drawSprite(ctx, G.Sprites.soldSign, 372, 216, 2);
 

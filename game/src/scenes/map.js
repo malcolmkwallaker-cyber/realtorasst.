@@ -1,6 +1,6 @@
 // ============================================================
 // scenes/map.js - the day hub: Northern MN map + action menu,
-// weather, Brad's bank, Jeff's plaza, and the occasional squatch
+// weather, Joel's bank, Jeff's plaza, and the occasional squatch
 // ============================================================
 'use strict';
 
@@ -38,9 +38,13 @@ G.Engine.register('map', {
     G.Audio.startMusic();
 
     if (params.newDay) {
-      const d = Math.min(s.dayOfMonth, G.Data.SEASON.daysPerMonth);
+      const d = Math.min(s.dayOfMonth, G.State.daysInMonth());
       const w = G.State.weatherData();
-      this.banner = { text: G.State.monthName() + ' DAY ' + d + '/' + G.Data.SEASON.daysPerMonth + ' - ' + w.label, t: 2.4 };
+      this.banner = {
+        text: G.State.monthName() + ' DAY ' + d + '/' + G.State.daysInMonth() + ' - ' + w.label,
+        sub: G.State.char().catchphrase || '',
+        t: 2.8,
+      };
     }
 
     if (params.result) {
@@ -75,10 +79,10 @@ G.Engine.register('map', {
     const mentorNote = (openNote) => s.mentorUsedToday ? 'MENTOR USED' : openNote;
     const mentorLock = s.mentorUsedToday; // one mentor power-up per day
     items.push({
-      label: '$ BRAD (BANK)', id: 'brad', kind: 'visit',
-      disabled: s.bradUsed || mentorLock,
-      note: s.bradUsed ? 'GONE' : mentorNote('FREE'),
-      desc: 'Visit Brad Nolan, The Mortgage Wizard. CLEAR TO CLOSE awaits. (1 mentor/day)',
+      label: '$ JOEL (BANK)', id: 'joel', kind: 'visit',
+      disabled: s.joelUsed || mentorLock,
+      note: s.joelUsed ? 'GONE' : mentorNote('FREE'),
+      desc: 'Visit Joel, the blond Mortgage Wizard. CLEAR TO CLOSE awaits. (1 mentor/day)',
     });
     const jeffAvail = !mentorLock && (!s.commercialUnlocked || (s.jeffCooldown <= 0 && s.energy >= G.State.actionCost('commercial')));
     items.push({
@@ -86,18 +90,6 @@ G.Engine.register('map', {
       disabled: !jeffAvail,
       note: !s.commercialUnlocked ? mentorNote('MEET') : (s.jeffCooldown > 0 ? s.jeffCooldown + 'D' : mentorNote('-2E')),
       desc: 'Visit Jeff Nobleza, The Commercial King. Big money (not homes sold). (1 mentor/day)',
-    });
-    items.push({
-      label: '> BLAKE (LAB)', id: 'blake', kind: 'visit',
-      disabled: s.blakeCooldown > 0 || mentorLock || s.energy < 1,
-      note: s.blakeCooldown > 0 ? s.blakeCooldown + 'D' : mentorNote('-1E'),
-      desc: 'Visit Blake Suddath, The Growth Guru. AI OVERDRIVE, SCALE MODE, or the RARE 22-min parking lot talk. (1 mentor/day)',
-    });
-    items.push({
-      label: '= TYLER (SYS)', id: 'tyler', kind: 'visit',
-      disabled: s.tylerCooldown > 0 || mentorLock || s.energy < 1,
-      note: s.tylerCooldown > 0 ? s.tylerCooldown + 'D' : mentorNote('-1E'),
-      desc: 'Visit Tyler Lewis, The Systems Architect. Cirql Scan + compounding systems. (1 mentor/day)',
     });
     const ab = G.State.char().ability;
     items.push({
@@ -110,7 +102,7 @@ G.Engine.register('map', {
   },
 
   buildMenu() {
-    const touch = G.Input.touch;
+    const touch = true;
     let items = [];
     if (touch) {
       // categorized, larger rows for fingers
@@ -157,27 +149,15 @@ G.Engine.register('map', {
       this.carTarget = { x: loc.x, y: loc.y + 12 };
       this.mode = 'drive';
       G.Audio.swoosh();
-    } else if (it.id === 'brad') {
+    } else if (it.id === 'joel') {
       const loc = G.Data.MAP.locations.bank;
-      this.pendingAction = { id: '_brad', loc: 'bank' };
+      this.pendingAction = { id: '_joel', loc: 'bank' };
       this.carTarget = { x: loc.x, y: loc.y + 12 };
       this.mode = 'drive';
       G.Audio.swoosh();
     } else if (it.id === 'jeff') {
       const loc = G.Data.MAP.locations.plaza;
       this.pendingAction = { id: '_jeff', loc: 'plaza' };
-      this.carTarget = { x: loc.x, y: loc.y + 12 };
-      this.mode = 'drive';
-      G.Audio.swoosh();
-    } else if (it.id === 'blake') {
-      const loc = G.Data.MAP.locations.growthlab;
-      this.pendingAction = { id: '_blake', loc: 'growthlab' };
-      this.carTarget = { x: loc.x, y: loc.y + 12 };
-      this.mode = 'drive';
-      G.Audio.swoosh();
-    } else if (it.id === 'tyler') {
-      const loc = G.Data.MAP.locations.systemslab;
-      this.pendingAction = { id: '_tyler', loc: 'systemslab' };
       this.carTarget = { x: loc.x, y: loc.y + 12 };
       this.mode = 'drive';
       G.Audio.swoosh();
@@ -202,8 +182,8 @@ G.Engine.register('map', {
   },
 
   // ----------------------------------------------------------
-  visitBrad() {
-    const res = G.State.visitBrad();
+  visitJoel() {
+    const res = G.State.visitJoel();
     if (res.sold) {
       G.Audio.cash();
       G.Engine.shake = 5;
@@ -213,7 +193,7 @@ G.Engine.register('map', {
     G.Popup.show({
       title: res.used ? 'THE BANK' : 'CLEAR TO CLOSE!',
       lines: res.lines,
-      sprite: 'bradNolan',
+      sprite: 'joel',
       color: G.C.yellow, textColor: G.C.white,
       onClose: () => this.buildMenu(),
     });
@@ -252,51 +232,6 @@ G.Engine.register('map', {
     }
   },
 
-  visitBlake() {
-    const res = G.State.visitBlake();
-    const scaling = G.State.s.scaleMode > 0 && !res.used;
-    if (!res.used) {
-      G.Audio[scaling ? 'fanfare' : 'ability']();
-      G.Engine.shake = scaling ? 5 : 3;
-      // AI drones + holographic charts swirl out
-      this.particles.spawn(278, 235, {
-        count: scaling ? 50 : 28,
-        colors: scaling ? [G.C.cyan, G.C.lime, G.C.sky, G.C.white] : [G.C.cyan, G.C.lime, G.C.sky],
-        life: 1.6, vyMin: -110, vyMax: -30,
-      });
-    }
-    G.Popup.show({
-      title: res.used ? 'GROWTH LAB' : (scaling ? 'SCALE MODE!!' : 'AI OVERDRIVE!'),
-      lines: res.lines,
-      sprite: 'blakeSuddath',
-      color: scaling ? G.C.cyan : G.C.lime,
-      onClose: () => this.buildMenu(),
-    });
-  },
-
-  visitTyler() {
-    const before = { sys: G.State.s.systemOverride, oh: G.State.s.openHouseEngine };
-    const res = G.State.visitTyler();
-    const override = G.State.s.systemOverride > before.sys;
-    if (!res.used) {
-      G.Audio[override ? 'fanfare' : 'ability']();
-      G.Engine.shake = override ? 5 : 2;
-      // holographic radar sweep + dashboards
-      this.particles.spawn(185, 228, {
-        count: override ? 44 : 24,
-        colors: override ? [G.C.sky, G.C.cyan, G.C.white, G.C.teal] : [G.C.sky, G.C.cyan, G.C.teal],
-        life: 1.6, vyMin: -100, vyMax: -30,
-      });
-    }
-    G.Popup.show({
-      title: res.used ? 'SYSTEMS LAB' : (override ? 'SYSTEM OVERRIDE!!' : 'CIRQL SCAN'),
-      lines: res.lines,
-      sprite: 'tylerLewis',
-      color: override ? G.C.sky : G.C.teal,
-      onClose: () => this.buildMenu(),
-    });
-  },
-
   // ----------------------------------------------------------
   resolveAction(actionId, score) {
     const res = G.State.performAction(actionId, score);
@@ -312,14 +247,23 @@ G.Engine.register('map', {
       color: res.sold > 0 ? G.C.green : G.C.blue,
       onClose: () => {
         this.buildMenu();
-        if (G.State.s.energy <= 0) {
+        const celeb = G.State.pullCelebrations();
+        const after = () => {
+          if (G.State.s.energy <= 0) {
+            G.Toast.push('OUT OF ENERGY', 'Shop, or end the day when you are ready.');
+          }
+        };
+        if (celeb.length) {
+          G.Audio.fanfare();
+          G.Engine.shake = 6;
+          this.particles.spawn(G.W / 2, 80, { count: 28, colors: [G.C.yellow, G.C.lime, G.C.cyan], life: 1.2 });
           G.Popup.show({
-            title: 'OUT OF ENERGY',
-            lines: ['You are running on fumes and gas station coffee.', 'Time to end the day.'],
-            color: G.C.slate,
-            onClose: () => this.endDay(),
+            title: celeb[0].title,
+            lines: celeb[0].lines,
+            color: G.C.green,
+            onClose: after,
           });
-        }
+        } else after();
       },
     });
   },
@@ -334,14 +278,15 @@ G.Engine.register('map', {
       // Never soft-lock the player if end-of-day processing throws:
       // force a minimal safe day advance so they can keep playing.
       G.Engine.reportError('endDay', e);
-      s.dayOfMonth++;
+      s._ending = false;
       let bossTime = false;
-      if (s.dayOfMonth > G.Data.SEASON.daysPerMonth) { s.pendingBoss = true; bossTime = true; }
+      if (!s._calendarMoved) {
+        s.dayOfMonth++;
+        if (s.dayOfMonth > G.State.daysInMonth()) { s.pendingBoss = true; bossTime = true; }
+      }
       s.energy = G.State.maxEnergy();
-      s.abilityUsed = false; s.bradUsed = false;
+      s.abilityUsed = false; s.joelUsed = false;
       if (s.jeffCooldown > 0) s.jeffCooldown--;
-      if (s.blakeCooldown > 0) s.blakeCooldown--;
-      if (s.tylerCooldown > 0) s.tylerCooldown--;
       try { G.State.rollWeather(); } catch (_) {}
       try { G.State.autosave(); } catch (_) {}
       r = { passiveLines: ['(An error was caught and the day advanced safely.)'], rivalLines: [], eventText: null, eventGood: false, bossTime };
@@ -363,7 +308,10 @@ G.Engine.register('map', {
     } else {
       lines.push('Your rival was suspiciously quiet today.');
     }
-    lines.push('', 'SCORE: YOU ' + s.stats.homesSold + ' - RIVAL ' + s.rival.homesSold);
+    const rivalName = (G.State.rivalChar().short) || 'BRIDGER';
+    lines.push('', 'SCORE: YOU ' + s.stats.homesSold + ' - ' + rivalName + ' ' + s.rival.homesSold);
+    lines.push('STREAK ' + (s.streak || 0) + '   BEST ' + (s.bestStreak || 0));
+    if (r.celebrations && r.celebrations.length) G.Audio.fanfare();
 
     G.Popup.show({
       title: 'END OF DAY', lines, color: G.C.navy,
@@ -425,9 +373,7 @@ G.Engine.register('map', {
         this.mode = 'menu';
         const a = this.pendingAction;
         this.pendingAction = null;
-        if (a.id === '_brad') { this.visitBrad(); return; }
-        if (a.id === '_blake') { this.visitBlake(); return; }
-        if (a.id === '_tyler') { this.visitTyler(); return; }
+        if (a.id === '_joel') { this.visitJoel(); return; }
         if (a.id === '_jeff') { this.visitJeff(); return; }
         if (a.minigame) {
           G.Engine.goto(a.minigame, { actionId: a.id });
@@ -460,7 +406,17 @@ G.Engine.register('map', {
       return;
     }
 
-    // hotkeys for the bottom nav
+    // hotkeys for the bottom nav and the action tabs
+    if (G.Input.p('q') || G.Input.left()) {
+      const i = Math.max(0, this.CATS.findIndex(c => c.id === this.cat));
+      this.cat = this.CATS[(i + this.CATS.length - 1) % this.CATS.length].id;
+      this.buildMenu(); G.Audio.move(); return;
+    }
+    if (G.Input.p('e') || G.Input.right()) {
+      const i = Math.max(0, this.CATS.findIndex(c => c.id === this.cat));
+      this.cat = this.CATS[(i + 1) % this.CATS.length].id;
+      this.buildMenu(); G.Audio.move(); return;
+    }
     if (G.Input.p('p')) { this.mode = 'pipeline'; this.pipeScroll = 0; G.Audio.select(); return; }
     if (G.Input.p('t')) { this.mode = 'stats'; G.Audio.select(); return; }
     if (G.Input.p('b')) { G.Engine.goto('shop'); G.Audio.select(); return; }
@@ -490,8 +446,11 @@ G.Engine.register('map', {
       const a = Math.min(1, this.banner.t);
       ctx.globalAlpha = a;
       ctx.fillStyle = G.C.ink;
-      ctx.fillRect(0, 110, G.W, 34);
-      G.UI.text(ctx, this.banner.text, G.W / 2, 122, { align: 'center', size: 12, color: G.C.yellow });
+      const bx = this.MAP_X;
+      const bw = G.W - this.MAP_X;
+      ctx.fillRect(bx, 108, bw, 40);
+      G.UI.text(ctx, this.banner.text, bx + bw / 2, 114, { align: 'center', size: 11, color: G.C.yellow });
+      if (this.banner.sub) G.UI.text(ctx, '"' + this.banner.sub + '"', bx + bw / 2, 130, { align: 'center', size: 7, color: G.C.white });
       ctx.globalAlpha = 1;
     }
   },
@@ -559,10 +518,8 @@ G.Engine.register('map', {
     let selLoc = null;
     if (selected) {
       if (selected.kind === 'action') selLoc = (G.Data.ACTIONS.find(a => a.id === selected.id) || {}).loc;
-      if (selected.id === 'brad') selLoc = 'bank';
+      if (selected.id === 'joel') selLoc = 'bank';
       if (selected.id === 'jeff') selLoc = 'plaza';
-      if (selected.id === 'blake') selLoc = 'growthlab';
-      if (selected.id === 'tyler') selLoc = 'systemslab';
     }
     for (const [key, loc] of Object.entries(G.Data.MAP.locations)) {
       const sp = G.Sprites[loc.sprite];
@@ -641,7 +598,9 @@ G.Engine.register('map', {
 
     const ch = G.State.char();
     G.drawSprite(ctx, G.Sprites[ch.sprite], 4, 4, 2);
-    G.UI.text(ctx, ch.name, 38, 6, { size: 9, color: ch.id === 'bridger' ? '#c0562f' : (ch.color || G.C.lime) });
+    if (ch.look === 'broccoli' && G.sparkle) G.sparkle(ctx, 28, 16, this.t, 3);
+    const nameCol = (ch.color === G.C.navy || ch.color === G.C.dusk) ? G.C.white : (ch.color || G.C.lime);
+    G.UI.text(ctx, ch.short || ch.name, 38, 6, { size: 8, color: nameCol });
     G.UI.text(ctx, G.money(s.cash), 38, 17, { size: 8, color: G.C.yellow });
 
     G.UI.text(ctx, 'ENERGY', 38, 28, { size: 6, color: G.C.gray });
@@ -652,15 +611,7 @@ G.Engine.register('map', {
       ctx.strokeRect(72.5 + i * 8, 28.5, 5, 5);
     }
 
-    // Coffee meter (playing Blake) + active buff badges (Blake / Tyler)
     let bx = 38;
-    if (G.State.perk() === 'blake') {
-      const c = s.coffee;
-      const col = c <= 0 ? G.C.red : c <= 34 ? G.C.orange : G.C.lime;
-      G.UI.text(ctx, 'CF', 38, 37, { size: 6, color: G.C.gray });
-      G.UI.bar(ctx, 51, 37, 24, 5, c / 100, col);
-      bx = 80;
-    }
     const buffs = G.State.activeBuffs();
     const blink = Math.floor(this.t * 3) % 2 === 0;
     for (const bf of buffs) {
@@ -668,8 +619,8 @@ G.Engine.register('map', {
       bx += G.UI.measure(ctx, bf.t, 6) + 5;
     }
 
-    // touch: category tabs above the menu
-    if (G.Input.touch) {
+    // category tabs above the menu (phone and desktop)
+    if (true) {
       let tx = 3;
       for (const c of this.CATS) {
         const sel = this.cat === c.id;
@@ -708,16 +659,25 @@ G.Engine.register('map', {
   renderHud(ctx) {
     const s = G.State.s;
     const w = 210, x = G.W - w - 4, y = 3;
+    const days = G.State.daysInMonth();
+    const total = days * G.Data.SEASON.months.length;
+    const done = s.month * days + Math.min(s.dayOfMonth, days) - 1;
     ctx.fillStyle = 'rgba(26,28,44,0.85)';
-    ctx.fillRect(x, y, w, 22);
+    ctx.fillRect(x, y, w, 36);
     ctx.strokeStyle = G.C.slate;
-    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, 21);
-    G.UI.text(ctx, G.State.monthName() + ' D' + Math.min(s.dayOfMonth, G.Data.SEASON.daysPerMonth) + '/' + G.Data.SEASON.daysPerMonth, x + 5, y + 3, { size: 7, color: G.C.white });
-    G.UI.text(ctx, 'YOU ' + s.stats.homesSold, x + 5, y + 12, { size: 7, color: G.C.lime });
-    G.UI.text(ctx, 'RIVAL ' + s.rival.homesSold, x + 50, y + 12, { size: 7, color: G.C.red });
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, 35);
+    G.UI.text(ctx, G.State.monthName() + ' D' + Math.min(s.dayOfMonth, days) + '/' + days, x + 5, y + 3, { size: 7, color: G.C.white });
     const wd = G.State.weatherData();
     G.UI.text(ctx, wd.label, x + w - 5, y + 3, { align: 'right', size: 7, color: G.C.cyan });
-    G.UI.text(ctx, 'LEADS ' + s.leads.length + '/' + G.State.bal().maxActivePipeline + '  FLW ' + s.stats.followers, x + w - 5, y + 12, { align: 'right', size: 7, color: G.C.yellow });
+    G.UI.bar(ctx, x + 5, y + 12, 70, 4, done / Math.max(1, total), G.C.lime);
+    G.UI.text(ctx, 'YOU ' + s.stats.homesSold, x + 80, y + 11, { size: 7, color: G.C.lime });
+    const rivalTag = (G.State.rivalChar().short || 'BRIDGER');
+    G.UI.text(ctx, rivalTag + ' ' + s.rival.homesSold, x + 118, y + 11, { size: 7, color: G.C.red });
+    const goal = Math.min(2, s.dayMarks || 0);
+    G.UI.text(ctx, 'STREAK ' + (s.streak || 0), x + 5, y + 18, { size: 7, color: (s.streak || 0) >= 3 ? G.C.yellow : G.C.gray });
+    G.UI.text(ctx, 'GOAL ' + goal + '/2', x + 70, y + 18, { size: 7, color: goal >= 2 ? G.C.lime : G.C.white });
+    G.UI.text(ctx, 'SCORE ' + G.State.seasonScore(), x + w - 5, y + 18, { align: 'right', size: 7, color: G.C.yellow });
+    G.UI.text(ctx, G.State.coachTip(), x + 5, y + 27, { size: 6, color: G.C.cyan });
   },
 
   renderStats(ctx) {
@@ -742,6 +702,7 @@ G.Engine.register('map', {
       ['BOSS WINS', s.stats.bossWins, G.C.purple],
       ['RIVALRY LEVEL', ['FRIENDLY', 'SPICY', 'FULL FEUD'][Math.min(2, Math.floor(s.rivalry / 2))], G.C.red],
       ['CASH ON HAND', G.money(s.cash), G.C.yellow],
+      ['STREAK / SCORE', (s.streak || 0) + ' / ' + G.State.seasonScore(), G.C.yellow],
     ];
     let y = 32;
     for (const [label, val, color] of rows) {

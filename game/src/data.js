@@ -29,8 +29,8 @@ G.Data.BALANCE = {
     dailyLeadCooling: 2,          // idle warmth loss baseline
     eventChance: 0.55,
     negativeEventShare: 0.45,
-    rivalCloseChances: [0.40, 0.50, 0.60],  // APR, MAY, JUN
-    rivalDoubleChance: 0.05,
+    rivalCloseChances: [0.16, 0.22, 0.28],  // APR, MAY, JUN
+    rivalDoubleChance: 0.02,
     warmThreshold: 35,            // NEW -> WARM needs this warmth
     apptThreshold: 60,            // WARM -> APPT needs this warmth
     decayNew: [4, 7],             // warmth loss after 1st / 2nd+ ignored day
@@ -52,8 +52,8 @@ G.Data.BALANCE = {
     dailyLeadCooling: 3,
     eventChance: 0.65,
     negativeEventShare: 0.60,
-    rivalCloseChances: [0.50, 0.62, 0.74],
-    rivalDoubleChance: 0.06,
+    rivalCloseChances: [0.26, 0.34, 0.42],
+    rivalDoubleChance: 0.03,
     warmThreshold: 40,
     apptThreshold: 65,
     decayNew: [8, 12],
@@ -75,8 +75,8 @@ G.Data.BALANCE = {
     dailyLeadCooling: 4,
     eventChance: 0.75,
     negativeEventShare: 0.70,
-    rivalCloseChances: [0.60, 0.72, 0.84],
-    rivalDoubleChance: 0.10,
+    rivalCloseChances: [0.30, 0.40, 0.50],
+    rivalDoubleChance: 0.04,
     warmThreshold: 40,
     apptThreshold: 65,
     decayNew: [10, 16],
@@ -90,62 +90,11 @@ G.Data.BALANCE = {
   },
 };
 
-// ------------------------------------------------------------
-// Characters
-// ------------------------------------------------------------
-G.Data.CHARACTERS = {
-  malcolm: {
-    id: 'malcolm',
-    name: 'MALCOLM',
-    title: 'The Lake Life Hype Man',
-    color: G.C.green,
-    accent: G.C.sky,
-    sprite: 'malcolm',
-    bio: [
-      'Social media wizard. Video marketing machine.',
-      'Builds relationships one dock chat at a time.',
-      'Lake home specialist. Never met a pontoon',
-      'he did not like.',
-    ],
-    strengths: ['VIDEO +25%', 'OPEN HOUSE +15%', 'LAKE LEADS x2'],
-    ability: {
-      name: 'VIRAL VIDEO',
-      desc: 'Post a ridiculous real estate video. Extra leads + followers pour in. Once per day.',
-    },
-    // gameplay modifiers
-    videoBonus: 0.25,       // video minigame score bonus
-    openHouseBonus: 0.15,   // open house minigame bonus
-    lakeLeadWeight: 2,      // lake/cabin leads twice as likely
-    negotiateBonus: 0,
-    listingBonus: 0,
-    luxuryValueBonus: 0,
-  },
-  bridger: {
-    id: 'bridger',
-    name: 'BRIDGER',
-    title: 'The Closer',
-    color: G.C.navy,
-    accent: G.C.yellow,
-    sprite: 'bridger',
-    bio: [
-      'Ruthless negotiator. Luxury client whisperer.',
-      'His listing presentations have made grown',
-      'sellers weep with joy. Runs on referrals,',
-      'black coffee, and that mighty red beard.',
-    ],
-    strengths: ['NEGOTIATE +25%', 'LISTING PITCH +15%', 'LUXURY VALUE +20%'],
-    ability: {
-      name: 'POWER CLOSE',
-      desc: 'Win a tough appointment or negotiation instantly. Your best lead jumps a stage. Once per day.',
-    },
-    videoBonus: 0,
-    openHouseBonus: 0,
-    lakeLeadWeight: 1,
-    negotiateBonus: 0.25,
-    listingBonus: 0.15,
-    luxuryValueBonus: 0.2,
-  },
-};
+// Characters live in characters.js (loaded after data2.js).
+// This placeholder keeps early references from crashing if a
+// script order ever changes. characters.js replaces it.
+G.Data.CHARACTERS = {};
+G.Data.ROSTER = [];
 
 // ------------------------------------------------------------
 // Lead types

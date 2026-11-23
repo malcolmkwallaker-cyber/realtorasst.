@@ -12,14 +12,14 @@
   // ----------------------------------------------------------
   // Legendary character power-ups
   // ----------------------------------------------------------
-  D.BRAD = {
-    name: 'BRAD NOLAN',
+  D.JOEL = {
+    name: 'JOEL',
     title: 'THE MORTGAGE WIZARD',
-    sprite: 'bradNolan',
+    sprite: 'joel',
     ability: 'CLEAR TO CLOSE',
     rare: 'WEEKEND UNDERWRITING',
     intro: [
-      'Local lending legend. His rate sheet glows.',
+      'Blond lending legend. His rate sheet glows.',
       'He pulls out a GOLDEN LOAN FOLDER.',
       'Paperwork flies everywhere.',
     ],
@@ -58,183 +58,9 @@
     passiveChance: 0.03, // 1031 exchange investor calls
   };
 
-  D.BLAKE = {
-    name: 'BLAKE SUDDATH',
-    title: 'THE GROWTH GURU',
-    sprite: 'blakeSuddath',
-    ability: 'AI OVERDRIVE',
-    ultimate: 'SCALE MODE',
-    scaleChance: 0.08, // chance a visit rolls the ultimate instead
-    talkChance: 0.07,  // RARE: the 22-minute parking lot talk
-    talkDays: 6,
-    intro: [
-      'Mentor. Rival. Power-up vendor. All at 100 mph.',
-      'Laptop in one hand, phone in the other, earbuds in,',
-      'coffee that never empties. Holographic charts orbit him.',
-      'The most POSITIVE man in real estate. He believes in you',
-      'harder than you believe in yourself. It\'s a little scary.',
-    ],
-    // AI Overdrive drone flavor
-    drones: [
-      'FOLLOW-UP DRONE nudging your whole pipeline...',
-      'CONTENT CANNON firing viral videos across the map...',
-      'CRM SYNC organizing every old lead...',
-      'SCHEDULER BOT booking appointments...',
-      'COPY BOT writing listing descriptions...',
-      'GEO BOOSTER spawning clients online...',
-    ],
-    lines: [
-      '"Work smarter, not harder."',
-      '"Let\'s automate that."',
-      '"Scale beats hustle."',
-      '"Your next client is already looking for you."',
-      '"If AI can do it, why are you doing it?"',
-      '"You\'re ONE follow-up away. You\'ve ALWAYS been one follow-up away."',
-      '"Reps. Volume. Outcomes. In that order. LET\'S GO."',
-      '"Nobody\'s coming to save your pipeline. GOOD. More reps for you."',
-      '"Average agents wait for leads. YOU manufacture them."',
-      '"Motivation fades. Systems don\'t. Lucky you - you\'ve got BOTH."',
-    ],
-    coffee: [
-      '*sips the coffee that never empties*',
-      '*already testing a newer AI tool mid-sentence*',
-      '*a holographic funnel chart rotates behind him*',
-    ],
-    scaleLines: [
-      'SCALE MODE ENGAGED!! The backpack of AI gadgets OPENS.',
-      'A swarm of AI agents deploys. Everything speeds up.',
-      'Leads double. Deals close faster. Cooldowns melt.',
-    ],
-    // RARE power-up find (submitted by the real Blake): pure analog belief
-    talkLines: [
-      '*** RARE POWER-UP FIND ***',
-      'THE 22-MINUTE PARKING LOT TALK',
-      '',
-      'Blake catches you by your car. Laptop CLOSED. Earbuds OUT.',
-      'No slides. No funnels. Just 22 straight minutes of belief,',
-      'delivered at full volume in a light drizzle.',
-      '"Volume beats talent! Talent that DOES volume is UNSTOPPABLE!',
-      'WHO\'S GONNA CARRY THE LISTINGS?! YOU ARE! LOOK AT YOU!"',
-      'You could cold-call a blizzard right now.',
-      '',
-      'MOTIVATION +100% for a quarter*  (*balance team: 6 days)',
-      '+1 max energy every morning, and every task runs hotter.',
-    ],
-  };
+  // Playable roster lives in characters.js.
+  D.SECRET_CHARACTERS = {};
 
-  D.TYLER = {
-    name: 'TYLER LEWIS',
-    title: 'THE SYSTEMS ARCHITECT',
-    sprite: 'tylerLewis',
-    overrideChance: 0.06,   // requires tier 3
-    engineChance: 0.12,     // requires tier 2
-    intro: [
-      'Calm. Analytical. Builds the system once, then leverages it.',
-      'A glowing tablet controls his digital assistants; his smartwatch',
-      'streams analytics. Floating dashboards hum around him.',
-    ],
-    scanLines: [
-      'CIRQL SCAN: a holographic radar sweeps the whole map...',
-      '- forgotten past clients light up',
-      '- warm leads highlighted',
-      '- referral opportunities revealed',
-      '- a hidden listing appointment surfaces',
-    ],
-    engineLines: [
-      'OPEN HOUSE ENGINE deployed. Visitors keep arriving on their own,',
-      'generating buyer leads, seller leads, and referrals for days.',
-    ],
-    overrideLines: [
-      'SYSTEM OVERRIDE!! Every follow-up automates. Paperwork completes',
-      'itself. The CRM organizes. Referrals double. Passive income climbs.',
-    ],
-    lines: [
-      '"The basics always win."',
-      '"Build the system once."',
-      '"Consistency beats intensity."',
-      '"Automation creates freedom."',
-      '"Your CRM should work harder than you do."',
-    ],
-  };
-
-  // ----------------------------------------------------------
-  // Secret characters (unlockable, playable)
-  // ----------------------------------------------------------
-  D.SECRET_CHARACTERS = {
-    grandpa: {
-      id: 'grandpa', name: 'GRANDPA REALTOR', title: 'The Handshake', secret: true,
-      color: G.C.slate, accent: G.C.yellow, sprite: 'grandpa',
-      bio: ['Has never used technology. Will never use technology.',
-        'Runs a 100% referral business powered by firm',
-        'handshakes and 60 years of favors.'],
-      strengths: ['2x REFERRALS', 'WARMER LEADS', 'NO VIDEOS (EVER)'],
-      ability: { name: 'THE ROLODEX', desc: 'Grandpa flips the sacred Rolodex. Two past clients call immediately. Once per day.' },
-      videoBonus: -1, openHouseBonus: 0.05, lakeLeadWeight: 1, negotiateBonus: 0.1, listingBonus: 0.1, luxuryValueBonus: 0,
-      perk: 'grandpa',
-      unlockHint: 'FINISH A SEASON',
-    },
-    influencer: {
-      id: 'influencer', name: 'THE INFLUENCER', title: 'Ring Light Royalty', secret: true,
-      color: '#c2478f', accent: G.C.cyan, sprite: 'influencer',
-      bio: ['Does not know what a contract is. Gets endless',
-        'leads anyway. HIRE A TRANSACTION COORDINATOR',
-        'IMMEDIATELY or pending deals will evaporate.'],
-      strengths: ['ENDLESS LEADS', 'VIDEO +35%', 'DEALS COLLAPSE W/O TC'],
-      ability: { name: 'GO LIVE', desc: 'Start a chaotic livestream. Followers and leads pour in. Once per day.' },
-      videoBonus: 0.35, openHouseBonus: 0.1, lakeLeadWeight: 1, negotiateBonus: -0.1, listingBonus: 0, luxuryValueBonus: 0,
-      perk: 'influencer',
-      unlockHint: 'REACH 5,000 FOLLOWERS',
-    },
-    veteran: {
-      id: 'veteran', name: 'THE VETERAN', title: '30 Years In', secret: true,
-      color: G.C.teal, accent: G.C.white, sprite: 'veteran',
-      bio: ['Thirty years of listings. Wins almost every',
-        'presentation. Thinks social media is "a CB',
-        'radio for people who hate money."'],
-      strengths: ['LISTING PITCH +35%', 'NEGOTIATE +15%', 'HATES SOCIAL MEDIA'],
-      ability: { name: 'WAR STORY', desc: 'Tell the 1994 blizzard closing story. A client is moved to action. Once per day.' },
-      videoBonus: -0.3, openHouseBonus: 0, lakeLeadWeight: 1, negotiateBonus: 0.15, listingBonus: 0.35, luxuryValueBonus: 0.1,
-      perk: 'veteran',
-      unlockHint: 'WIN ALL 3 BOSS BATTLES IN ONE SEASON',
-    },
-    rookie: {
-      id: 'rookie', name: 'THE ROOKIE', title: 'Day One Energy', secret: true,
-      color: G.C.orange, accent: G.C.lime, sprite: 'rookie',
-      bio: ['Starts broke. One lead. A dream. Levels up',
-        'absurdly fast - every 3 closings makes them',
-        'permanently better at everything.'],
-      strengths: ['LEVELS UP FAST', '+ENERGY PER 3 SALES', 'STARTS WITH NOTHING'],
-      ability: { name: 'HUSTLE', desc: 'Pure rookie hustle. A random lead advances a stage. Once per day.' },
-      videoBonus: 0, openHouseBonus: 0, lakeLeadWeight: 1, negotiateBonus: 0, listingBonus: 0, luxuryValueBonus: 0,
-      perk: 'rookie',
-      unlockHint: 'LOSE A SEASON (IT BUILDS CHARACTER)',
-    },
-    blake: {
-      id: 'blake', name: 'BLAKE SUDDATH', title: 'The Growth Guru', secret: true,
-      color: G.C.teal, accent: G.C.cyan, sprite: 'blakeSuddath',
-      bio: ['High-energy growth strategist. Deploys AI to do the',
-        'busywork and generate passive leads - but runs entirely',
-        'on coffee, and drags to a crawl the moment it runs dry.'],
-      strengths: ['AI PASSIVE LEADS', 'VIDEO +15%, FOLLOWERS +25%', 'COFFEE-POWERED (WEAKNESS)'],
-      ability: { name: 'AI OVERDRIVE', desc: 'Deploy AI drones: instant leads + a follower spike, plus 2 days of passive AI lead-gen. Once per day.' },
-      videoBonus: 0.15, openHouseBonus: 0, lakeLeadWeight: 1, negotiateBonus: 0, listingBonus: 0, luxuryValueBonus: 0,
-      perk: 'blake',
-      unlockHint: "TRIGGER BLAKE'S SCALE MODE AT THE LAB",
-    },
-    tyler: {
-      id: 'tyler', name: 'TYLER LEWIS', title: 'The Systems Architect', secret: true,
-      color: G.C.sky, accent: G.C.cyan, sprite: 'tylerLewis',
-      bio: ['Calm systems builder. WEAK EARLY - his automations need',
-        'a few days to gain momentum - but Daily Discipline compounds',
-        'until he is one of the strongest agents late in the season.'],
-      strengths: ['COMPOUNDING SYSTEMS', 'DAILY DISCIPLINE (SCALES)', 'WEAK EARLY / STRONG LATE'],
-      ability: { name: 'SYSTEM OVERRIDE', desc: 'Automate the night: auto follow-up, a lead advances, referrals spike. Grows stronger as your systems build. Once per day.' },
-      videoBonus: 0, openHouseBonus: 0.1, lakeLeadWeight: 1, negotiateBonus: 0.05, listingBonus: 0.1, luxuryValueBonus: 0,
-      perk: 'tyler',
-      unlockHint: "TRIGGER TYLER'S SYSTEM OVERRIDE AT THE LAB",
-    },
-  };
-  Object.assign(D.CHARACTERS, D.SECRET_CHARACTERS);
 
   // ----------------------------------------------------------
   // New lead types (commercial gated behind the Commercial Division)
@@ -456,24 +282,21 @@
     { id: 'aimaster',   name: 'AI MASTER',             desc: 'Own the AI Assistant and close 5 deals with it.', stat: 'aiCloses', goal: 5 },
     { id: 'squatch',    name: 'SQUATCH SPOTTER',       desc: 'Find Bigfoot in the woods. He is shy.' },
     { id: 'megaslayer', name: 'GIANT SLAYER',          desc: 'Defeat the final boss.' },
-    { id: 'scalemode',  name: 'SCALE BEATS HUSTLE',    desc: 'Trigger Blake Suddath\'s Scale Mode ultimate.' },
-    { id: 'parkinglot', name: 'THE 22-MINUTE TALK',    desc: 'Catch Blake\'s rare parking lot talk power-up.' },
-    { id: 'sysoverride', name: 'AUTOMATION IS FREEDOM', desc: 'Trigger Tyler Lewis\'s System Override.' },
   ];
 
   // ----------------------------------------------------------
   // Dynamic rivalry: trash talk tiers + head-to-head battles
   // ----------------------------------------------------------
   D.TRASH_TALK = {
-    malcolm: [
-      ['"Nice sale! I taught him that." - MALCOLM, to a barista', '"Bridger who? Kidding. Kind of." - MALCOLM'],
-      ['"Bridger\'s idea of video marketing is a fax." - MALCOLM', '"I heard his listing binder has its own binder." - MALCOLM'],
-      ['"This lake ain\'t big enough for the two of us, and I have the pontoon." - MALCOLM', '"His beard called. It wants a better agent." - MALCOLM'],
-    ],
     bridger: [
-      ['"Good month, Malcolm. Adorable, even." - BRIDGER', '"I respect the hustle. From a distance." - BRIDGER'],
-      ['"Malcolm closes deals when the WiFi cooperates." - BRIDGER', '"Nice video. My clients don\'t have ring lights. They have money." - BRIDGER'],
-      ['"I don\'t compete with content creators. I compete with closers. So: nobody." - BRIDGER', '"Tell Malcolm the adults are negotiating." - BRIDGER'],
+      ['BRIDGER: "Nice sale, Malcolm. I will allow it."', 'BRIDGER: "Head to head again. This is the fun part."'],
+      ['BRIDGER: "The lake can have two favorites. I am still in it."', 'BRIDGER: "See you at the next listing. Bring the good stuff."'],
+      ['BRIDGER: "You recruited backup. Cute. I am still across the table."', 'BRIDGER: "That one was clean. Annoying. But clean."'],
+    ],
+    malcolm: [
+      ['MALCOLM: "Bridger, that was sharp. I am still coming."', 'MALCOLM: "The desk is loud today. You can hear us, right?"'],
+      ['MALCOLM: "Head to head. Nobody else I would rather chase."', 'MALCOLM: "Good close. I wrote it down. Then I planned the next one."'],
+      ['MALCOLM: "Recruiting does not make me softer. It makes the office faster."', 'MALCOLM: "See you at the sign. Loser buys the coffee."'],
     ],
   };
 
@@ -524,8 +347,6 @@
   // Map additions: bank + commercial plaza + growth lab
   D.MAP.locations.bank = { x: 434, y: 168, sprite: 'bank', label: 'FIRST NORTHERN BANK' };
   D.MAP.locations.plaza = { x: 222, y: 218, sprite: 'plaza', label: 'NOBLEZA COMMERCIAL PLAZA' };
-  D.MAP.locations.growthlab = { x: 278, y: 250, sprite: 'growthlab', label: 'SUDDATH GROWTH LAB' };
-  D.MAP.locations.systemslab = { x: 185, y: 242, sprite: 'systemslab', label: 'LEWIS SYSTEMS LAB' };
 
   // Hidden actions reached via map visits (not in the sidebar list)
   D.ACTIONS.push(

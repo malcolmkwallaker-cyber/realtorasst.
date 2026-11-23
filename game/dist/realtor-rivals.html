@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Bridger vs. Malcolm: Realtor Rivals</title>
+<title>Malcolm vs Bridger - Pemberton Real Estate</title>
 <style>
   html, body {
     margin: 0; padding: 0;
@@ -736,8 +736,8 @@ G.makeSprite = (rows, colors) => {
 
   // ============ EXPANSION SPRITES ============
 
-  // BRAD NOLAN: blond lending legend, gray suit, gold tie, golden folder
-  S.bradNolan = G.makeSprite([
+  // JOEL: blond mortgage wizard, gray suit, gold tie, golden folder
+  S.joel = G.makeSprite([
     '....YYYYYY....',
     '...YYYYYYYY...',
     '...YSSSSSSY...',
@@ -755,7 +755,7 @@ G.makeSprite = (rows, colors) => {
     '....DD..DD....',
     '....DD..DD....',
     '...KK....KK...',
-  ], { Y: '#232433', S: '#f0c9a0', K: C.ink, W: C.white, G: C.gray, T: C.yellow, D: C.dusk, F: C.yellow });
+  ], { Y: '#f0d090', S: '#f0c9a0', K: C.ink, W: C.white, G: C.gray, T: C.yellow, D: C.dusk, F: C.yellow });
 
   // JEFF NOBLEZA: sharp charcoal blazer, glasses, blueprints in hand
   S.jeffNobleza = G.makeSprite([
@@ -966,73 +966,6 @@ G.makeSprite = (rows, colors) => {
     '..WWWWDDWWWW..',
   ], { Y: C.yellow, W: C.gray, D: '#6b4226' });
 
-  // BLAKE SUDDATH: The Growth Guru - quarter-zip, earbuds, laptop, coffee, phone
-  // Black hair + goatee, no earbuds, crossed-keys logo on the shirt (white on teal)
-  S.blakeSuddath = G.makeSprite([
-    '....HHHHHH....',
-    '...HHHHHHHH...',
-    '...HSSSSSSH...',
-    '...HSKSSKSH...',
-    '....SSSSSS....',
-    '....XWWWWX....',
-    '....SXXXXS....',
-    '....QQQQQQ....',
-    '...QWQQQQWQ...',
-    '..L.QWQQWQ.C..',
-    '..L.QQWWQQ.P..',
-    '....QWQQWQ....',
-    '....JJJJJJ....',
-    '....JJ..JJ....',
-    '....JJ..JJ....',
-    '....JJ..JJ....',
-    '...NN....NN...',
-  ], { H: '#232433', X: '#232433', S: '#e8b796', K: C.ink, W: C.white, Q: '#232433', L: C.gray, C: C.orange, P: C.sky, J: '#3a3f52', N: C.white });
-
-  // Growth Lab: modern glass building with a holo chart
-  S.growthlab = G.makeSprite([
-    '...G..G..G....',
-    '...G.GG.GG....',
-    '..CCCCCCCCCC..',
-    '.CCCCCCCCCCCC.',
-    '..TWWTWWTWWT..',
-    '..TWWTWWTWWT..',
-    '..TTTTDDTTTT..',
-    '..TTTTDDTTTT..',
-  ], { G: C.lime, C: C.cyan, T: C.teal, W: C.sky, D: C.ink });
-
-  // TYLER LEWIS: The Systems Architect - black hair, clean-shaven, black shirt
-  // with the Cirql logo (cyan "C" + gradient ring dots), tablet + smartwatch
-  S.tylerLewis = G.makeSprite([
-    '....HHHHHH....',
-    '...HHHHHHHH...',
-    '...HSSSSSSH...',
-    '...HSKSSKSH...',
-    '....SSSSSS....',
-    '....SSSSSS....',
-    '....SSSSSS....',
-    '....ZZUZZZ....',
-    '....ZZIIZZ....',
-    '..T.UZIZZU.M..',
-    '..T.ZZIZZZ.S..',
-    '....ZZIIZZ....',
-    '....ZZUZZZ....',
-    '....JJ..JJ....',
-    '....JJ..JJ....',
-    '....JJ..JJ....',
-    '...NN....NN...',
-  ], { H: '#232433', S: '#e8b796', K: C.ink, Z: '#232433', I: C.cyan, U: C.blue, T: C.cyan, M: C.red, J: '#3a3f52', N: C.white });
-
-  // Systems Lab: dark server building with data lights
-  S.systemslab = G.makeSprite([
-    '..KKKKKKKKKK..',
-    '..KCKCKCKCKK..',
-    '..KCKCKCKCKK..',
-    '..KKKKKKKKKK..',
-    '..KWWKWWKWWK..',
-    '..KWWKWWKWWK..',
-    '..KKKKDDKKKK..',
-  ], { K: '#232433', C: C.cyan, W: C.sky, D: C.teal });
-
   // AI drone: tiny hovering helper (for particles / flair)
   S.aidrone = G.makeSprite([
     'C.C',
@@ -1054,6 +987,7 @@ G.makeSprite = (rows, colors) => {
 
 // Draw a sprite scaled (integer scale keeps it crisp)
 G.drawSprite = (ctx, sprite, x, y, scale = 1, flip = false) => {
+  if (!sprite) return;
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   if (flip) {
@@ -1100,8 +1034,8 @@ G.Data.BALANCE = {
     dailyLeadCooling: 2,          // idle warmth loss baseline
     eventChance: 0.55,
     negativeEventShare: 0.45,
-    rivalCloseChances: [0.40, 0.50, 0.60],  // APR, MAY, JUN
-    rivalDoubleChance: 0.05,
+    rivalCloseChances: [0.16, 0.22, 0.28],  // APR, MAY, JUN
+    rivalDoubleChance: 0.02,
     warmThreshold: 35,            // NEW -> WARM needs this warmth
     apptThreshold: 60,            // WARM -> APPT needs this warmth
     decayNew: [4, 7],             // warmth loss after 1st / 2nd+ ignored day
@@ -1123,8 +1057,8 @@ G.Data.BALANCE = {
     dailyLeadCooling: 3,
     eventChance: 0.65,
     negativeEventShare: 0.60,
-    rivalCloseChances: [0.50, 0.62, 0.74],
-    rivalDoubleChance: 0.06,
+    rivalCloseChances: [0.26, 0.34, 0.42],
+    rivalDoubleChance: 0.03,
     warmThreshold: 40,
     apptThreshold: 65,
     decayNew: [8, 12],
@@ -1146,8 +1080,8 @@ G.Data.BALANCE = {
     dailyLeadCooling: 4,
     eventChance: 0.75,
     negativeEventShare: 0.70,
-    rivalCloseChances: [0.60, 0.72, 0.84],
-    rivalDoubleChance: 0.10,
+    rivalCloseChances: [0.30, 0.40, 0.50],
+    rivalDoubleChance: 0.04,
     warmThreshold: 40,
     apptThreshold: 65,
     decayNew: [10, 16],
@@ -1161,62 +1095,11 @@ G.Data.BALANCE = {
   },
 };
 
-// ------------------------------------------------------------
-// Characters
-// ------------------------------------------------------------
-G.Data.CHARACTERS = {
-  malcolm: {
-    id: 'malcolm',
-    name: 'MALCOLM',
-    title: 'The Lake Life Hype Man',
-    color: G.C.green,
-    accent: G.C.sky,
-    sprite: 'malcolm',
-    bio: [
-      'Social media wizard. Video marketing machine.',
-      'Builds relationships one dock chat at a time.',
-      'Lake home specialist. Never met a pontoon',
-      'he did not like.',
-    ],
-    strengths: ['VIDEO +25%', 'OPEN HOUSE +15%', 'LAKE LEADS x2'],
-    ability: {
-      name: 'VIRAL VIDEO',
-      desc: 'Post a ridiculous real estate video. Extra leads + followers pour in. Once per day.',
-    },
-    // gameplay modifiers
-    videoBonus: 0.25,       // video minigame score bonus
-    openHouseBonus: 0.15,   // open house minigame bonus
-    lakeLeadWeight: 2,      // lake/cabin leads twice as likely
-    negotiateBonus: 0,
-    listingBonus: 0,
-    luxuryValueBonus: 0,
-  },
-  bridger: {
-    id: 'bridger',
-    name: 'BRIDGER',
-    title: 'The Closer',
-    color: G.C.navy,
-    accent: G.C.yellow,
-    sprite: 'bridger',
-    bio: [
-      'Ruthless negotiator. Luxury client whisperer.',
-      'His listing presentations have made grown',
-      'sellers weep with joy. Runs on referrals,',
-      'black coffee, and that mighty red beard.',
-    ],
-    strengths: ['NEGOTIATE +25%', 'LISTING PITCH +15%', 'LUXURY VALUE +20%'],
-    ability: {
-      name: 'POWER CLOSE',
-      desc: 'Win a tough appointment or negotiation instantly. Your best lead jumps a stage. Once per day.',
-    },
-    videoBonus: 0,
-    openHouseBonus: 0,
-    lakeLeadWeight: 1,
-    negotiateBonus: 0.25,
-    listingBonus: 0.15,
-    luxuryValueBonus: 0.2,
-  },
-};
+// Characters live in characters.js (loaded after data2.js).
+// This placeholder keeps early references from crashing if a
+// script order ever changes. characters.js replaces it.
+G.Data.CHARACTERS = {};
+G.Data.ROSTER = [];
 
 // ------------------------------------------------------------
 // Lead types
@@ -1435,14 +1318,14 @@ G.Data.FLAVOR = {
   // ----------------------------------------------------------
   // Legendary character power-ups
   // ----------------------------------------------------------
-  D.BRAD = {
-    name: 'BRAD NOLAN',
+  D.JOEL = {
+    name: 'JOEL',
     title: 'THE MORTGAGE WIZARD',
-    sprite: 'bradNolan',
+    sprite: 'joel',
     ability: 'CLEAR TO CLOSE',
     rare: 'WEEKEND UNDERWRITING',
     intro: [
-      'Local lending legend. His rate sheet glows.',
+      'Blond lending legend. His rate sheet glows.',
       'He pulls out a GOLDEN LOAN FOLDER.',
       'Paperwork flies everywhere.',
     ],
@@ -1481,183 +1364,9 @@ G.Data.FLAVOR = {
     passiveChance: 0.03, // 1031 exchange investor calls
   };
 
-  D.BLAKE = {
-    name: 'BLAKE SUDDATH',
-    title: 'THE GROWTH GURU',
-    sprite: 'blakeSuddath',
-    ability: 'AI OVERDRIVE',
-    ultimate: 'SCALE MODE',
-    scaleChance: 0.08, // chance a visit rolls the ultimate instead
-    talkChance: 0.07,  // RARE: the 22-minute parking lot talk
-    talkDays: 6,
-    intro: [
-      'Mentor. Rival. Power-up vendor. All at 100 mph.',
-      'Laptop in one hand, phone in the other, earbuds in,',
-      'coffee that never empties. Holographic charts orbit him.',
-      'The most POSITIVE man in real estate. He believes in you',
-      'harder than you believe in yourself. It\'s a little scary.',
-    ],
-    // AI Overdrive drone flavor
-    drones: [
-      'FOLLOW-UP DRONE nudging your whole pipeline...',
-      'CONTENT CANNON firing viral videos across the map...',
-      'CRM SYNC organizing every old lead...',
-      'SCHEDULER BOT booking appointments...',
-      'COPY BOT writing listing descriptions...',
-      'GEO BOOSTER spawning clients online...',
-    ],
-    lines: [
-      '"Work smarter, not harder."',
-      '"Let\'s automate that."',
-      '"Scale beats hustle."',
-      '"Your next client is already looking for you."',
-      '"If AI can do it, why are you doing it?"',
-      '"You\'re ONE follow-up away. You\'ve ALWAYS been one follow-up away."',
-      '"Reps. Volume. Outcomes. In that order. LET\'S GO."',
-      '"Nobody\'s coming to save your pipeline. GOOD. More reps for you."',
-      '"Average agents wait for leads. YOU manufacture them."',
-      '"Motivation fades. Systems don\'t. Lucky you - you\'ve got BOTH."',
-    ],
-    coffee: [
-      '*sips the coffee that never empties*',
-      '*already testing a newer AI tool mid-sentence*',
-      '*a holographic funnel chart rotates behind him*',
-    ],
-    scaleLines: [
-      'SCALE MODE ENGAGED!! The backpack of AI gadgets OPENS.',
-      'A swarm of AI agents deploys. Everything speeds up.',
-      'Leads double. Deals close faster. Cooldowns melt.',
-    ],
-    // RARE power-up find (submitted by the real Blake): pure analog belief
-    talkLines: [
-      '*** RARE POWER-UP FIND ***',
-      'THE 22-MINUTE PARKING LOT TALK',
-      '',
-      'Blake catches you by your car. Laptop CLOSED. Earbuds OUT.',
-      'No slides. No funnels. Just 22 straight minutes of belief,',
-      'delivered at full volume in a light drizzle.',
-      '"Volume beats talent! Talent that DOES volume is UNSTOPPABLE!',
-      'WHO\'S GONNA CARRY THE LISTINGS?! YOU ARE! LOOK AT YOU!"',
-      'You could cold-call a blizzard right now.',
-      '',
-      'MOTIVATION +100% for a quarter*  (*balance team: 6 days)',
-      '+1 max energy every morning, and every task runs hotter.',
-    ],
-  };
+  // Playable roster lives in characters.js.
+  D.SECRET_CHARACTERS = {};
 
-  D.TYLER = {
-    name: 'TYLER LEWIS',
-    title: 'THE SYSTEMS ARCHITECT',
-    sprite: 'tylerLewis',
-    overrideChance: 0.06,   // requires tier 3
-    engineChance: 0.12,     // requires tier 2
-    intro: [
-      'Calm. Analytical. Builds the system once, then leverages it.',
-      'A glowing tablet controls his digital assistants; his smartwatch',
-      'streams analytics. Floating dashboards hum around him.',
-    ],
-    scanLines: [
-      'CIRQL SCAN: a holographic radar sweeps the whole map...',
-      '- forgotten past clients light up',
-      '- warm leads highlighted',
-      '- referral opportunities revealed',
-      '- a hidden listing appointment surfaces',
-    ],
-    engineLines: [
-      'OPEN HOUSE ENGINE deployed. Visitors keep arriving on their own,',
-      'generating buyer leads, seller leads, and referrals for days.',
-    ],
-    overrideLines: [
-      'SYSTEM OVERRIDE!! Every follow-up automates. Paperwork completes',
-      'itself. The CRM organizes. Referrals double. Passive income climbs.',
-    ],
-    lines: [
-      '"The basics always win."',
-      '"Build the system once."',
-      '"Consistency beats intensity."',
-      '"Automation creates freedom."',
-      '"Your CRM should work harder than you do."',
-    ],
-  };
-
-  // ----------------------------------------------------------
-  // Secret characters (unlockable, playable)
-  // ----------------------------------------------------------
-  D.SECRET_CHARACTERS = {
-    grandpa: {
-      id: 'grandpa', name: 'GRANDPA REALTOR', title: 'The Handshake', secret: true,
-      color: G.C.slate, accent: G.C.yellow, sprite: 'grandpa',
-      bio: ['Has never used technology. Will never use technology.',
-        'Runs a 100% referral business powered by firm',
-        'handshakes and 60 years of favors.'],
-      strengths: ['2x REFERRALS', 'WARMER LEADS', 'NO VIDEOS (EVER)'],
-      ability: { name: 'THE ROLODEX', desc: 'Grandpa flips the sacred Rolodex. Two past clients call immediately. Once per day.' },
-      videoBonus: -1, openHouseBonus: 0.05, lakeLeadWeight: 1, negotiateBonus: 0.1, listingBonus: 0.1, luxuryValueBonus: 0,
-      perk: 'grandpa',
-      unlockHint: 'FINISH A SEASON',
-    },
-    influencer: {
-      id: 'influencer', name: 'THE INFLUENCER', title: 'Ring Light Royalty', secret: true,
-      color: '#c2478f', accent: G.C.cyan, sprite: 'influencer',
-      bio: ['Does not know what a contract is. Gets endless',
-        'leads anyway. HIRE A TRANSACTION COORDINATOR',
-        'IMMEDIATELY or pending deals will evaporate.'],
-      strengths: ['ENDLESS LEADS', 'VIDEO +35%', 'DEALS COLLAPSE W/O TC'],
-      ability: { name: 'GO LIVE', desc: 'Start a chaotic livestream. Followers and leads pour in. Once per day.' },
-      videoBonus: 0.35, openHouseBonus: 0.1, lakeLeadWeight: 1, negotiateBonus: -0.1, listingBonus: 0, luxuryValueBonus: 0,
-      perk: 'influencer',
-      unlockHint: 'REACH 5,000 FOLLOWERS',
-    },
-    veteran: {
-      id: 'veteran', name: 'THE VETERAN', title: '30 Years In', secret: true,
-      color: G.C.teal, accent: G.C.white, sprite: 'veteran',
-      bio: ['Thirty years of listings. Wins almost every',
-        'presentation. Thinks social media is "a CB',
-        'radio for people who hate money."'],
-      strengths: ['LISTING PITCH +35%', 'NEGOTIATE +15%', 'HATES SOCIAL MEDIA'],
-      ability: { name: 'WAR STORY', desc: 'Tell the 1994 blizzard closing story. A client is moved to action. Once per day.' },
-      videoBonus: -0.3, openHouseBonus: 0, lakeLeadWeight: 1, negotiateBonus: 0.15, listingBonus: 0.35, luxuryValueBonus: 0.1,
-      perk: 'veteran',
-      unlockHint: 'WIN ALL 3 BOSS BATTLES IN ONE SEASON',
-    },
-    rookie: {
-      id: 'rookie', name: 'THE ROOKIE', title: 'Day One Energy', secret: true,
-      color: G.C.orange, accent: G.C.lime, sprite: 'rookie',
-      bio: ['Starts broke. One lead. A dream. Levels up',
-        'absurdly fast - every 3 closings makes them',
-        'permanently better at everything.'],
-      strengths: ['LEVELS UP FAST', '+ENERGY PER 3 SALES', 'STARTS WITH NOTHING'],
-      ability: { name: 'HUSTLE', desc: 'Pure rookie hustle. A random lead advances a stage. Once per day.' },
-      videoBonus: 0, openHouseBonus: 0, lakeLeadWeight: 1, negotiateBonus: 0, listingBonus: 0, luxuryValueBonus: 0,
-      perk: 'rookie',
-      unlockHint: 'LOSE A SEASON (IT BUILDS CHARACTER)',
-    },
-    blake: {
-      id: 'blake', name: 'BLAKE SUDDATH', title: 'The Growth Guru', secret: true,
-      color: G.C.teal, accent: G.C.cyan, sprite: 'blakeSuddath',
-      bio: ['High-energy growth strategist. Deploys AI to do the',
-        'busywork and generate passive leads - but runs entirely',
-        'on coffee, and drags to a crawl the moment it runs dry.'],
-      strengths: ['AI PASSIVE LEADS', 'VIDEO +15%, FOLLOWERS +25%', 'COFFEE-POWERED (WEAKNESS)'],
-      ability: { name: 'AI OVERDRIVE', desc: 'Deploy AI drones: instant leads + a follower spike, plus 2 days of passive AI lead-gen. Once per day.' },
-      videoBonus: 0.15, openHouseBonus: 0, lakeLeadWeight: 1, negotiateBonus: 0, listingBonus: 0, luxuryValueBonus: 0,
-      perk: 'blake',
-      unlockHint: "TRIGGER BLAKE'S SCALE MODE AT THE LAB",
-    },
-    tyler: {
-      id: 'tyler', name: 'TYLER LEWIS', title: 'The Systems Architect', secret: true,
-      color: G.C.sky, accent: G.C.cyan, sprite: 'tylerLewis',
-      bio: ['Calm systems builder. WEAK EARLY - his automations need',
-        'a few days to gain momentum - but Daily Discipline compounds',
-        'until he is one of the strongest agents late in the season.'],
-      strengths: ['COMPOUNDING SYSTEMS', 'DAILY DISCIPLINE (SCALES)', 'WEAK EARLY / STRONG LATE'],
-      ability: { name: 'SYSTEM OVERRIDE', desc: 'Automate the night: auto follow-up, a lead advances, referrals spike. Grows stronger as your systems build. Once per day.' },
-      videoBonus: 0, openHouseBonus: 0.1, lakeLeadWeight: 1, negotiateBonus: 0.05, listingBonus: 0.1, luxuryValueBonus: 0,
-      perk: 'tyler',
-      unlockHint: "TRIGGER TYLER'S SYSTEM OVERRIDE AT THE LAB",
-    },
-  };
-  Object.assign(D.CHARACTERS, D.SECRET_CHARACTERS);
 
   // ----------------------------------------------------------
   // New lead types (commercial gated behind the Commercial Division)
@@ -1879,24 +1588,21 @@ G.Data.FLAVOR = {
     { id: 'aimaster',   name: 'AI MASTER',             desc: 'Own the AI Assistant and close 5 deals with it.', stat: 'aiCloses', goal: 5 },
     { id: 'squatch',    name: 'SQUATCH SPOTTER',       desc: 'Find Bigfoot in the woods. He is shy.' },
     { id: 'megaslayer', name: 'GIANT SLAYER',          desc: 'Defeat the final boss.' },
-    { id: 'scalemode',  name: 'SCALE BEATS HUSTLE',    desc: 'Trigger Blake Suddath\'s Scale Mode ultimate.' },
-    { id: 'parkinglot', name: 'THE 22-MINUTE TALK',    desc: 'Catch Blake\'s rare parking lot talk power-up.' },
-    { id: 'sysoverride', name: 'AUTOMATION IS FREEDOM', desc: 'Trigger Tyler Lewis\'s System Override.' },
   ];
 
   // ----------------------------------------------------------
   // Dynamic rivalry: trash talk tiers + head-to-head battles
   // ----------------------------------------------------------
   D.TRASH_TALK = {
-    malcolm: [
-      ['"Nice sale! I taught him that." - MALCOLM, to a barista', '"Bridger who? Kidding. Kind of." - MALCOLM'],
-      ['"Bridger\'s idea of video marketing is a fax." - MALCOLM', '"I heard his listing binder has its own binder." - MALCOLM'],
-      ['"This lake ain\'t big enough for the two of us, and I have the pontoon." - MALCOLM', '"His beard called. It wants a better agent." - MALCOLM'],
-    ],
     bridger: [
-      ['"Good month, Malcolm. Adorable, even." - BRIDGER', '"I respect the hustle. From a distance." - BRIDGER'],
-      ['"Malcolm closes deals when the WiFi cooperates." - BRIDGER', '"Nice video. My clients don\'t have ring lights. They have money." - BRIDGER'],
-      ['"I don\'t compete with content creators. I compete with closers. So: nobody." - BRIDGER', '"Tell Malcolm the adults are negotiating." - BRIDGER'],
+      ['BRIDGER: "Nice sale, Malcolm. I will allow it."', 'BRIDGER: "Head to head again. This is the fun part."'],
+      ['BRIDGER: "The lake can have two favorites. I am still in it."', 'BRIDGER: "See you at the next listing. Bring the good stuff."'],
+      ['BRIDGER: "You recruited backup. Cute. I am still across the table."', 'BRIDGER: "That one was clean. Annoying. But clean."'],
+    ],
+    malcolm: [
+      ['MALCOLM: "Bridger, that was sharp. I am still coming."', 'MALCOLM: "The desk is loud today. You can hear us, right?"'],
+      ['MALCOLM: "Head to head. Nobody else I would rather chase."', 'MALCOLM: "Good close. I wrote it down. Then I planned the next one."'],
+      ['MALCOLM: "Recruiting does not make me softer. It makes the office faster."', 'MALCOLM: "See you at the sign. Loser buys the coffee."'],
     ],
   };
 
@@ -1947,13 +1653,808 @@ G.Data.FLAVOR = {
   // Map additions: bank + commercial plaza + growth lab
   D.MAP.locations.bank = { x: 434, y: 168, sprite: 'bank', label: 'FIRST NORTHERN BANK' };
   D.MAP.locations.plaza = { x: 222, y: 218, sprite: 'plaza', label: 'NOBLEZA COMMERCIAL PLAZA' };
-  D.MAP.locations.growthlab = { x: 278, y: 250, sprite: 'growthlab', label: 'SUDDATH GROWTH LAB' };
-  D.MAP.locations.systemslab = { x: 185, y: 242, sprite: 'systemslab', label: 'LEWIS SYSTEMS LAB' };
 
   // Hidden actions reached via map visits (not in the sidebar list)
   D.ACTIONS.push(
     { id: 'commercial', label: 'JEFF\'S COMMERCIAL DEAL', energy: 2, loc: 'plaza', hidden: true, desc: 'Take on one of Jeff\'s monster commercial deals.', minigame: 'negotiateGame' },
   );
+})();
+
+</script>
+<script>
+// ============================================================
+// characters.js - THE roster. Edit this file to change who is
+// playable, how they play, and how office agents unlock.
+//
+// Malcolm Wallaker starts unlocked. Parker (CEO) and Liz (operator) are rare.
+// Everyone else is a Grand Rapids office agent. They begin locked
+// and unlock through play. Progress is saved in localStorage.
+//
+// To add a future teammate: copy an office entry, set a new id,
+// name, title, perk, catchphrase, colors, and unlock hint. Do not
+// invent people. Only add someone when you know they are on the team.
+//
+// Bios are playful game traits, not biographies.
+// ============================================================
+'use strict';
+
+(function buildRoster() {
+  const C = G.C;
+
+  function agentSprite(hair, shirt, trim, look) {
+    const skin = '#e8b796';
+    if (look === 'camo') {
+      // Blaze-orange cap, camo jacket. A Bigfork truck-and-woods costume.
+      return G.makeSprite([
+        '....OOOOOO....',
+        '...OOOOOOOO...',
+        '...OSSSSSSO...',
+        '...OSKSSKSO...',
+        '..TOSSSSSSOT..',
+        '..T.SSWWSS.T..',
+        '..T.SSSSSS....',
+        '..T.MCMCMC....',
+        '..TMCMCMCMC...',
+        '..MCMCOCMCM...',
+        '..S.MCMCMC.S..',
+        '....CMCMCM....',
+        '....MCMCMC....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+      ], { O: '#e07020', S: skin, K: C.ink, W: C.white, M: '#3d5c34', C: '#8faf62', T: '#6b4226', D: C.dusk });
+    }
+    if (look === 'welcome') {
+      // Soft cardigan and a small cross pin. Sincere, not a punchline.
+      return G.makeSprite([
+        '....HHHHHH....',
+        '...HHHHHHHH...',
+        '...HSSSSSSH...',
+        '...HSKSSKSH...',
+        '..THSSSSSSHT..',
+        '..T.SSWWSS.T..',
+        '..T.SSSSSS....',
+        '..T.BBBBBB....',
+        '..TBBBXBBBB...',
+        '..BBBXBXBBB...',
+        '..S.BBXBBB.S..',
+        '....BBBBBB....',
+        '....BBBBBB....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+      ], { H: hair, S: skin, K: C.ink, W: C.white, B: shirt, X: trim || C.yellow, D: C.dusk, T: trim || shirt });
+    }
+    if (look === 'tiny') {
+      // Same frame as everyone else, figure packed at the bottom so she is clearly short.
+      // Fists out. Feet land on the same line.
+      return G.makeSprite([
+        '..............',
+        '..............',
+        '..............',
+        '..............',
+        '.....HHHH.....',
+        '....HHHHHH....',
+        '....HSSSSSH...',
+        '....HSKSKSH...',
+        '.....SSWWSS...',
+        '..F..SSSSS..F.',
+        '...FBBBBBBF...',
+        '....BBBBBB....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+        '..............',
+        '..............',
+      ], { H: hair, S: skin, K: C.ink, W: C.white, B: shirt, F: trim || C.orange, D: C.dusk });
+    }
+    if (look === 'broccoli') {
+      // Big curly top, one gold earring. The hair enters the room first.
+      return G.makeSprite([
+        'GGGGGGGGGGGGGG',
+        '.GGGgGGGgGGGg.',
+        'GGGgGGGgGGGgGG',
+        '.GGgGGGgGGGgG.',
+        '..GSSSSSSSG...',
+        '..GSSKSSKSG.E.',
+        '...GSSWWSS..E.',
+        '....SSSSSS....',
+        '...BBBBBBB....',
+        '..BBBBBBBBB...',
+        '..S.BBBBBB.S..',
+        '....BBBBBB....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+        '..............',
+      ], { G: '#3f8f3a', g: '#7dce55', S: skin, K: C.ink, W: C.white, E: '#ffd24a', B: shirt, D: C.dusk });
+    }
+    if (look === 'beard') {
+      // The beard is the whole portrait. It has seniority.
+      return G.makeSprite([
+        '....HHHHHH....',
+        '...HHHHHHHH...',
+        '...HSSSSSSH...',
+        '...HSKSSKSH...',
+        '....SSWWSS....',
+        '...RRRRRRRR...',
+        '..RRRRRRRRRR..',
+        '..RRRrRRRrRR..',
+        '..RRRRRRRRRR..',
+        '...RRRRRRRR...',
+        '..S.RRRRRR.S..',
+        '....RRRRRR....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+        '..............',
+      ], { H: hair, S: skin, K: C.ink, W: C.white, R: '#4a3424', r: '#7a5a3a', D: C.dusk, B: shirt });
+    }
+    if (look === 'flyer') {
+      // Steady as ever, plus the carry-on she will not gate-check.
+      return G.makeSprite([
+        '....HHHHHH....',
+        '...HHHHHHHH...',
+        '...HSSSSSSH...',
+        '...HSKSSKSH...',
+        '..THSSSSSSHT..',
+        '..T.SSWWSS.T..',
+        '..T.SSSSSS....',
+        '..T.BBBBBB.UU.',
+        '..TBBBBBBBBUU.',
+        '..BBBBOBBB.UU.',
+        '..S.BBOBBB....',
+        '....BBBBBB....',
+        '....BBBBBB....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+      ], { H: hair, S: skin, K: C.ink, W: C.white, B: shirt, O: trim || C.yellow, D: C.dusk, T: trim || shirt, U: '#d7c4a3' });
+    }
+    if (look === 'range') {
+      // Flannel and a cap. Hibbing to Eveleth, she knows the road.
+      return G.makeSprite([
+        '....CCCCCCCC..',
+        '...CCCCCCCCC..',
+        '...CSSSSSSC...',
+        '...CSKSSKSC...',
+        '....SSSSSS....',
+        '....SSWWSS....',
+        '....SSSSSS....',
+        '...FLFLFLFL...',
+        '..FLFLFLFLFL..',
+        '..SFLFLFLFL.S.',
+        '....FLFLFL....',
+        '....FLFLFL....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+        '..............',
+      ], { C: '#8d1d2c', S: skin, K: C.ink, W: C.white, F: '#6b2a22', L: '#c4553a', D: C.dusk });
+    }
+    return G.makeSprite([
+      '....HHHHHH....',
+      '...HHHHHHHH...',
+      '...HSSSSSSH...',
+      '...HSKSSKSH...',
+      '..THSSSSSSHT..',
+      '..T.SSWWSS.T..',
+      '..T.SSSSSS....',
+      '..T.BBBBBB....',
+      '..TBBBBBBBB...',
+      '..BBBBOBBBB...',
+      '..S.BBOBBB.S..',
+      '....BBBBBB....',
+      '....BBBBBB....',
+      '....DD..DD....',
+      '....DD..DD....',
+      '....DD..DD....',
+      '...KK....KK...',
+    ], { H: hair, S: skin, K: C.ink, W: C.white, B: shirt, O: trim || C.yellow, D: C.dusk, T: trim || shirt });
+  }
+
+  G.Sprites.silhouette = G.makeSprite([
+    '....HHHHHH....',
+    '...HHHHHHHH...',
+    '...HHHHHHHH...',
+    '...HHKHHKHH...',
+    '....HHHHHH....',
+    '....HHHHHH....',
+    '....HHHHHH....',
+    '....BBBBBB....',
+    '...BBBBBBBB...',
+    '...BBBBBBBB...',
+    '....BBBBBB....',
+    '....BBBBBB....',
+    '....BBBBBB....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '....DD..DD....',
+    '...KK....KK...',
+  ], { H: C.dusk, K: C.ink, B: C.slate, D: C.ink });
+
+  G.Sprites.rivalBroker = agentSprite('#3a3f52', C.red, C.yellow);
+
+  const base = {
+    videoBonus: 0, openHouseBonus: 0, lakeLeadWeight: 1,
+    negotiateBonus: 0, listingBonus: 0, luxuryValueBonus: 0,
+    energyMod: 0, commissionMult: 1, followupBonus: 0, decayMult: 1,
+    referralBonus: 0, showBonus: 0, inspectBonus: 0, followerMult: 1,
+    happyMult: 1, rivalPressure: 0, valueBonus: 0,
+    secret: false, role: 'starter', unlock: null,
+  };
+
+  function make(partial) {
+    const ch = Object.assign({}, base, partial);
+    ch.sprite = 'agent_' + ch.id;
+    ch.unlockHint = ch.unlock ? ch.unlock.hint : '';
+    G.Sprites[ch.sprite] = agentSprite(ch.hair, ch.shirt, ch.trim, ch.look);
+    return ch;
+  }
+
+  const starters = [
+    make({
+      id: 'malcolm',
+      name: 'MALCOLM WALLAKER',
+      short: 'MALCOLM',
+      title: 'Office Leader',
+      role: 'leader',
+      color: C.green, accent: C.sky,
+      hair: '#6b4226', shirt: C.green, trim: C.sky,
+      catchphrase: 'The season is me and Bridger. The desk makes us better.',
+      bio: [
+        'Office leader in Grand Rapids. The default agent.',
+        'His season is the head-to-head with Bridger Hopkins.',
+        'He recruits agents, and the whole team gets louder.',
+      ],
+      strengths: ['OFFICE LEADER', 'RECRUITS LIFT THE TEAM', 'HEAD TO HEAD WITH BRIDGER'],
+      ability: {
+        name: 'OFFICE LEADER',
+        effect: 'recruit',
+        desc: 'Bring an agent onto the desk. The recruit boosts the whole team: warmer leads and a little extra zip. Once per day.',
+        lines: [
+          'New agent on the floor. Everybody just got backup.',
+          'Recruiting day. The book belongs to the whole office now.',
+          'One more teammate. Bridger can hear the desk from here.',
+        ],
+      },
+      videoBonus: 0.05, openHouseBonus: 0.05, lakeLeadWeight: 1.2,
+    }),
+    make({
+      id: 'parker',
+      name: 'PARKER PEMBERTON',
+      short: 'PARKER',
+      title: 'CEO, Pemberton Real Estate',
+      role: 'owner',
+      badge: 'CEO',
+      secret: true,
+      color: C.yellow, accent: C.white,
+      hair: '#3a3f52', shirt: C.navy, trim: C.yellow,
+      catchphrase: 'CEO mode. The whole desk gets a lift.',
+      bio: [
+        'Owner and CEO of Pemberton Real Estate.',
+        'Rare. You earn the chair by winning the season and the final boss.',
+        'Bigger deals, more energy, and the market notices the boss is in.',
+      ],
+      strengths: ['CEO MODE', '+1 ENERGY', 'COMMISSION +25%', 'BIGGER DEALS'],
+      ability: {
+        name: 'CEO MODE',
+        effect: 'ceo',
+        desc: 'Lift the whole book. Every lead warms up, a bigger deal appears, and the company puts cash behind it. Once per day.',
+        lines: [
+          'He did not raise his voice. The pipeline stood up straighter.',
+          'The whole desk eats when this one moves.',
+          'Bigger deal. Same kindness. That is the job.',
+        ],
+      },
+      energyMod: 1, commissionMult: 1.25, negotiateBonus: 0.15, listingBonus: 0.12,
+      luxuryValueBonus: 0.15, rivalPressure: 0.1, startCash: 15000, startReputation: 78,
+      unlock: {
+        hint: 'BEAT THE FINAL BOSS AND WIN THE SEASON',
+        met: (s) => !!s.stats.wonSeason && (s.stats.bossWins || 0) >= 3,
+      },
+    }),
+    make({
+      id: 'liz',
+      name: 'LIZ REIN',
+      short: 'LIZ',
+      title: 'Second in Command',
+      role: 'operator',
+      badge: 'OPS',
+      secret: true,
+      color: C.sky, accent: C.white,
+      hair: '#8a5a44', shirt: C.sky, trim: C.white,
+      catchphrase: 'Consider it done. I will make it happen.',
+      bio: [
+        'Pemberton Real Estate. Second chair. She runs the show.',
+        'Rare. Win a season with 8 homes and the desk is hers.',
+        'Blockers move. Stalled files finish. Deals cross the line.',
+      ],
+      strengths: ['MAKES IT HAPPEN', 'CLEARS BLOCKERS', 'FOLLOW UP +2'],
+      ability: {
+        name: 'MAKES IT HAPPEN',
+        effect: 'happen',
+        desc: 'Clear the blockers. Inspections, delays, and a stalled deal get pushed across the line. Once per day.',
+        lines: [
+          'She said "on it" and the file was already moving.',
+          'The stall ended because Liz decided it would.',
+          'No drama. The thing that was stuck is not stuck.',
+        ],
+      },
+      followupBonus: 2, decayMult: 0.75, referralBonus: 0.08,
+      unlock: {
+        hint: 'WIN A SEASON WITH 8 HOMES SOLD',
+        met: (s) => !!s.stats.wonSeason && (s.stats.homesSold || 0) >= 8,
+      },
+    }),
+  ];
+
+  const office = [
+    make({
+      id: 'rebekkah',
+      name: 'REBEKKAH ANDERSON',
+      short: 'BEKKAH',
+      title: 'The Side Hustle',
+      role: 'office', secret: true,
+      color: C.yellow, accent: C.orange,
+      hair: '#6b4226', shirt: C.orange, trim: C.yellow,
+      catchphrase: 'You should start a business. Actually, start twelve.',
+      bio: [
+        'Grand Rapids office. She goes by Bekkah.',
+        'Talks business the way other people talk weather.',
+        'Every closing is a commission plus a side-hustle idea.',
+      ],
+      strengths: ['COMMISSION +18%', 'SIDE-HUSTLE CASH', 'TWELVE IDEAS A DAY'],
+      ability: {
+        name: 'TWELVE BUSINESSES',
+        effect: 'ideas',
+        desc: 'Bekkah pitches a dozen side hustles and one of them pays today. Plus a business-minded lead. Once per day.',
+        lines: [
+          'Bait shop. Ice-castle rental. Hotdish window. Pontoon sunrise tours.',
+          'Firewood bundles. Fish-house weekends. Snowmobile shuttle. Cabin coffee.',
+          'Leech Lake guides. Yard-sign repair. Chainsaw welcome bears. And real estate, which you already started.',
+        ],
+      },
+      commissionMult: 1.18,
+      unlock: { hint: 'EARN $8,000 COMMISSION IN ONE SEASON', met: (s) => s.stats.commission >= 8000 },
+    }),
+    make({
+      id: 'jillian',
+      name: 'JILLIAN BILDEN',
+      short: 'JILLIAN',
+      title: 'The Short Fight',
+      role: 'office', secret: true,
+      color: C.orange, accent: C.yellow,
+      hair: '#3a3f52', shirt: C.red, trim: C.yellow, look: 'tiny',
+      catchphrase: 'I am short. The offer is not.',
+      bio: [
+        'Grand Rapids office. Tiny, and she knows it.',
+        'Will pick a friendly fight with any standoff.',
+        'Fearless at the table. Shakes hands after. Always.',
+      ],
+      strengths: ['NEGOTIATE +30%', 'STANDOFFS GO HER WAY'],
+      ability: {
+        name: 'STAND YOUR GROUND',
+        effect: 'standoff',
+        desc: 'Square up with a smile. The best offer goes pending. Hard talks are her fun. Once per day.',
+        lines: [
+          'She stepped up. The other side sat down.',
+          'Short speech. Firm number. Then a grin.',
+          'Friendly fight. Firm handshake after.',
+        ],
+      },
+      negotiateBonus: 0.3,
+      unlock: { hint: 'WIN 2 NEGOTIATIONS IN ONE SEASON', met: (s) => (s.stats.negotiationsWon || 0) >= 2 },
+    }),
+    make({
+      id: 'deb',
+      name: 'DEB DANLEY',
+      short: 'DEB',
+      title: 'The Steady Hand',
+      role: 'office', secret: true,
+      color: C.lime, accent: C.white,
+      hair: '#c0a060', shirt: C.teal, trim: C.lime,
+      catchphrase: 'Slow is smooth. I have also made this drive from the airport.',
+      bio: [
+        'Grand Rapids office. Steady, and a travel hand.',
+        'Keeps jittery deals from bolting.',
+        'Out-of-town buyers land softly. She already knows the gate.',
+      ],
+      strengths: ['GHOSTING DOWN', 'LEADS COOL SLOWER', 'FREQUENT FLYER'],
+      ability: {
+        name: 'STEADY NOW',
+        effect: 'clearIssue',
+        desc: 'Talk a snag down, even if the buyer is still on a layover. An issue clears, or a lead steps forward. Once per day.',
+        lines: [
+          'She talked them through it between connections.',
+          'The out-of-town buyer landed. Deb already had the car.',
+          'Miles on the card. Patience in the file. Both count.',
+        ],
+      },
+      decayMult: 0.8, ghostMult: 0.65, reloWeight: 2.2, look: 'flyer',
+      unlock: { hint: 'WIN A SEASON', met: (s) => !!s.stats.wonSeason },
+    }),
+    make({
+      id: 'jordan',
+      name: 'JORDAN HESS',
+      short: 'JORDAN',
+      title: 'The Buyer Agent',
+      role: 'office', secret: true,
+      color: C.sky, accent: C.white,
+      hair: '#3a3f52', shirt: C.blue, trim: C.sky,
+      catchphrase: 'Tell me what home feels like. I will go find it.',
+      bio: [
+        'Grand Rapids office. Buyer agent, through and through.',
+        'Showings click. Buyers sign. Offers get written.',
+        'Confident, and still the calm one in the car.',
+      ],
+      strengths: ['SHOWINGS +18%', 'BUYERS CONVERT FASTER', 'WRITES TWO OFFERS'],
+      ability: {
+        name: 'BUYER DAY',
+        effect: 'buyerday',
+        desc: 'A full day on the buy side. Your best buyer signs or goes under offer. Once per day.',
+        lines: [
+          'Jordan already had three houses in mind.',
+          'The buyer said yes before the porch light was off.',
+          'Offer drafted in the driveway. That is the job.',
+        ],
+      },
+      showBonus: 0.18,
+      unlock: { hint: 'WRITE 3 OFFERS IN ONE SEASON', met: (s) => (s.stats.offersWritten || 0) >= 3 },
+    }),
+    make({
+      id: 'bridger',
+      name: 'BRIDGER HOPKINS',
+      short: 'BRIDGER',
+      title: 'Price Is Right',
+      role: 'office', secret: true,
+      color: '#e7a07a', accent: C.yellow,
+      hair: '#8a3a2a', shirt: C.navy, trim: '#e7a07a',
+      catchphrase: 'Price it right and the sign does the rest.',
+      bio: [
+        'The other half of the season. Malcolm across the table.',
+        'Every pricing call runs through him. He lands the number.',
+        'If Malcolm overprices, Bridger is already in the driveway.',
+      ],
+      strengths: ['PRICE IS RIGHT', 'LISTINGS MOVE', 'STEALS AN OVERPRICED LISTING'],
+      ability: {
+        name: 'PRICE IS RIGHT',
+        effect: 'priceisright',
+        desc: 'Set the perfect list price. A listing sheds a bad number and draws an offer. Once per day.',
+        lines: [
+          'He said the number once. The seller nodded.',
+          'Not high. Not cute. The price the market will actually pay.',
+          'Malcolm can recruit the desk. Bridger will price the house.',
+        ],
+      },
+      listingBonus: 0.08, negotiateBonus: 0,
+      unlock: { hint: 'LAND THE RIGHT PRICE ON 2 LISTINGS', met: (s) => (s.stats.perfectPrices || 0) >= 2 },
+    }),
+    make({
+      id: 'matt',
+      name: 'MATT HUEBSCHER',
+      short: 'MATT',
+      title: 'The Price Guide',
+      role: 'office', secret: true,
+      color: C.yellow, accent: C.white,
+      hair: '#3a3f52', shirt: C.slate, trim: C.yellow,
+      catchphrase: 'The beard has seen worse deals than this. We are fine.',
+      bio: [
+        'Grand Rapids office. The beard is the legend.',
+        'Folks joke it could fix a Monday. It does fix deals.',
+        'A comeback with a smile under all that seniority.',
+      ],
+      strengths: ['MIRACLE BEARD', 'RESCUES SICK DEALS', 'COMEBACK CLOSER'],
+      ability: {
+        name: 'MIRACLE BEARD',
+        effect: 'miracle',
+        desc: 'The beard goes to work. A stuck inspection, a delay, or a cooling lead gets another chance. Once per day.',
+        lines: [
+          'They joke the beard could fix a whole Monday.',
+          'It did not say a word. The deal sat up anyway.',
+          'Comeback energy, politely, from behind the beard.',
+        ],
+      },
+      look: 'beard',
+      unlock: { hint: 'RESCUE 2 DEALS IN ONE SEASON', met: (s) => (s.stats.dealsRescued || 0) >= 2 },
+    }),
+    make({
+      id: 'bethany',
+      name: 'BETHANY LEADLEY',
+      short: 'BETHANY',
+      title: 'The Tour Guide',
+      role: 'office', secret: true,
+      color: C.lime, accent: C.sky,
+      hair: '#c0a060', shirt: C.lime, trim: C.sky,
+      catchphrase: 'You are not a bother. Tell me what you need.',
+      bio: [
+        'Grand Rapids office. A nurse\'s heart in a listing folder.',
+        'She notices when someone is slipping, and she stays.',
+        'Trust comes back. Morale comes back with it.',
+      ],
+      strengths: ['NURSE\'S HEART', 'TRUST COMES BACK', 'MORALE UP'],
+      ability: {
+        name: 'NURSE\'S HEART',
+        effect: 'nurse',
+        desc: 'A careful check-in. At-risk clients feel looked after, and the office morale lifts. Once per day.',
+        lines: [
+          'She asked how they were doing before she asked about the house.',
+          'Nobody got a lecture. They got a person who stayed.',
+          'Trust is a vital sign. Hers just improved.',
+        ],
+      },
+      happyMult: 1.45, decayMult: 0.82,
+      unlock: { hint: 'REACH 85 CLIENT HAPPINESS', met: (s) => s.stats.happiness >= 85 },
+    }),
+    make({
+      id: 'emily',
+      name: 'EMILY LUTZ',
+      short: 'EMILY',
+      title: 'The Connector',
+      role: 'office', secret: true,
+      color: '#e7a0c8', accent: C.white,
+      hair: '#6b4226', shirt: '#c2478f', trim: C.white,
+      catchphrase: 'That Zillow ping is a person. I answer like one.',
+      bio: [
+        'Grand Rapids office. Zillow leads are her craft.',
+        'Online inquiries become real appointments.',
+        'Fast, kind, and she actually calls them back.',
+      ],
+      strengths: ['ZILLOW FLIP', 'ONLINE LEADS x2', 'PINGS BECOME APPTS'],
+      ability: {
+        name: 'ZILLOW FLIP',
+        effect: 'zillow',
+        desc: 'Turn the newest online leads into appointments. If the inbox is quiet, a fresh Zestimate lead calls. Once per day.',
+        lines: [
+          'She called before the listing alert finished loading.',
+          'Online lead, real voice, Saturday showing.',
+          'They said they were just looking. Emily booked the tour.',
+        ],
+      },
+      unlock: { hint: 'FLIP 3 ONLINE LEADS INTO APPOINTMENTS', met: (s) => (s.stats.zillowFlips || 0) >= 3 },
+    }),
+    make({
+      id: 'adam',
+      name: 'ADAM MARKS',
+      short: 'ADAM',
+      title: 'The Early Start',
+      role: 'office', secret: true,
+      color: C.orange, accent: C.yellow,
+      hair: '#3a3f52', shirt: C.gray, trim: C.orange,
+      catchphrase: 'Fun fact. I already read the comps. And the buyer.',
+      bio: [
+        'Grand Rapids office. He knows literally everything.',
+        'Lovable about it. Mostly.',
+        'Hidden motives, market facts, the right answer. He shares.',
+      ],
+      strengths: ['KNOW IT ALL', 'SEES THE BEST ANSWER', 'COMPS ON COMMAND'],
+      ability: {
+        name: 'KNOW IT ALL',
+        effect: 'know',
+        desc: 'Adam opens the file in his head. You learn what the buyer wants, plus a market fact, and the lead moves. Once per day.',
+        lines: [
+          'He started with "actually" and somehow it was helpful.',
+          'The buyer wants a shop for the truck. Adam knew on page one.',
+          'Frontage, sunset side, legal dock. He did not even look it up.',
+        ],
+      },
+      listingBonus: 0.12, negotiateBonus: 0.1,
+      unlock: { hint: 'WIN A HEAD-TO-HEAD LISTING BATTLE', met: (s) => (s.stats.battleWins || 0) >= 1 },
+    }),
+    make({
+      id: 'stephanie',
+      name: 'STEPHANIE MASCARENAS',
+      short: 'STEPHANIE',
+      title: 'Sells Anything',
+      role: 'office', secret: true,
+      color: C.sky, accent: C.white,
+      hair: '#3a3f52', shirt: C.blue, trim: C.white,
+      catchphrase: 'If it has a door, I can sell it. Watch.',
+      bio: [
+        'Grand Rapids office. She can sell any home.',
+        'Overpriced, odd, or stubborn. She still finds the buyer.',
+        'Confident, and the seller feels taken care of.',
+      ],
+      strengths: ['SELL ANYTHING', 'LISTING PITCH +40%', 'TOUGH HOMES MOVE'],
+      ability: {
+        name: 'SELL ANYTHING',
+        effect: 'sellany',
+        desc: 'Guarantee movement on the toughest listing. A stuck or overpriced house gets an offer, or a seller says yes. Once per day.',
+        lines: [
+          'She looked at the odd house and said, "Yep. I know who."',
+          'The seller wanted double. Stephanie found the person anyway.',
+          'Tough listing. Easy confidence. The sign is coming.',
+        ],
+      },
+      listingBonus: 0.4,
+      unlock: { hint: 'TAKE 2 LISTINGS IN ONE SEASON', met: (s) => (s.stats.listings || 0) >= 2 },
+    }),
+    make({
+      id: 'scotty',
+      name: 'SCOTTY PUGLISI',
+      short: 'SCOTTY',
+      title: 'The Pastor\'s Wife',
+      role: 'office', secret: true,
+      color: '#e7b7c8', accent: C.yellow,
+      hair: '#6b4226', shirt: '#f0d8c8', trim: C.yellow, look: 'welcome',
+      catchphrase: 'Come in. The coffee is on, and so is the church family.',
+      bio: [
+        'Grand Rapids office. A pastor\'s wife.',
+        'Hospitality first. A casserole, a kitchen table, a real welcome.',
+        'The prayer chain is a referral network with a kind heart.',
+      ],
+      strengths: ['PRAYER-CHAIN REFERRALS', 'HOSPITALITY', 'LEADS FEEL LOOKED AFTER'],
+      ability: {
+        name: 'PRAYER CHAIN',
+        effect: 'prayerchain',
+        desc: 'Ask the church family who could use a good hand. Warm referrals and a hotdish. Once per day.',
+        lines: [
+          'The prayer chain went out with the morning coffee.',
+          'Somebody brought tater-tot hotdish. Somebody brought a name.',
+          'No pitch. Just "we have been thinking of you."',
+        ],
+      },
+      referralBonus: 0.18, happyMult: 1.25, openHouseBonus: 0.1, decayMult: 0.85,
+      unlock: { hint: 'EARN 2 REFERRALS IN ONE SEASON', met: (s) => (s.stats.referrals || 0) >= 2 },
+    }),
+    make({
+      id: 'tania',
+      name: 'TANIA SUONVIERI',
+      short: 'TANIA',
+      title: 'Iron Range Insider',
+      role: 'office', secret: true,
+      color: '#c4553a', accent: C.yellow,
+      hair: '#3a3f52', shirt: '#6b2a22', trim: '#c4553a', look: 'range',
+      catchphrase: 'Hibbing, Virginia, Eveleth, Chisholm. I know which coffee is good.',
+      bio: [
+        'Grand Rapids office. Iron Range, born into the work.',
+        'Hibbing, Virginia, Eveleth, Chisholm. She has the back roads.',
+        'Range deals come in warmer, and they close like neighbors.',
+      ],
+      strengths: ['IRON RANGE INSIDER', 'RANGE DEALS PAY MORE', 'KNOWS THE TOWNS'],
+      ability: {
+        name: 'IRON RANGE INSIDER',
+        effect: 'range',
+        desc: 'A Range buyer calls from Hibbing, Virginia, Eveleth, or Chisholm. Warm, local, and ready to talk. Once per day.',
+        lines: [
+          'She said the name of the street before they finished the sentence.',
+          'Eveleth to Chisholm is not a commute. It is a conversation.',
+          'Virginia called. Tania already knew the basement.',
+        ],
+      },
+      rangeValue: 1.12,
+      unlock: { hint: 'CLOSE A DEAL IN HIBBING, VIRGINIA, EVELETH, OR CHISHOLM', met: (s) => (s.stats.rangeSold || 0) >= 1 },
+    }),
+    make({
+      id: 'gaige',
+      name: 'GAIGE WALDVOGEL',
+      short: 'GAIGE',
+      title: 'The Hustle',
+      role: 'office', secret: true,
+      color: C.orange, accent: C.lime,
+      hair: '#6b4226', shirt: C.orange, trim: C.lime,
+      catchphrase: 'The hair arrived first. The earring caught the porch light.',
+      bio: [
+        'Grand Rapids office. Broccoli on top, on purpose.',
+        'One earring. It sparkles when a deal is about to move.',
+        'Starts light. The crown grows every few closings.',
+      ],
+      strengths: ['BROCCOLI BOOST', 'EARRING TELLS THE TRUTH', '+ENERGY EVERY 3 SALES'],
+      ability: {
+        name: 'BROCCOLI BOOST',
+        effect: 'broccoli',
+        desc: 'The top gets ideas. Two days of extra zip, the earring sparks, and a lead steps forward. Once per day.',
+        lines: [
+          'He shook his head and the whole room noticed.',
+          'The earring did a little flash. That means go.',
+          'Broccoli boost. Silly name. Real appointments.',
+        ],
+      },
+      look: 'broccoli',
+      unlock: { hint: 'FINISH 2 SEASONS', met: (s, p) => (p.lifetime.seasons || 0) >= 2 },
+    }),
+    make({
+      id: 'kaila',
+      name: 'KAILA WASS',
+      short: 'KAILA',
+      title: 'Bigfork Original',
+      role: 'office', secret: true,
+      color: '#8faf62', accent: '#e07020',
+      hair: '#c0a060', shirt: '#3d5c34', trim: '#e07020', look: 'camo',
+      catchphrase: 'Truck is warm. Ice is thick. Let us go look at that camp.',
+      bio: [
+        'Grand Rapids office. From Bigfork.',
+        'Camo jacket, blaze-orange cap, a truck that starts in January.',
+        'Deer camp, ice fishing, and a handshake that means something.',
+      ],
+      strengths: ['WOODS LEADS x2', 'BLIZZARDS DO NOT STOP THE TRUCK', 'ICE HOUSE TOUR'],
+      ability: {
+        name: 'ICE HOUSE TOUR',
+        effect: 'bigfork',
+        desc: 'Take the truck out. Woods and lake leads warm up, and a camp buyer calls. Weather does not get a vote. Once per day.',
+        lines: [
+          'Bigfork called. The fish are biting and so is a buyer.',
+          'She left the truck running. That is hospitality up here.',
+          'Deer camp small talk just turned into a showing.',
+        ],
+      },
+      lakeLeadWeight: 1.7, outdoorsWeight: 2, showBonus: 0.08,
+      unlock: { hint: 'SELL A LAKE, CABIN, HUNTING, OR FARM PLACE', met: (s) => (s.stats.outdoorsSold || 0) >= 1 },
+    }),
+  ];
+
+  const list = starters.concat(office);
+  G.Data.CHARACTERS = {};
+  list.forEach((ch) => { G.Data.CHARACTERS[ch.id] = ch; });
+  G.Data.ROSTER = list.map((ch) => ch.id);
+  G.Data.SECRET_CHARACTERS = {};
+  delete G.Data.BLAKE;
+  delete G.Data.TYLER;
+  if (G.Data.MAP && G.Data.MAP.locations) {
+    delete G.Data.MAP.locations.growthlab;
+    delete G.Data.MAP.locations.systemslab;
+  }
+
+  G.Data.RANGE_TOWNS = ['HIBBING', 'VIRGINIA', 'EVELETH', 'CHISHOLM'];
+  if (G.Data.MAP && G.Data.MAP.towns) {
+    const extra = [
+      { id: 'hibbing', name: 'HIBBING', x: 292, y: 42 },
+      { id: 'chisholm', name: 'CHISHOLM', x: 348, y: 30 },
+      { id: 'virginia', name: 'VIRGINIA', x: 418, y: 34 },
+      { id: 'eveleth', name: 'EVELETH', x: 458, y: 52 },
+    ];
+    for (const t of extra) {
+      if (!G.Data.MAP.towns.some((x) => x.id === t.id)) G.Data.MAP.towns.push(t);
+    }
+  }
+
+  // Earring twinkle for Gaige. t is seconds.
+  G.sparkle = function (ctx, x, y, t, n) {
+    const count = n || 3;
+    for (let i = 0; i < count; i++) {
+      const ph = t * 7 + i * 1.8;
+      if (Math.sin(ph) < 0.15) continue;
+      ctx.fillStyle = i % 2 ? '#fff6c2' : '#ffd24a';
+      ctx.fillRect(Math.round(x + Math.cos(ph) * 5), Math.round(y + Math.sin(ph * 1.4) * 4), 2, 2);
+    }
+  };
+
+  G.Data.RIVAL = {
+    id: 'billboard',
+    name: 'BILLBOARD',
+    title: 'A fictional highway-sign brokerage',
+    sprite: 'rivalBroker',
+    color: C.red,
+  };
+
+  G.Roster = {
+    list,
+    starters,
+    office,
+    officeCount: office.length,
+
+    unlockedCount() {
+      return office.filter((ch) => G.Profile.unlocked(ch.id)).length;
+    },
+
+    evaluate(s) {
+      const profile = G.Profile.load();
+      const newly = [];
+      for (const ch of list) {
+        if (!ch.secret || !ch.unlock || G.Profile.unlocked(ch.id)) continue;
+        let met = false;
+        try { met = !!ch.unlock.met(s, profile); } catch (e) { met = false; }
+        if (met && G.Profile.unlock(ch.id, ch.unlock.hint)) newly.push(ch);
+      }
+      return newly;
+    },
+  };
 })();
 
 </script>
@@ -2222,7 +2723,10 @@ G.Profile = {
     d.unlocks[charId] = true;
     this.save();
     const ch = G.Data.CHARACTERS[charId];
-    if (ch) G.Toast.push('SECRET AGENT UNLOCKED: ' + ch.name, why || ch.unlockHint);
+    if (ch) {
+      const label = ch.role === 'office' ? 'OFFICE UNLOCKED: ' : 'UNLOCKED: ';
+      G.Toast.push(label + ch.short, why || ch.unlockHint);
+    }
     return true;
   },
 
@@ -2238,9 +2742,9 @@ G.State = {
   s: null, // current game state
 
   // ----------------------------------------------------------
-  newGame(charId, difficulty) {
+  newGame(charId, difficulty, pace) {
     this.s = {
-      charId,
+      charId: G.Data.CHARACTERS[charId] ? charId : 'malcolm',
       difficulty: G.Data.BALANCE[difficulty] ? difficulty : 'standard',
       month: 0,        // 0..2
       dayOfMonth: 1,   // 1..daysPerMonth
@@ -2256,18 +2760,18 @@ G.State = {
       seasonOver: false,
       effects: { snowTomorrow: false, preapproved: false },
       weather: null,
-      bradUsed: false,
+      joelUsed: false,
       jeffCooldown: 0,
       blakeCooldown: 0,
       aiOverdrive: 0,
       scaleMode: 0,
-      parkingLotTalk: 0,   // Blake's rare 22-minute motivation buff (days)
+      parkingLotTalk: 0,
       tylerCooldown: 0,
       tylerTier: 0,
       systemOverride: 0,
       openHouseEngine: 0,
       commercialUnlocked: false,
-      coffee: 100,          // Blake's coffee meter (only drains when playing Blake)
+      coffee: 100,
       rivalry: 0,
       dayVolume: 0,
       bigfootToday: false,
@@ -2275,6 +2779,12 @@ G.State = {
       marketVisibility: 40,     // 0..100 public-marketing momentum
       eventHistory: [],         // last 5 event ids (no immediate repeats)
       followReport: null,       // yesterday's follow-up summary
+      daysPerMonth: 5,
+      streak: 0,
+      bestStreak: 0,
+      dayMarks: 0,
+      milestones: {},
+      pendingCelebrations: [],
       stats: {
         homesSold: 0, commission: 0, listings: 0, buyers: 0,
         referrals: 0, reviews: 5, followers: 120, happiness: 70,
@@ -2286,21 +2796,27 @@ G.State = {
       upgrades: {},
       log: [],
     };
+    this.s.daysPerMonth = pace === 'full' ? 8 : 5;
+
     // boss plan: two random pool bosses + the final
     const pool = G.shuffle(G.Data.BOSS_POOL).slice(0, 2);
     this.s.bossPlan = [...pool, G.Data.FINAL_BOSS];
 
-    // starting pipeline (Rookie & Tyler start slow; size set by difficulty)
-    if (this.perk() === 'rookie') {
+    const ch = this.char();
+    if (ch.startCash) this.s.cash = ch.startCash;
+    if (ch.startReputation) this.s.stats.reputation = ch.startReputation;
+    if (ch.startFollowers) this.s.stats.followers = ch.startFollowers;
+
+    // starting pipeline. Gaige starts light on purpose.
+    if (ch.perk === 'gaige' || ch.id === 'gaige') {
       this.spawnLead('firsttime');
-    } else if (this.perk() === 'tyler') {
-      this.spawnLead('firsttime');
-      this.spawnLead('signcall');
+      this.s.cash = Math.min(this.s.cash, 500);
     } else {
-      const pool = ['firsttime', 'signcall', this.char().id === 'malcolm' ? 'lakehome' : 'luxury', 'facebook'];
+      const pool = ['firsttime', 'signcall', (ch.lakeLeadWeight || 1) > 1 ? 'lakehome' : 'facebook', 'referral'];
       for (const t of pool.slice(0, this.bal().startingLeadCount)) this.spawnLead(t);
     }
-    if (this.perk() === 'influencer') { this.spawnLead('facebook'); this.spawnLead('facebook'); }
+    if (ch.id === 'liz') this.spawnLead('referral');
+    this.s.energy = this.maxEnergy();
 
     this.rollWeather();
     this.pushLog('Season started. Go get \'em!');
@@ -2314,7 +2830,7 @@ G.State = {
     st.effects = st.effects || { snowTomorrow: false };
     st.effects.preapproved = st.effects.preapproved || false;
     st.weather = st.weather || null;
-    st.bradUsed = st.bradUsed || false;
+    st.joelUsed = st.joelUsed || st.bradUsed || false;
     st.jeffCooldown = st.jeffCooldown || 0;
     st.blakeCooldown = st.blakeCooldown || 0;
     st.aiOverdrive = st.aiOverdrive || 0;
@@ -2345,10 +2861,24 @@ G.State = {
     st.tylerTier = Math.min(st.tylerTier || 0, 3);
     st.scaleMode = Math.min(st.scaleMode || 0, 1);
     st.aiOverdrive = Math.min(st.aiOverdrive || 0, 2);
-    st.parkingLotTalk = Math.min(st.parkingLotTalk || 0, 6);
-    st.systemOverride = Math.min(st.systemOverride || 0, 1);
-    st.openHouseEngine = Math.min(st.openHouseEngine || 0, 1);
-    const today = st.month * G.Data.SEASON.daysPerMonth + st.dayOfMonth;
+    st.parkingLotTalk = 0;
+    st.systemOverride = 0;
+    st.openHouseEngine = 0;
+    st.scaleMode = 0;
+    st.aiOverdrive = 0;
+    st.daysPerMonth = st.daysPerMonth === 8 ? 8 : (st.daysPerMonth || 5);
+    st.streak = st.streak || 0;
+    st.bestStreak = st.bestStreak || 0;
+    st.dayMarks = st.dayMarks || 0;
+    st.milestones = st.milestones || {};
+    st.pendingCelebrations = st.pendingCelebrations || [];
+    st.stats.openHouses = st.stats.openHouses || 0;
+    st.stats.pendings = st.stats.pendings || 0;
+    st.stats.lakeSold = st.stats.lakeSold || 0;
+    st.stats.inspectionsCleared = st.stats.inspectionsCleared || 0;
+    const retired = { blake: 1, tyler: 1, grandpa: 1, influencer: 1, veteran: 1, rookie: 1 };
+    if (!G.Data.CHARACTERS[st.charId] || retired[st.charId]) st.charId = 'malcolm';
+    const today = st.month * (st.daysPerMonth || G.Data.SEASON.daysPerMonth) + st.dayOfMonth;
     for (const l of st.leads || []) {
       l.lastContactDay = l.lastContactDay ?? today;
       l.daysSinceContact = l.daysSinceContact || 0;
@@ -2375,13 +2905,16 @@ G.State = {
   },
 
   // ----------------------------------------------------------
-  char() { return G.Data.CHARACTERS[this.s.charId]; },
-  perk() { return this.char().perk || null; },
+  char() { return G.Data.CHARACTERS[this.s.charId] || G.Data.CHARACTERS.malcolm; },
+  perk() { return this.char().perk || this.char().id || null; },
   rivalChar() {
-    // secret characters still feud with Bridger by default; Bridger plays vs Malcolm
-    if (this.s.charId === 'bridger') return G.Data.CHARACTERS.malcolm;
+    // The season is Malcolm Wallaker vs Bridger Hopkins.
+    // Playing anyone else, you are still chasing Bridger. Playing Bridger, Malcolm is the one across the table.
+    const me = this.char();
+    if (me && me.id === 'bridger') return G.Data.CHARACTERS.malcolm;
     return G.Data.CHARACTERS.bridger;
   },
+  daysInMonth() { return (this.s && this.s.daysPerMonth) || G.Data.SEASON.daysPerMonth; },
   has(up) { return !!this.s.upgrades[up]; },
   commercialOk() { return this.s.commercialUnlocked || this.has('commercialdiv'); },
 
@@ -2390,19 +2923,17 @@ G.State = {
   },
 
   maxEnergy() {
+    const ch = this.char();
+    const hustle = ch.id === 'gaige' ? Math.min(2, Math.floor(this.s.stats.homesSold / 3)) : Math.min(3, this.rookieLevel());
     return G.Data.SEASON.baseEnergy
       + (this.has('ai') ? 1 : 0)
       + (this.has('corporateHQ') ? 1 : 0)
-      + (this.s.parkingLotTalk > 0 ? 1 : 0)  // Blake's parking lot talk: motivation +100%
-      + (this.perk() === 'blake' && this.s.coffee <= 0 ? -1 : 0)  // out of coffee: slower
-      + Math.min(3, this.rookieLevel());
+      + (ch.energyMod || 0)
+      + ((this.s.streak || 0) >= 5 ? 1 : 0)
+      + hustle;
   },
 
-  // Tyler's Daily Discipline passive tier (playable). Dormant the first
-  // few days (weak early), then compounds (strong late).
-  tylerPassiveTier() {
-    return this.perk() === 'tyler' ? Math.min(3, Math.floor((this.totalDay() - 1) / 3)) : 0;
-  },
+  tylerPassiveTier() { return 0; },
 
   blakeBuff() {
     if (this.s.scaleMode > 0) return { label: 'SCALE MODE', days: this.s.scaleMode, color: G.C.cyan };
@@ -2424,7 +2955,7 @@ G.State = {
     return out;
   },
 
-  totalDay() { return this.s.month * G.Data.SEASON.daysPerMonth + this.s.dayOfMonth; },
+  totalDay() { return this.s.month * this.daysInMonth() + this.s.dayOfMonth; },
   monthName() { return G.Data.SEASON.months[this.s.month]; },
 
   pushLog(msg) {
@@ -2446,11 +2977,7 @@ G.State = {
     if (this.has('camera')) m *= 1.5;
     if (this.has('social')) m *= 2;
     if (this.has('tiktok')) m *= 1.3;
-    const perk = this.perk();
-    if (perk === 'grandpa') m *= 0.25;
-    if (perk === 'veteran') m *= 0.5;
-    if (perk === 'influencer') m *= 1.5;
-    if (perk === 'blake') m *= 1.25;
+    m *= this.char().followerMult || 1;
     return m;
   },
 
@@ -2473,7 +3000,7 @@ G.State = {
     const w = this.weatherData();
     let mod = (w.mods || {})[actionId] || 0;
     // snowmobile makes winter weather harmless
-    if (mod < 0 && (w.id === 'blizzard' || w.id === 'icestorm') && this.has('snowmobile')) mod = 0;
+    if (mod < 0 && (w.id === 'blizzard' || w.id === 'icestorm') && (this.has('snowmobile') || this.char().id === 'kaila')) mod = 0;
     return mod;
   },
 
@@ -2520,6 +3047,9 @@ G.State = {
             w *= ch.lakeLeadWeight || 1;
             if (this.has('waterfrontOffice')) w *= 2;
           }
+          if (t.outdoors && (ch.outdoorsWeight || 1) > 1) w *= ch.outdoorsWeight;
+          if ((t.id === 'facebook' || t.id === 'zestimate') && ch.id === 'emily') w *= 2.6;
+          if (t.relo && (ch.reloWeight || 1) > 1) w *= ch.reloWeight;
           if (t.luxury && this.has('luxdiv')) w *= 2;
           if (t.relo && this.has('privatejet')) w *= 2;
           if ((t.id === 'cabin' || t.id === 'cabininv' || t.id === 'vacation') && this.has('cabinexpert')) w *= 1.5;
@@ -2536,7 +3066,9 @@ G.State = {
     if (type.commercial && this.has('commercialdiv')) value = Math.round(value * 1.1);
 
     let warmth = G.clamp(type.warmth + G.randInt(-10, 10), 5, 95);
-    if (this.perk() === 'grandpa') warmth = G.clamp(warmth + 15, 5, 100);
+    if ((type.outdoors || type.lake) && this.char().id === 'kaila') warmth = G.clamp(warmth + 8, 5, 100);
+    if ((type.id === 'facebook' || type.id === 'zestimate') && this.char().id === 'emily') warmth = G.clamp(warmth + 12, 5, 100);
+    if (type.relo && this.char().id === 'deb') warmth = G.clamp(warmth + 12, 5, 100);
     if (type.lake && this.has('fishingboat')) warmth = G.clamp(warmth + 10, 5, 100);
     if (type.lake && this.has('lakecert')) warmth = G.clamp(warmth + 10, 5, 100);
     if (type.outdoors && this.has('atv')) warmth = G.clamp(warmth + 15, 5, 100);
@@ -2550,6 +3082,10 @@ G.State = {
       label: type.label,
       seller: !!type.seller,
       lake: !!type.lake,
+      outdoors: !!(type.outdoors || type.lake),
+      online: type.id === 'facebook' || type.id === 'zestimate',
+      range: false,
+      town: null,
       luxury: !!type.luxury,
       commercial: !!type.commercial,
       value,
@@ -2567,8 +3103,31 @@ G.State = {
       attendedOpenHouse: opts.stage === 'attendee',
       followUpDeadline: opts.stage === 'attendee' ? this.bal().attendeeDeadline : null,
     };
+    const rangeChance = this.char().id === 'tania' ? 0.5 : 0.1;
+    if (!lead.commercial && G.chance(rangeChance)) this.tagRange(lead);
     s.leads.push(lead);
     s.stats.leadsReceived++;
+    return lead;
+  },
+
+  // Bridger's number: fair price, buyers show up, the listing is not a trophy.
+  priceRight(lead, lines) {
+    if (!lead) return;
+    lead.overpriced = false;
+    lead.pricedRight = true;
+    lead.listingMomentum = Math.max(lead.listingMomentum || 0, 52);
+    this.s.stats.perfectPrices = (this.s.stats.perfectPrices || 0) + 1;
+    if (lines) lines.push('PRICE IS RIGHT: ' + lead.name + ' listed at ' + G.money(lead.value) + '.');
+  },
+
+  tagRange(lead) {
+    const towns = G.Data.RANGE_TOWNS || ['HIBBING', 'VIRGINIA', 'EVELETH', 'CHISHOLM'];
+    lead.range = true;
+    lead.town = G.choice(towns);
+    if (lead.label.indexOf(lead.town) !== 0) lead.label = lead.town + ' ' + lead.label;
+    const bump = this.char().id === 'tania' ? (this.char().rangeValue || 1.12) : 1.04;
+    lead.value = Math.round(lead.value * bump);
+    if (this.char().id === 'tania') lead.warmth = G.clamp(lead.warmth + 14, 5, 100);
     return lead;
   },
 
@@ -2608,6 +3167,7 @@ G.State = {
     lead.stage = toStage;
     lead.daysInStage = 0;
     if (toStage !== 'attendee') { lead.qualified = true; lead.followUpDeadline = null; }
+    if (toStage === 'pending') this.s.stats.pendings = (this.s.stats.pendings || 0) + 1;
     if (toStage === 'active') {
       if (lead.seller) {
         this.s.stats.listings++;
@@ -2643,7 +3203,6 @@ G.State = {
         return this.leadsInStage('attendee', 'new', 'hot', 'appt', 'active').length
           ? { ok: true } : { ok: false, reason: 'NOBODY TO NUDGE' };
       case 'video':
-        if (this.perk() === 'grandpa') return { ok: false, reason: 'GRANDPA SAYS NO' };
         return { ok: true };
       case 'listing':
         return this.leadsInStage('appt').some(l => l.seller)
@@ -2694,7 +3253,7 @@ G.State = {
     const pre = this.s.effects.preapproved;
     // New pendings must sit a couple days (TC trims one, never below 1)
     let wait = this.bal().pendingDaysBeforeClose;
-    if (this.has('tc')) wait = Math.max(1, wait - 1);
+    if (this.has('tc') || this.char().id === 'tania') wait = Math.max(1, wait - 1);
     return this.leadsInStage('pending').filter(l => !l.issue && (pre || l.delay <= 0) && l.daysInStage >= wait);
   },
 
@@ -2702,12 +3261,20 @@ G.State = {
   scoreAdjust(id) {
     let adj = this.weatherMod(id);
     adj += this.rookieLevel() * 0.04;
+    const ch = this.char();
     if (id === 'show') {
       if (this.has('matterport')) adj += 0.05;
       if (this.has('luxsuv')) adj += 0.05;
       if (this.has('pontoon')) adj += 0.08;
       if (this.has('lakecert')) adj += 0.04;
+      adj += ch.showBonus || 0;
     }
+    if (id === 'inspect') adj += ch.inspectBonus || 0;
+    if (ch.id === 'malcolm') adj += Math.min(0.08, (this.s.teamRecruits || 0) * 0.02);
+    if (ch.id === 'adam' && (id === 'listing' || id === 'negotiate' || id === 'show')) adj += 0.08;
+    if ((this.s.broccoliDays || 0) > 0) adj += 0.08;
+    adj += Math.min(0.1, (this.s.streak || 0) * 0.02);
+    if (ch.id === 'scotty') adj += (this.s.stats.happiness - 50) / 900;
     if (id === 'listing' && this.has('matterport')) adj += 0.1;
     if (id === 'video') {
       if (this.has('tiktok')) adj += 0.1;
@@ -2715,21 +3282,21 @@ G.State = {
     }
     if ((id === 'negotiate' || id === 'inspect') && this.s.effects.preapproved) adj += 0.15;
     if (this.s.scaleMode > 0) adj += 0.05;   // Scale Mode: everything a touch smoother
-    if (this.s.parkingLotTalk > 0) adj += 0.05; // Parking Lot Talk: you believe, therefore you close
+    if (this.s.parkingLotTalk > 0) adj += 0.05; // legacy buff, no longer granted
     // county road detour: tomorrow's tours suffer
-    if (this.s.effects.detour > 0 && (id === 'show' || id === 'openhouse')) adj -= 0.15;
+    if (this.s.effects.detour > 0 && (id === 'show' || id === 'openhouse') && ch.id !== 'deb') adj -= 0.15;
     // market visibility: known agents draw better open house crowds
     if (id === 'openhouse') adj += (this.s.marketVisibility - 40) / 500;
     return adj;
   },
 
   // ----------------------------------------------------------
-  // Close a single lead: shared by close action, Brad, commercial
+  // Close a single lead: shared by close action, Joel, commercial
   // ----------------------------------------------------------
   closeLead(l, lines) {
     const s = this.s;
     const rate = l.commercial ? 0.005 : 0.027;
-    const comm = Math.round(l.value * rate);
+    const comm = Math.round(l.value * rate * (this.char().commissionMult || 1));
     // Commercial deals are their own stat - they do NOT count as homes sold
     if (l.commercial) s.stats.commercialDeals++;
     else s.stats.homesSold++;
@@ -2738,7 +3305,8 @@ G.State = {
     s.dayVolume += l.value;
     s.marketVisibility = G.clamp(s.marketVisibility + 5, 0, 100);  // SOLD signs sell
     lines.push('SOLD! ' + l.name + ' - ' + G.money(l.value) + ' (+' + G.money(comm) + ' commission)');
-    s.stats.happiness = G.clamp(s.stats.happiness + 4, 0, 100);
+    const happyGain = Math.round(4 * (this.char().happyMult || 1));
+    s.stats.happiness = G.clamp(s.stats.happiness + happyGain, 0, 100);
 
     if (G.chance(0.5)) {
       s.stats.reviews++;
@@ -2748,9 +3316,9 @@ G.State = {
         'They brought bars to closing. BARS.', '10/10 would house again.',
       ]) + '"');
     }
-    const refChance = 0.35 + s.stats.happiness / 400 + (this.has('retreat') ? 0.1 : 0);
+    const refChance = 0.35 + s.stats.happiness / 400 + (this.has('retreat') ? 0.1 : 0) + (this.char().referralBonus || 0);
     if (G.chance(refChance)) {
-      const n = this.perk() === 'grandpa' ? 2 : 1;
+      const n = this.char().id === 'emily' ? 2 : 1;
       for (let i = 0; i < n; i++) {
         const r = this.spawnLead('referral');
         if (!r) { lines.push('They wanted to refer a friend, but your plate is FULL. (pipeline cap)'); break; }
@@ -2761,7 +3329,23 @@ G.State = {
     }
     // lifetime achievements
     G.Profile.bump('closes');
-    if (l.lake) G.Profile.bump('lakeSold');
+    if (l.lake) {
+      G.Profile.bump('lakeSold');
+      s.stats.lakeSold = (s.stats.lakeSold || 0) + 1;
+    }
+    if (l.lake || l.outdoors) s.stats.outdoorsSold = (s.stats.outdoorsSold || 0) + 1;
+    if (l.range) s.stats.rangeSold = (s.stats.rangeSold || 0) + 1;
+    if (!l.commercial && s.month === 0) s.stats.aprilClose = true;
+    if (!l.commercial && s.stats.homesSold === 1) {
+      this.celebrate('firstHome', 'FIRST KEYS!', ['The first closing of the season.', 'Uff da, that feels good.']);
+    }
+    if (!l.commercial && s.stats.homesSold === 5) {
+      this.celebrate('fiveHomes', 'FIVE HOMES!', ['The yard signs are multiplying. Nice work.']);
+    }
+    if (!l.commercial && s.stats.homesSold > s.rival.homesSold) {
+      this.celebrate('ahead', 'YOU TOOK THE LEAD!', ['The billboard broker can wait.']);
+    }
+    if (G.Roster) G.Roster.evaluate(s);
     if (this.has('ai')) G.Profile.bump('aiCloses');
     if (s.stats.homesSold >= 12) G.Profile.award('closer');
     if (s.dayVolume >= 1000000) G.Profile.award('monday');
@@ -2797,7 +3381,11 @@ G.State = {
         for (const l of picked) {
           this.touch(l);
           l.warmth = G.clamp(l.warmth + Math.round(10 + 10 * score), 0, 100);
-          if (l.stage === 'new' && l.warmth >= bal.warmThreshold) {
+          if (ch.id === 'emily' && l.online && score >= 0.4 && (l.stage === 'new' || l.stage === 'hot')) {
+            this.advance(l, 'appt');
+            s.stats.zillowFlips = (s.stats.zillowFlips || 0) + 1;
+            lines.push(l.name + ' went from a Zillow ping to an appointment.');
+          } else if (l.stage === 'new' && l.warmth >= bal.warmThreshold) {
             this.advance(l, 'hot'); lines.push(l.name + ' warmed up! (' + l.label + ')');
           } else if (l.stage === 'hot' && l.warmth >= bal.apptThreshold) {
             this.advance(l, 'appt'); lines.push(l.name + ' booked an appointment!');
@@ -2820,7 +3408,7 @@ G.State = {
         let advanced = 0;
         for (const l of picked) {
           if (l.stage === 'new' && l.warmth >= bal.warmThreshold) {
-            this.advance(l, 'hot'); lines.push(l.name + ' replied with 3 emojis. Warm!'); advanced++;
+            this.advance(l, 'hot'); lines.push(l.name + ' replied with three exclamation points. Warm!'); advanced++;
           } else if (l.stage === 'hot' && l.warmth >= bal.apptThreshold) {
             this.advance(l, 'appt'); lines.push(l.name + ' set an appointment by text!'); advanced++;
           }
@@ -2834,20 +3422,13 @@ G.State = {
         G.Profile.load().coffeeVisits++;
         G.Profile.save();
         const bal = this.bal();
-        // Blake refuels at the coffee shop
-        if (this.perk() === 'blake') {
-          const wasEmpty = s.coffee <= 0;
-          s.coffee = 100;
-          if (wasEmpty) { s.energy = Math.min(s.energy + 1, this.maxEnergy()); lines.push('COFFEE REFILLED to 100%! Blake is back to 100 mph. (+1 energy)'); }
-          else lines.push('Coffee topped off to 100%. The cup that never empties, empties into Blake.');
-        }
         lines.push(grade(score) + ' ' + G.choice(G.Data.FLAVOR.followup));
         // Contact a limited number of people - most at-risk first
         const riskOrder = { 'ABOUT TO GHOST': 0, 'AT RISK': 1, 'DUE TODAY': 2, 'SAFE': 3 };
         const pool = this.leadsInStage('attendee', 'new', 'hot', 'appt', 'active')
           .sort((a, b) => (riskOrder[this.leadRisk(a)] - riskOrder[this.leadRisk(b)]) ||
                           ((b.daysSinceContact || 0) - (a.daysSinceContact || 0)));
-        const contacts = bal.followupContacts + (this.has('crm') ? 2 : 0);
+        const contacts = bal.followupContacts + (this.has('crm') ? 2 : 0) + (ch.followupBonus || 0);
         const picked = pool.slice(0, contacts);
         for (const l of picked) {
           const late = (l.daysSinceContact || 0) >= 2;
@@ -2907,7 +3488,7 @@ G.State = {
           if (l.stage !== 'attendee') {
             this.touch(l);
             l.warmth = G.clamp(l.warmth + 3, 0, 100);
-            lines.push('AI ASSISTANT auto-texted ' + l.name + '. It used two emojis. (+3 warmth)');
+            lines.push('AI ASSISTANT auto-texted ' + l.name + '. Polite, and only one exclamation point. (+3 warmth)');
           }
         }
         // Excellent follow-up occasionally creates something special
@@ -2941,6 +3522,7 @@ G.State = {
         const listing = this.bestLead(listings);
         const bumpMomentum = (n) => { if (listing) listing.listingMomentum = G.clamp((listing.listingMomentum ?? 50) + n, 0, 100); };
         const band = score >= 0.9 ? 3 : score >= 0.7 ? 2 : score >= 0.45 ? 1 : 0;
+        s.stats.openHouses = (s.stats.openHouses || 0) + 1;
         lines.push(grade(score) + ' The open house wrapped up.');
 
         let qualified = 0, attendees = 0;
@@ -3029,10 +3611,8 @@ G.State = {
           s.stats.followers += extra;
           lines.push('IT\'S TRENDING LOCALLY! +' + extra + ' bonus followers!');
         }
-        if (s.stats.followers >= 5000) {
-          G.Profile.award('butterfly');
-          G.Profile.unlock('influencer', 'You reached 5,000 followers!');
-        }
+        if (s.stats.followers >= 5000) G.Profile.award('butterfly');
+        if (G.Roster) G.Roster.evaluate(s);
         break;
       }
 
@@ -3043,6 +3623,8 @@ G.State = {
         const bonus = ch.listingBonus + (this.has('drone') ? 0.15 : 0);
         if (score + bonus >= 0.5) {
           this.advance(l, 'active');
+          if (ch.id === 'bridger') this.priceRight(l, lines);
+          if (ch.valueBonus) l.value = Math.round(l.value * (1 + ch.valueBonus));
           if (this.has('drone')) l.value = Math.round(l.value * 1.1);
           if (this.has('staging')) l.value = Math.round(l.value * 1.05);
           if (this.has('luxOffice')) l.value = Math.round(l.value * 1.05);
@@ -3060,21 +3642,24 @@ G.State = {
       case 'show': {
         let buyers = this.leadsInStage('active', 'appt').filter(l => !l.seller);
         buyers.sort((a, b) => (a.stage === 'active' ? -1 : 1) - (b.stage === 'active' ? -1 : 1));
-        const howMany = this.has('assistant') ? 2 : 1;
+        const howMany = (this.has('assistant') || ch.id === 'jordan') ? 2 : 1;
         const picked = buyers.slice(0, howMany);
+        const signAt = ch.id === 'jordan' ? 0.22 : 0.35;
+        const offerAt = ch.id === 'jordan' ? 0.4 : 0.55;
         if (s.effects.showPenalty) { s.effects.showPenalty = false; lines.push('(The lockbox finally opened. Your mitten will never be the same.)'); }
-        lines.push(grade(score) + ' Tour day!');
+        lines.push(grade(score) + (ch.id === 'jordan' ? ' Jordan knows this buyer already.' : ' Tour day!'));
         for (const l of picked) {
           this.touch(l);
           if (l.stage === 'appt') {
-            if (score >= 0.35) {
+            if (score >= signAt) {
               this.advance(l, 'active');
               lines.push(l.name + ' is now YOUR buyer client!');
             } else {
               lines.push(l.name + ' "didn\'t vibe with the carpet." Still at appt.');
             }
-          } else if (score >= 0.55) {
+          } else if (score >= offerAt) {
             this.advance(l, 'offer');
+            s.stats.offersWritten = (s.stats.offersWritten || 0) + 1;
             lines.push(l.name + ' FOUND THE ONE! (' + G.choice([
               'It was the hot tub.', 'The garage fits the boat AND the wheeler.',
               'A bald eagle flew by during the tour. Done deal.', 'Granite. Countertops.',
@@ -3089,12 +3674,22 @@ G.State = {
 
       case 'offer': {
         G.Profile.bump('offers');
-        const ready = this.offerReadyLeads();
-        const l = this.bestLead(ready);
-        this.touch(l);
-        this.advance(l, 'offer');
-        lines.push(G.choice(G.Data.FLAVOR.offer));
-        lines.push(l.name + ' (' + G.money(l.value) + ') is now UNDER OFFER.');
+        let ready = this.offerReadyLeads();
+        if (ch.id === 'jordan') {
+          const buyersOnly = ready.filter(l => !l.seller);
+          if (buyersOnly.length) ready = buyersOnly;
+        }
+        ready = ready.slice().sort((a, b) => b.value - a.value);
+        const count = ch.id === 'jordan' ? Math.min(2, ready.length) : 1;
+        const picked = ready.slice(0, count);
+        if (ch.id === 'jordan') lines.push('Jordan already had the offer language ready.');
+        for (const l of picked) {
+          this.touch(l);
+          this.advance(l, 'offer');
+          s.stats.offersWritten = (s.stats.offersWritten || 0) + 1;
+          lines.push(G.choice(G.Data.FLAVOR.offer));
+          lines.push(l.name + ' (' + G.money(l.value) + ') is now UNDER OFFER.');
+        }
         break;
       }
 
@@ -3105,11 +3700,13 @@ G.State = {
         let power = G.clamp(score + ch.negotiateBonus, 0, 1);
         if (s.effects.preapproved) {
           power = 1;
-          lines.push('BRAD\'S PRE-APPROVAL DID THE TALKING. No contingencies. No mercy.');
+          lines.push('JOEL\'S PRE-APPROVAL DID THE TALKING. No contingencies. No mercy.');
           s.effects.preapproved = false;
         }
         if (power >= 0.45) {
           this.advance(l, 'pending');
+          s.stats.negotiationsWon = (s.stats.negotiationsWon || 0) + 1;
+          if (ch.id === 'jillian') lines.push('Jillian did not blink. They did. Everybody shook on it.');
           if (power >= 0.8) {
             l.value = Math.round(l.value * 1.05);
             lines.push('MASTERCLASS. Deal agreed ABOVE asking: ' + G.money(l.value) + '!');
@@ -3139,6 +3736,8 @@ G.State = {
         this.touch(l);
         if (score >= 0.4) {
           l.issue = false;
+          s.stats.inspectionsCleared = (s.stats.inspectionsCleared || 0) + 1;
+          G.Profile.bump('inspectionsCleared');
           lines.push(grade(score) + ' Issues fixed on ' + l.name + '\'s deal!');
           lines.push('The inspector nodded approvingly. High praise.');
         } else {
@@ -3188,11 +3787,14 @@ G.State = {
       }
     }
 
+    const good = score == null || score >= 0.45;
+    if (good) s.dayMarks = (s.dayMarks || 0) + 1;
+    if (G.Roster) G.Roster.evaluate(s);
     return { lines, sold };
   },
 
   // ----------------------------------------------------------
-  // Legendary power-ups: Brad Nolan & Jeff Nobleza
+  // Legendary power-ups: Joel & Jeff Nobleza
   // ----------------------------------------------------------
   // One major mentor benefit per day - visiting a second mentor gets a rain check
   mentorBusy() {
@@ -3204,14 +3806,14 @@ G.State = {
     ]), '(One mentor power-up per day - come back tomorrow.)'], used: true };
   },
 
-  visitBrad() {
+  visitJoel() {
     const s = this.s;
-    if (s.bradUsed) return { lines: ['Brad is out closing loans. Back tomorrow. His voicemail is just air horns.'], used: true };
+    if (s.joelUsed) return { lines: ['Joel is out closing loans. Back tomorrow. His voicemail is just air horns.'], used: true };
     const busy = this.mentorBusy();
     if (busy) return busy;
-    s.bradUsed = true;
+    s.joelUsed = true;
     s.mentorUsedToday = true;
-    const B = G.Data.BRAD;
+    const B = G.Data.JOEL;
     const lines = [B.name + ' - ' + B.title];
     lines.push(...B.intro);
     lines.push(G.choice(B.lines));
@@ -3271,126 +3873,45 @@ G.State = {
   },
 
   // ----------------------------------------------------------
-  // Blake Suddath - The Growth Guru (AI Overdrive / Scale Mode)
+  // Daily celebrations and the once-a-day ability.
+  // Abilities are data (characters.js effect ids).
   // ----------------------------------------------------------
-  visitBlake() {
+  celebrate(id, title, textLines) {
     const s = this.s;
-    const B = G.Data.BLAKE;
-    if (s.blakeCooldown > 0) {
-      return { lines: ['BLAKE: "Systems are still running - give it ' + s.blakeCooldown + ' day(s)."',
-        G.choice(B.coffee), '"' + G.choice(['Scale beats hustle.', 'Work smarter, not harder.']) + '"'], used: true };
-    }
-    const busy = this.mentorBusy();
-    if (busy) return busy;
-    if (s.energy < 1) {
-      return { lines: ['BLAKE: "Love the energy. Wait. You have none. Come back with 1 energy."'], used: true };
-    }
-    s.energy -= 1;
-    s.blakeCooldown = 6;
-    s.mentorUsedToday = true;
-    const lines = [B.name + ' - ' + B.title];
-
-    if (G.chance(B.talkChance)) {
-      // RARE FIND: the 22-minute parking lot talk (submitted by the real Blake)
-      s.parkingLotTalk = Math.max(s.parkingLotTalk, B.talkDays);
-      s.energy = Math.min(s.energy + 1, this.maxEnergy());
-      lines.push(...B.talkLines);
-      lines.push(G.choice(B.lines));
-      G.Profile.award('parkinglot');
-      return { lines };
-    }
-    if (G.chance(B.scaleChance)) {
-      // ULTIMATE: Scale Mode (1 day)
-      s.scaleMode = Math.max(s.scaleMode, 1);
-      s.energy = Math.min(s.energy + 1, this.maxEnergy());
-      lines.push(...B.scaleLines);
-      const l = this.spawnLead();
-      if (l) lines.push('+ LEAD: ' + l.name + ' recruited by the AI swarm!');
-      else lines.push('The AI swarm found a lead... but your pipeline is FULL.');
-      lines.push('', 'SCALE MODE active today: +1 energy, smoother tasks, drones hunt overnight.');
-      G.Profile.award('scalemode');
-      G.Profile.unlock('blake', 'You triggered Blake\'s Scale Mode!');
-    } else {
-      // SPECIAL: AI Overdrive (2 days, passive-only)
-      s.aiOverdrive = Math.max(s.aiOverdrive, 2);
-      lines.push(...B.intro);
-      lines.push('', B.ability + ' DEPLOYED:');
-      const twoDrones = G.shuffle(B.drones).slice(0, 2);
-      for (const d of twoDrones) lines.push('* ' + d);
-      lines.push(G.choice(B.coffee));
-      lines.push('', 'AI OVERDRIVE active 2 days: the drones may source leads overnight,');
-      lines.push('nudge your pipeline, and earn a little passive income.');
-    }
-    lines.push(G.choice(B.lines));
-    return { lines };
+    s.milestones = s.milestones || {};
+    if (s.milestones[id]) return false;
+    s.milestones[id] = true;
+    s.pendingCelebrations = s.pendingCelebrations || [];
+    s.pendingCelebrations.push({ title, lines: textLines });
+    return true;
   },
 
-  // ----------------------------------------------------------
-  // Tyler Lewis - The Systems Architect (systems that compound;
-  // weak early, strong late). Every visit runs Cirql Scan and
-  // strengthens the Daily Discipline passive; may deploy the
-  // Open House Engine or the System Override ultimate.
-  // ----------------------------------------------------------
-  visitTyler() {
-    const s = this.s;
-    const T = G.Data.TYLER;
-    if (s.tylerCooldown > 0) {
-      return { lines: ['TYLER: "The systems are running. Give it ' + s.tylerCooldown + ' day(s)."',
-        '"' + G.choice(['Consistency beats intensity.', 'The basics always win.']) + '"'], used: true };
-    }
-    const busy = this.mentorBusy();
-    if (busy) return busy;
-    if (s.energy < 1) {
-      return { lines: ['TYLER: "A system needs an operator. Come back with 1 energy."'], used: true };
-    }
-    s.energy -= 1;
-    s.tylerCooldown = 5;
-    s.mentorUsedToday = true;
-    s.tylerTier = Math.min(s.tylerTier + 1, 3);
-    const lines = [T.name + ' - ' + T.title];
-
-    // Cirql Scan: warms only your two coldest prospects
-    lines.push(...T.scanLines.slice(0, 3));
-    const coldest = this.leadsInStage('new', 'hot').sort((a, b) => a.warmth - b.warmth).slice(0, 2);
-    for (const l of coldest) {
-      l.warmth = G.clamp(l.warmth + 5, 0, 100);
-      lines.push('* ' + l.name + ' resurfaced in the CRM. (+5 warmth)');
-    }
-    // Sometimes the scan digs up a real person
-    if (G.chance(0.35)) {
-      const l = this.spawnLead(G.chance(0.5) ? 'pastclient' : 'referral');
-      if (l) lines.push('+ REVEALED: ' + l.name + ' (' + l.label + ')');
-      else lines.push('The scan found someone... but your pipeline is FULL.');
-    }
-
-    // Bigger systems unlock at higher tiers (weak early, useful late)
-    if (s.tylerTier >= 3 && G.chance(T.overrideChance)) {
-      s.systemOverride = Math.max(s.systemOverride, 1);
-      lines.push('', ...T.overrideLines);
-      lines.push('SYSTEM OVERRIDE active 1 day.');
-      G.Profile.award('sysoverride');
-      G.Profile.unlock('tyler', 'You triggered Tyler\'s System Override!');
-    } else if (s.tylerTier >= 2 && G.chance(T.engineChance)) {
-      s.openHouseEngine = Math.max(s.openHouseEngine, 1);
-      lines.push('', ...T.engineLines);
-      lines.push('OPEN HOUSE ENGINE active 1 day.');
-    } else {
-      lines.push('', 'DAILY DISCIPLINE strengthened (tier ' + s.tylerTier + '/3): nightly warmth,',
-        'lower ghosting risk, and a small referral chance. Systems compound.');
-    }
-    lines.push(G.choice(T.lines));
-    return { lines };
+  pullCelebrations() {
+    const c = (this.s && this.s.pendingCelebrations) || [];
+    if (this.s) this.s.pendingCelebrations = [];
+    return c;
   },
 
-  // ----------------------------------------------------------
-  // Special ability (once per day) - per character
-  // ----------------------------------------------------------
+  coachTip() {
+    if (this.actionAvailable('close').ok) return 'A deal can close today.';
+    if (this.actionAvailable('inspect').ok) return 'An inspection is waiting on you.';
+    if (this.actionAvailable('negotiate').ok) return 'An offer wants a yes.';
+    if (this.actionAvailable('offer').ok) return 'A client is ready for an offer.';
+    if (this.leadsInStage('attendee').length) return 'Open house guests need a follow-up.';
+    if (this.actionAvailable('listing').ok) return 'A seller appointment is on the books.';
+    if (this.actionAvailable('show').ok) return 'A buyer is ready to tour.';
+    const cooling = this.s.leads.filter(l => this.leadRisk(l) !== 'SAFE').length;
+    if (cooling) return cooling + ' leads are cooling. Follow up.';
+    return 'Prospect, then move the warm ones.';
+  },
+
   useAbility() {
     const s = this.s;
     if (s.abilityUsed) return null;
+    const ch = this.char();
+    const effect = (ch.ability && ch.ability.effect) || 'advance';
     s.abilityUsed = true;
     const lines = [];
-    const perk = this.perk();
 
     const advanceBest = () => {
       const pick =
@@ -3401,75 +3922,388 @@ G.State = {
         this.bestLead(this.leadsInStage('hot')) ||
         this.bestLead(this.leadsInStage('new'));
       if (!pick) return null;
-      if (pick.stage === 'pending' && pick.issue) { pick.issue = false; return pick.name + '\'s inspection issue: waived!'; }
+      if (pick.stage === 'pending' && pick.issue) { pick.issue = false; return pick.name + ' inspection issue: cleared.'; }
       const next = { new: 'hot', hot: 'appt', appt: 'active', active: 'offer', offer: 'pending' }[pick.stage];
+      if (!next) return null;
       this.advance(pick, next);
-      return pick.name + ' advances to ' + G.Data.STAGE_LABELS[next] + '!';
+      return pick.name + ' moves to ' + G.Data.STAGE_LABELS[next] + '.';
     };
 
-    if (s.charId === 'malcolm') {
-      const gain = Math.round(G.randInt(300, 800) * this.followerGainMult());
-      s.stats.followers += gain;
-      const n = G.randInt(1, 2);
-      lines.push('VIRAL VIDEO! "' + G.choice([
-        'AGENT RATES EVERY LAKE (PART 7)', 'I SLEPT IN AN ICE HOUSE FOR A LISTING',
-        'THE LOON CALL CHALLENGE', 'SELLING A HOUSE IN -30 (GONE WRONG)',
-      ]) + '"');
-      lines.push('+' + gain + ' FOLLOWERS!');
-      for (let i = 0; i < n; i++) {
-        const l = this.spawnLead(G.chance(0.4) ? 'lakehome' : 'facebook');
-        if (l) lines.push('+ LEAD: ' + l.name + ' - "saw your video, had to call!"');
-        else lines.push('More viewers wanted to call... but your pipeline is FULL.');
+    lines.push(ch.ability.name + '!');
+    switch (effect) {
+      case 'priceisright': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const listing = this.leadsInStage('active').filter(l => l.seller)
+          .sort((a, b) => ((b.overpriced ? 1 : 0) - (a.overpriced ? 1 : 0)) || ((a.listingMomentum || 50) - (b.listingMomentum || 50)))[0];
+        if (listing) {
+          this.priceRight(listing, lines);
+          lines.push(listing.name + ' is priced for the buyers who are actually out there.');
+          break;
+        }
+        lines.push('No listing to reprice yet. The next pricing call still runs through Bridger.');
+        break;
       }
-    } else if (s.charId === 'bridger') {
-      lines.push('POWER CLOSE! Bridger straightens his tie...');
-      const r = advanceBest();
-      lines.push(r || '...but there was nobody to close. He closed a car door, powerfully.');
-    } else if (perk === 'grandpa') {
-      lines.push('THE ROLODEX! Grandpa licks a thumb and flips...');
-      for (let i = 0; i < 2; i++) {
-        const l = this.spawnLead('pastclient');
-        if (l) { l.warmth = 85; lines.push('+ ' + l.name + ' answered on the first ring. Of course they did.'); }
-        else lines.push('The Rolodex had more names, but your plate is FULL.');
+      case 'recruit': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const desk = (G.Roster && G.Roster.office) || [];
+        const hire = desk.length ? G.choice(desk) : null;
+        s.teamRecruits = (s.teamRecruits || 0) + 1;
+        const zip = Math.min(4, s.teamRecruits);
+        for (const l of s.leads) l.warmth = G.clamp(l.warmth + 3 + zip, 0, 100);
+        if (hire) lines.push(hire.short + ' JOINS THE DESK. The whole team just got a lift.');
+        lines.push('TEAM SIZE ' + (1 + s.teamRecruits) + '. Every lead felt the extra hands.');
+        if (G.chance(0.55)) {
+          const extra = this.spawnLead();
+          if (extra) lines.push('+ LEAD: ' + extra.name + ' came in because the office showed up.');
+        }
+        break;
       }
-    } else if (perk === 'influencer') {
-      const gain = Math.round(G.randInt(400, 900) * this.followerGainMult());
-      s.stats.followers += gain;
-      lines.push('GOING LIVE! Chaos. Beautiful chaos.');
-      lines.push('+' + gain + ' FOLLOWERS!');
-      const n = G.randInt(1, 2);
-      for (let i = 0; i < n; i++) {
-        const l = this.spawnLead('facebook');
-        if (l) lines.push('+ LEAD: ' + l.name + ' from the live chat!');
-        else lines.push('The chat is full of buyers... and your pipeline is full of everyone else.');
+      case 'viral': {
+        const gain = Math.round(G.randInt(280, 760) * this.followerGainMult());
+        s.stats.followers += gain;
+        lines.push('"' + G.choice([
+          'AGENT RATES EVERY LAKE, PART 7', 'I SLEPT IN AN ICE HOUSE FOR A LISTING',
+          'THE LOON CALL CHALLENGE', 'SELLING A HOUSE IN A COLD SNAP',
+        ]) + '"');
+        lines.push('+' + gain + ' FOLLOWERS.');
+        const n = ch.id === 'jillian' ? 1 : G.randInt(1, 2);
+        for (let i = 0; i < n; i++) {
+          const l = this.spawnLead(G.chance(0.4) ? 'lakehome' : 'facebook');
+          if (l) lines.push('+ LEAD: ' + l.name + ' saw it and called.');
+          else lines.push('More viewers wanted in, but the pipeline is full.');
+        }
+        if (s.stats.followers >= 5000) G.Profile.award('butterfly');
+        break;
       }
-      if (s.stats.followers >= 5000) G.Profile.award('butterfly');
-    } else if (perk === 'veteran') {
-      lines.push('WAR STORY: "...so there we were, blizzard of \'94, the ink was FROZEN..."');
-      const r = advanceBest();
-      lines.push(r || 'The room was moved. Unfortunately the room was empty.');
-      s.stats.happiness = G.clamp(s.stats.happiness + 3, 0, 100);
-    } else if (perk === 'rookie') {
-      lines.push('HUSTLE! The rookie does everything, everywhere, all at once.');
-      const r = advanceBest();
-      lines.push(r || 'Nothing to hustle yet. The rookie does pushups instead.');
-    } else if (perk === 'blake') {
-      s.aiOverdrive = Math.max(s.aiOverdrive, 2);
-      const gain = Math.round(G.randInt(200, 500) * this.followerGainMult());
-      s.stats.followers += gain;
-      lines.push('AI OVERDRIVE! Drones deploy - holographic dashboards everywhere.');
-      lines.push('+' + gain + ' FOLLOWERS');
-      const l = this.spawnLead();
-      if (l) lines.push('+ LEAD: ' + l.name + ' (AI-sourced)');
-      lines.push('2 days of passive AI drone work now active.');
-    } else if (perk === 'tyler') {
-      s.systemOverride = Math.max(s.systemOverride, 1);
-      lines.push('SYSTEM OVERRIDE! Automations take the wheel tonight.');
-      const r = advanceBest();
-      lines.push(r || 'Systems primed - nothing to advance yet.');
-      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + 8, 0, 100);
-      lines.push('Full auto follow-up + referral engine engaged for the night.');
+      case 'warmAll': {
+        let leads = s.leads.filter(l => ['AT RISK', 'ABOUT TO GHOST', 'DUE TODAY'].includes(this.leadRisk(l)));
+        if (!leads.length) leads = this.leadsInStage('new', 'hot', 'attendee');
+        for (const l of leads) { this.touch(l); l.warmth = G.clamp(l.warmth + 14, 0, 100); }
+        lines.push(leads.length ? ('Checked in with ' + leads.length + ' people.') : 'The list was quiet. You still made the calls.');
+        break;
+      }
+      case 'owner': {
+        const r = advanceBest();
+        lines.push(r || 'The line was open. Nobody needed a push yet.');
+        const ref = this.spawnLead('referral');
+        if (ref) { ref.warmth = 75; s.stats.referrals++; G.Profile.bump('referrals'); lines.push('+ REFERRAL: ' + ref.name + ' heard the owner was on it.'); }
+        this.addReputation(4);
+        break;
+      }
+      case 'ideas': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const side = G.randInt(1200, 2800);
+        s.cash += side;
+        s.stats.commission += side;
+        lines.push('SIDE HUSTLE PAID: +' + G.money(side) + '. Bekkah says that one was obvious.');
+        const biz = this.spawnLead(G.chance(0.5) ? 'investor' : 'facebook');
+        if (biz) lines.push('+ LEAD: ' + biz.name + ' wants in on the idea. And a house.');
+        else lines.push('A future business partner called. Your pipeline is full, so she took a note.');
+        break;
+      }
+      case 'buyerday': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const buyer =
+          this.bestLead(this.leadsInStage('active').filter(l => !l.seller)) ||
+          this.bestLead(this.leadsInStage('appt').filter(l => !l.seller)) ||
+          this.bestLead(this.leadsInStage('hot').filter(l => !l.seller));
+        if (!buyer) {
+          lines.push(advanceBest() || 'No buyer on the hook yet. Jordan is already previewing three houses.');
+          break;
+        }
+        this.touch(buyer);
+        if (buyer.stage === 'active') {
+          this.advance(buyer, 'offer');
+          s.stats.offersWritten = (s.stats.offersWritten || 0) + 1;
+          lines.push(buyer.name + ' is UNDER OFFER. Written before lunch.');
+        } else if (buyer.stage === 'appt' || buyer.stage === 'hot' || buyer.stage === 'new') {
+          const next = { new: 'hot', hot: 'appt', appt: 'active' }[buyer.stage];
+          this.advance(buyer, next);
+          lines.push(buyer.name + ' moves to ' + G.Data.STAGE_LABELS[next] + '. That buyer is in good hands.');
+        } else {
+          lines.push(advanceBest() || 'The buy side is quiet. Jordan is fine with that for one hour.');
+        }
+        break;
+      }
+      case 'welcome': {
+        let made = 0;
+        for (let i = 0; i < 2; i++) {
+          const l = this.spawnLead('openhouse', { stage: 'attendee' });
+          if (l) { l.warmth = G.randInt(30, 50); made++; lines.push('+ GUEST: ' + l.name + ' signed in early.'); }
+        }
+        if (!made) lines.push('The cookies were ready. The pipeline was not. It is full.');
+        break;
+      }
+      case 'referral': {
+        for (let i = 0; i < 2; i++) {
+          const l = this.spawnLead('referral');
+          if (l) { l.warmth = 72; s.stats.referrals++; G.Profile.bump('referrals'); lines.push('+ REFERRAL: ' + l.name + '.'); }
+          else lines.push('Someone wanted to refer a friend. Your plate is full.');
+        }
+        break;
+      }
+      case 'clearIssue': {
+        if (ch.id === 'deb' && ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const issue = this.leadsInStage('pending').find(l => l.issue);
+        if (issue) { issue.issue = false; lines.push(issue.name + ' inspection worry: talked down.'); }
+        else lines.push(advanceBest() || 'Everyone is steady. That counts.');
+        s.stats.happiness = G.clamp(s.stats.happiness + 3, 0, 100);
+        break;
+      }
+      case 'spark': {
+        s.energy = Math.min(this.maxEnergy(), s.energy + 1);
+        lines.push('+1 ENERGY.');
+        lines.push(advanceBest() || 'Energy banked. The pipeline will catch up.');
+        break;
+      }
+      case 'price': {
+        const listing = this.leadsInStage('active').filter(l => l.seller).sort((a, b) => b.value - a.value)[0];
+        if (listing) {
+          listing.value = Math.round(listing.value * 1.08);
+          listing.listingMomentum = G.clamp((listing.listingMomentum || 50) + 20, 0, 100);
+          lines.push(listing.name + ' repriced with care: ' + G.money(listing.value) + '.');
+        } else lines.push(advanceBest() || 'No listing to reprice yet. The comps are ready.');
+        break;
+      }
+      case 'dawn': {
+        const leads = this.leadsInStage('new', 'hot');
+        for (const l of leads) { this.touch(l); l.warmth = G.clamp(l.warmth + 14, 0, 100); }
+        lines.push(leads.length ? ('Morning calls warmed ' + leads.length + ' leads.') : 'Nobody on the morning list. Coffee still counts.');
+        break;
+      }
+      case 'lake': {
+        const lakes = s.leads.filter(l => l.lake);
+        for (const l of lakes) l.warmth = G.clamp(l.warmth + 10, 0, 100);
+        const newbie = this.spawnLead('cabin');
+        if (newbie) lines.push('+ CABIN BUYER: ' + newbie.name + '.');
+        else lines.push('A cabin buyer called. The pipeline is full.');
+        if (lakes.length) lines.push(lakes.length + ' lake leads warmed up.');
+        break;
+      }
+      case 'bigfork': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const woods = s.leads.filter(l => l.lake || l.outdoors);
+        for (const l of woods) { this.touch(l); l.warmth = G.clamp(l.warmth + 12, 0, 100); }
+        const newbie = this.spawnLead(G.chance(0.5) ? 'hunting' : 'fishcabin');
+        if (newbie) lines.push('+ FROM THE WOODS: ' + newbie.name + ' (' + newbie.label + ').');
+        else lines.push('A camp buyer called. The pipeline is full, so they left a note on the truck.');
+        if (woods.length) lines.push(woods.length + ' woods leads warmed up. The truck did not mind the weather.');
+        s.stats.happiness = G.clamp(s.stats.happiness + 4, 0, 100);
+        break;
+      }
+      case 'standoff': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const offer = this.bestLead(this.leadsInStage('offer'));
+        if (offer) {
+          this.touch(offer);
+          this.advance(offer, 'pending');
+          s.stats.negotiationsWon = (s.stats.negotiationsWon || 0) + 1;
+          lines.push(offer.name + ' is PENDING. She smiled the whole time.');
+        } else {
+          const moved = advanceBest();
+          lines.push(moved || 'Nobody at the table yet. She is shadowboxing the listing binder.');
+        }
+        break;
+      }
+      case 'prayerchain': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        s.stats.happiness = G.clamp(s.stats.happiness + Math.round(8 * (ch.happyMult || 1)), 0, 100);
+        let made = 0;
+        for (let i = 0; i < 2; i++) {
+          const ref = this.spawnLead('referral');
+          if (ref) {
+            ref.warmth = 78;
+            s.stats.referrals++;
+            G.Profile.bump('referrals');
+            made++;
+            lines.push('+ REFERRAL: ' + ref.name + '. The church family thought of them.');
+          }
+        }
+        if (!made) lines.push('The chain had more names. Your plate is full, so she saved them a plate anyway.');
+        for (const l of this.leadsInStage('new', 'hot', 'attendee')) l.warmth = G.clamp(l.warmth + 6, 0, 100);
+        break;
+      }
+      case 'file': {
+        const stuck = this.leadsInStage('pending').find(l => l.issue || l.delay > 0) || this.leadsInStage('pending')[0];
+        if (stuck) {
+          stuck.issue = false; stuck.delay = 0;
+          if (stuck.daysInStage < 1) stuck.daysInStage = 1;
+          lines.push(stuck.name + ' file is clean. Ready when the calendar is.');
+        } else lines.push(advanceBest() || 'No file to tidy. The desk is clear.');
+        break;
+      }
+      case 'pep': {
+        const bump = Math.round(12 * (ch.happyMult || 1));
+        s.stats.happiness = G.clamp(s.stats.happiness + bump, 0, 100);
+        for (const l of s.leads) l.warmth = G.clamp(l.warmth + 4, 0, 100);
+        lines.push('+' + bump + ' HAPPINESS. The whole pipeline felt that.');
+        break;
+      }
+      case 'broccoli': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        s.broccoliDays = Math.max(s.broccoliDays || 0, 2);
+        lines.push(advanceBest() || 'The boost is planted. The earring is on duty.');
+        lines.push('BROCCOLI BOOST for 2 days. The earring keeps score.');
+        break;
+      }
+      case 'miracle': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const sick = this.leadsInStage('pending').find(l => l.issue || l.delay > 0);
+        if (sick) {
+          sick.issue = false;
+          sick.delay = 0;
+          s.stats.dealsRescued = (s.stats.dealsRescued || 0) + 1;
+          lines.push(sick.name + ' is back on track. The beard took the meeting.');
+          break;
+        }
+        const fading = s.leads.filter(l => {
+          const risk = this.leadRisk(l);
+          return risk === 'ABOUT TO GHOST' || risk === 'AT RISK';
+        })[0];
+        if (fading) {
+          this.touch(fading);
+          fading.warmth = G.clamp(fading.warmth + 25, 0, 100);
+          s.stats.dealsRescued = (s.stats.dealsRescued || 0) + 1;
+          lines.push(fading.name + ' picked up. Trust came back with the beard.');
+          break;
+        }
+        lines.push(advanceBest() || 'Every deal is healthy. The beard is resting, kindly.');
+        break;
+      }
+      case 'zillow': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const online = s.leads.filter(l => l.online && (l.stage === 'new' || l.stage === 'hot')).slice(0, 2);
+        if (!online.length) {
+          const l = this.spawnLead('zestimate');
+          if (l) {
+            l.online = true;
+            this.advance(l, 'appt');
+            s.stats.zillowFlips = (s.stats.zillowFlips || 0) + 1;
+            lines.push(l.name + ' came off Zillow and already has an appointment.');
+          } else lines.push('The inbox pinged. The pipeline is full.');
+          break;
+        }
+        for (const l of online) {
+          this.touch(l);
+          this.advance(l, 'appt');
+          s.stats.zillowFlips = (s.stats.zillowFlips || 0) + 1;
+          lines.push(l.name + ' flipped from online to an appointment.');
+        }
+        break;
+      }
+      case 'nurse': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const bump = Math.round(10 * (ch.happyMult || 1));
+        s.stats.happiness = G.clamp(s.stats.happiness + bump, 0, 100);
+        const hurting = s.leads.filter(l => this.leadRisk(l) !== 'SAFE');
+        for (const l of hurting) { this.touch(l); l.warmth = G.clamp(l.warmth + 16, 0, 100); }
+        lines.push('+' + bump + ' MORALE. ' + (hurting.length ? hurting.length + ' clients felt looked after.' : 'The office exhaled.'));
+        break;
+      }
+      case 'know': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        lines.push(G.choice([
+          'Market fact: sunset-side frontage still sells the lake.',
+          'Market fact: fishing opener week is when the north fills up.',
+          'Market fact: a legal dock is worth more than a new couch.',
+        ]));
+        const lead = this.bestLead(s.leads);
+        if (lead) {
+          const motive = lead.seller
+            ? 'They want a clean exit and to feel respected.'
+            : (lead.lake ? 'They want the dock more than the kitchen.' : 'They want to feel sure before they sign.');
+          lines.push(lead.name + ' (' + lead.warmth + ' warmth): ' + motive);
+          const next = { new: 'hot', hot: 'appt', appt: 'active', active: 'offer', offer: 'pending' }[lead.stage];
+          if (next) {
+            this.advance(lead, next);
+            lines.push('Moved to ' + G.Data.STAGE_LABELS[next] + '. Adam had already guessed.');
+          }
+        } else lines.push('No file to read yet. He is reciting lake facts anyway.');
+        break;
+      }
+      case 'sellany': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const sellers = this.leadsInStage('active').filter(l => l.seller);
+        const tough = sellers.slice().sort((a, b) => ((b.overpriced ? 1 : 0) - (a.overpriced ? 1 : 0)) || ((a.listingMomentum || 50) - (b.listingMomentum || 50)))[0];
+        if (tough) {
+          const wasTough = !!tough.overpriced || (tough.listingMomentum || 50) < 40;
+          tough.overpriced = false;
+          tough.listingMomentum = 85;
+          this.advance(tough, 'offer');
+          if (wasTough) s.stats.toughOffers = (s.stats.toughOffers || 0) + 1;
+          lines.push(tough.name + ' has an offer. Even the tough ones move.');
+          break;
+        }
+        const appt = this.leadsInStage('appt').find(l => l.seller);
+        if (appt) {
+          this.advance(appt, 'active');
+          lines.push('LISTING TAKEN: ' + appt.name + '. She can sell this one too.');
+          break;
+        }
+        lines.push(advanceBest() || 'No listing on the hook. She is already picturing the sign.');
+        break;
+      }
+      case 'range': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const l = this.spawnLead(G.chance(0.5) ? 'signcall' : 'facebook');
+        if (l) {
+          this.tagRange(l);
+          l.warmth = Math.max(l.warmth, 72);
+          lines.push('+ ' + l.town + ': ' + l.name + ' is ready to talk.');
+        } else lines.push('A Range buyer called. The pipeline is full, so she named a diner and a time.');
+        for (const r of s.leads.filter(x => x.range)) r.warmth = G.clamp(r.warmth + 8, 0, 100);
+        break;
+      }
+      case 'ceo': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        for (const l of s.leads) l.warmth = G.clamp(l.warmth + 8, 0, 100);
+        const big = this.spawnLead(G.chance(0.5) ? 'luxury' : 'lakehome');
+        if (big) {
+          big.value = Math.round(big.value * 1.25);
+          big.warmth = Math.max(big.warmth, 70);
+          lines.push('+ BIGGER DEAL: ' + big.name + ' at ' + G.money(big.value) + '.');
+        } else lines.push('A bigger deal called. The pipeline is full, so he took the name himself.');
+        const stipend = 2500;
+        s.cash += stipend;
+        s.stats.commission += stipend;
+        this.addReputation(5);
+        lines.push('THE COMPANY BACKS YOU: +' + G.money(stipend) + '. The whole book warmed up.');
+        lines.push(advanceBest() || 'Nothing to push. The lift is still on the team.');
+        break;
+      }
+      case 'happen': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        let cleared = 0;
+        for (const l of this.leadsInStage('pending')) {
+          if (l.issue || l.delay > 0) {
+            l.issue = false;
+            l.delay = 0;
+            cleared++;
+          }
+          if (l.daysInStage < 2) l.daysInStage = 2;
+        }
+        if (cleared) lines.push(cleared + ' blocker' + (cleared === 1 ? '' : 's') + ' cleared. Those files can close.');
+        const stalled = s.leads.filter(l => this.leadRisk(l) === 'ABOUT TO GHOST' || this.leadRisk(l) === 'AT RISK')[0];
+        if (stalled) {
+          this.touch(stalled);
+          stalled.warmth = G.clamp(stalled.warmth + 20, 0, 100);
+          lines.push(stalled.name + ' was stalled. Liz unstalled them.');
+        }
+        lines.push(advanceBest() || 'The desk is clear. She already moved on to the next thing.');
+        break;
+      }
+      case 'advance': {
+        lines.push(advanceBest() || 'Nothing to move yet. The offer template is ready.');
+        break;
+      }
+      default: {
+        lines.push(advanceBest() || 'Saved for the right moment.');
+        break;
+      }
     }
+    if (ch.catchphrase) lines.push('"' + ch.catchphrase + '"');
+    s.dayMarks = (s.dayMarks || 0) + 1;
+    if (G.Roster) G.Roster.evaluate(s);
     G.Audio.ability();
     return { lines };
   },
@@ -3505,6 +4339,11 @@ G.State = {
   // ----------------------------------------------------------
   endDay() {
     const s = this.s;
+    if (s._ending) {
+      return { eventText: null, eventGood: false, rivalLines: [], passiveLines: [], bossTime: !!s.pendingBoss, battleTime: !!s.pendingBattle, report: s.followReport, celebrations: [] };
+    }
+    s._ending = true;
+    s._calendarMoved = false;
     const bal = this.bal();
     const today = this.totalDay();
     const passiveLines = [];
@@ -3513,13 +4352,11 @@ G.State = {
     s.bigfootToday = G.chance(0.06);
     if (s.effects.detour > 0) s.effects.detour--;
 
-    // Tyler's Daily Discipline tier (vendor visits + playable passive)
-    const disciplineTier = Math.min(6, s.tylerTier + this.tylerPassiveTier());
-
+    const chNow = this.char();
     // 1. FOLLOW-UP DECAY: untouched leads cool, then ghost.
-    // CRM softens decay (-40%) and halves ghosting; Tyler -10%/tier ghosting.
-    const decayMult = this.has('crm') ? 0.6 : 1;
-    const ghostMult = (this.has('crm') ? 0.5 : 1) * Math.max(0.4, 1 - 0.1 * disciplineTier);
+    // CRM softens decay. Some agents simply lose fewer people.
+    const decayMult = (this.has('crm') ? 0.6 : 1) * (chNow.decayMult || 1);
+    const ghostMult = (this.has('crm') ? 0.5 : 1) * (chNow.ghostMult || 1);
     const lose = (l, why) => { this.removeLead(l); report.lost.push(l.name + ' (' + G.Data.STAGE_LABELS[l.stage] + '): ' + why); };
     for (const l of s.leads.slice()) {
       l.daysInStage++;
@@ -3575,14 +4412,6 @@ G.State = {
         // offer/pending are committed - they decay via events, not neglect
       }
     }
-    if (this.perk() === 'influencer' && !this.has('tc')) {
-      for (const l of this.leadsInStage('pending').slice()) {
-        if (G.chance(0.2)) {
-          this.removeLead(l);
-          passiveLines.push(l.name + '\'s deal COLLAPSED. "Wait, the contract needed... signing?" GET A TRANSACTION COORDINATOR.');
-        }
-      }
-    }
     if (this.has('smallOffice')) {
       for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + 2, 0, 100);
     }
@@ -3598,15 +4427,10 @@ G.State = {
     if (this.has('marketing')) roll('marketing', 0.15, null, 'AD LEAD: %N saw your billboard by the DQ!');
     if (this.has('marketingdir')) roll('mdir', 0.20, null, 'YOUR MARKETING DIRECTOR delivered: %N (%T)!');
     if (this.has('downtownOffice')) roll('walkin', 0.10, null, 'WALK-IN: %N wandered into the office. Free lead!');
-    if (this.perk() === 'influencer') roll('dm', 0.5, 'facebook', 'DM LEAD: %N slid into the DMs. As they do.');
     if (s.commercialUnlocked) roll('jeff', G.Data.JEFF.passiveChance, 'ex1031', 'JEFF\'S NETWORK: %N called about a 1031 Exchange!');
     const organicChance = Math.min(0.18, 0.08 + s.stats.followers / 40000 + Math.max(0, s.marketVisibility - 40) / 800);
     roll('organic', organicChance, null, 'NEW LEAD: %N (%T) reached out!');
-    if (s.scaleMode > 0) roll('blakeScale', 0.6, null, 'BLAKE\'S DRONE SWARM delivered: %N (%T)!');
-    else if (s.aiOverdrive > 0) roll('blakeAI', 0.35, null, 'BLAKE\'S AI SOURCED A LEAD: %N (%T)!');
-    if (this.perk() === 'blake') roll('network', 0.15, null, 'NETWORK EFFECT: %N was introduced through Blake\'s network!');
     if (s.openHouseEngine > 0) roll('ohengine', 0.8, 'openhouse', 'OPEN HOUSE ENGINE: %N signed in overnight.');
-    if (disciplineTier > 0) roll('discipline', 0.03 * disciplineTier, 'referral', 'DAILY DISCIPLINE: consistent follow-up earned a referral from %N.', true);
     if (this.has('retreat')) roll('retreat', 0.10, 'referral', 'RETREAT MAGIC: %N was referred after a weekend at your cabin!', true);
 
     const winners = G.shuffle(hits).slice(0, bal.maxPassiveLeadsPerDay);
@@ -3641,7 +4465,9 @@ G.State = {
       if (l.listingMomentum == null) l.listingMomentum = 50;
       if (l.expectsOpenHouse === undefined) l.expectsOpenHouse = G.chance(0.4);
       l.listingMomentum = G.clamp(l.listingMomentum - 6 + (this.has('photographer') ? 3 : 0), 0, 100);
-      if (l.daysInStage >= 1 && !l.overpriced && G.chance(l.listingMomentum / 250 + (this.has('photographer') ? 0.08 : 0))) {
+      const stephanie = this.char().id === 'stephanie';
+      if (l.daysInStage >= 1 && (!l.overpriced || stephanie) && G.chance(l.listingMomentum / 250 + (this.has('photographer') ? 0.08 : 0) + (stephanie ? 0.08 : 0))) {
+        if (l.overpriced) { l.overpriced = false; s.stats.toughOffers = (s.stats.toughOffers || 0) + 1; }
         this.advance(l, 'offer');
         passiveLines.push('MOMENTUM: an offer came in on ' + l.name + '\'s listing!');
         continue;
@@ -3668,51 +4494,14 @@ G.State = {
     // market visibility fades without public marketing
     s.marketVisibility = G.clamp(s.marketVisibility - 8, 0, 100);
 
-    // 3b. BLAKE SUDDATH buffs (leads come via the passive pool above)
-    if (s.scaleMode > 0 || s.aiOverdrive > 0) {
-      const scaling = s.scaleMode > 0;
-      // gentle auto follow-up
-      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + (scaling ? 5 : 3), 0, 100);
-      // modest passive income
-      const income = scaling ? 250 : 100;
-      s.cash += income; s.stats.commission += income;
-      passiveLines.push((scaling ? 'SCALE MODE' : 'AI OVERDRIVE') + ': AI drones worked overnight (+' + G.money(income) + ' passive).');
-      if (scaling) { s.scaleMode--; if (s.scaleMode === 0) passiveLines.push('Scale Mode wound down. The dashboards fade.'); }
-      else { s.aiOverdrive--; if (s.aiOverdrive === 0) passiveLines.push('AI Overdrive ended. The drones return to the backpack.'); }
-    }
-
-    // 3b2. BLAKE (playable): coffee drains; shiny-tool distraction costs real time
-    if (this.perk() === 'blake') {
-      s.coffee = Math.max(0, s.coffee - 34);
-      if (s.coffee <= 0) passiveLines.push('COFFEE EMPTY! Blake is dragging - do FOLLOW UP to refuel. (-1 energy until then)');
-      else if (s.coffee <= 34) passiveLines.push('Coffee low (' + s.coffee + '%). Refill soon or slow down.');
-      if (G.chance(0.15)) {
-        s.effects.distracted = true;
-        passiveLines.push('Blake stayed up testing a shiny new AI tool. Tomorrow starts slow. (-1 energy)');
-      }
-    }
-
-    // 3c. TYLER: Daily Discipline (+1 warmth per tier, referrals via pool)
-    if (disciplineTier > 0) {
-      for (const l of this.leadsInStage('new', 'hot', 'appt')) l.warmth = G.clamp(l.warmth + disciplineTier, 0, 100);
-    }
-    if (s.systemOverride > 0) {
-      // paperwork moves itself along: unstick one snagged transaction
-      const stuck = this.leadsInStage('pending').filter(l => l.issue || l.delay > 0)[0];
-      if (stuck) { stuck.issue = false; stuck.delay = 0; passiveLines.push('SYSTEM OVERRIDE cleared the paperwork snag on ' + stuck.name + '\'s deal.'); }
-      s.stats.followers += 40;
-      s.cash += 200; s.stats.commission += 200;
-      passiveLines.push('SYSTEM OVERRIDE: automations ran the business overnight (+' + G.money(200) + ').');
-      s.systemOverride--; if (s.systemOverride === 0) passiveLines.push('System Override ended. The systems keep humming.');
-    }
-    if (s.openHouseEngine > 0) {
-      s.openHouseEngine--; if (s.openHouseEngine === 0) passiveLines.push('Open House Engine wrapped up.');
-    }
-
     // 4. rival AI + trash talk scaled by rivalry
     const rivalLines = [];
     const rc = this.rivalChar();
-    const closeChance = bal.rivalCloseChances[Math.min(s.month, 2)];
+    let closeChance = bal.rivalCloseChances[Math.min(s.month, 2)] + (this.char().rivalPressure || 0);
+    // The real rivalry shows up. Malcolm and Bridger chase each other harder than a normal market.
+    if ((this.char().id === 'malcolm' && rc.id === 'bridger') || (this.char().id === 'bridger' && rc.id === 'malcolm')) {
+      closeChance += 0.10;
+    }
     let rivalCloses = G.chance(closeChance) ? 1 : 0;
     if (G.chance(bal.rivalDoubleChance)) rivalCloses++;
     for (let i = 0; i < rivalCloses; i++) {
@@ -3778,30 +4567,74 @@ G.State = {
 
     // 7. advance calendar
     let bossTime = false;
+    s._calendarMoved = true;
     s.dayOfMonth++;
-    if (s.dayOfMonth > G.Data.SEASON.daysPerMonth) {
+    if (s.dayOfMonth > this.daysInMonth()) {
       bossTime = true;
       s.pendingBoss = true;
       if (s.rival.homesSold > s.stats.homesSold) s.rivalry++;
     }
 
-    // 8. energy + daily resets + weather for tomorrow
+    // 8. streaks first, so a hot streak can add energy tomorrow
+    const marked = s.dayMarks || 0;
+    const goal = 2;
+    if (marked >= goal) {
+      s.streak = (s.streak || 0) + 1;
+      if (s.streak > (s.bestStreak || 0)) s.bestStreak = s.streak;
+      passiveLines.push('DAILY GOAL MET (' + marked + '/' + goal + '). Streak: ' + s.streak + '.');
+      if (s.streak === 3) {
+        s.cash += 500; s.stats.commission += 500;
+        this.celebrate('streak3', '3-DAY STREAK!', ['The hot dish is working. +$500.']);
+      }
+      if (s.streak === 5) this.celebrate('streak5', '5-DAY STREAK!', ['You are on a roll. +1 energy while it holds.']);
+      if (s.streak === 7) this.celebrate('streak7', 'ONE HOT WEEK!', ['Grand Rapids noticed. Keep the lights on.']);
+    } else {
+      if ((s.streak || 0) > 0) passiveLines.push('Streak reset. Tomorrow is a fresh start.');
+      s.streak = 0;
+      passiveLines.push('Daily goal: ' + marked + '/' + goal + ' solid tasks.');
+    }
+    s.dayMarks = 0;
+    // Head to head: Bridger takes the listing if Malcolm overpriced it.
+    // Playing Bridger, Malcolm overprices one out in the market and you price it instead.
+    if (this.char().id === 'malcolm') {
+      const ripe = this.leadsInStage('active').filter(l => l.seller && l.overpriced);
+      if (ripe.length && G.chance(0.7)) {
+        const lost = ripe[0];
+        this.removeLead(lost);
+        s.rival.homesSold++;
+        s.rivalry++;
+        passiveLines.push('BRIDGER priced ' + lost.name + ' right and took the listing. Malcolm had aimed too high.');
+      }
+    } else if (this.char().id === 'bridger' && G.chance(0.1)) {
+      const stolen = this.spawnLead(G.chance(0.5) ? 'expired' : 'fsbo', { stage: 'appt' });
+      if (stolen) {
+        stolen.seller = true;
+        this.priceRight(stolen, null);
+        passiveLines.push('MALCOLM overpriced a listing. BRIDGER took it at ' + G.money(stolen.value) + '.');
+      }
+    }
+    if (this.char().id === 'malcolm' && (s.teamRecruits || 0) > 0) {
+      const zip = Math.min(3, s.teamRecruits);
+      for (const l of s.leads) l.warmth = G.clamp(l.warmth + zip + 1, 0, 100);
+      passiveLines.push('THE DESK (' + s.teamRecruits + ' recruit' + (s.teamRecruits === 1 ? '' : 's') + ') worked the book overnight.');
+    }
+    if (s.broccoliDays > 0) {
+      s.broccoliDays--;
+      if (s.broccoliDays === 0) passiveLines.push('The broccoli boost settled. The earring is just shiny again.');
+    }
+    if (G.Roster) G.Roster.evaluate(s);
+
     let energyPenalty = 0;
     if (s.effects.snowTomorrow) { energyPenalty++; passiveLines.push('You lost an hour shoveling the driveway. (-1 energy)'); }
     if (s.effects.distracted) { energyPenalty++; s.effects.distracted = false; }
     s.energy = Math.max(0, this.maxEnergy() - energyPenalty);
     s.effects.snowTomorrow = false;
     s.effects.preapproved = false;
+
     s.abilityUsed = false;
-    s.bradUsed = false;
+    s.joelUsed = false;
     s.mentorUsedToday = false;
     if (s.jeffCooldown > 0) s.jeffCooldown--;
-    if (s.blakeCooldown > 0) s.blakeCooldown--;
-    if (s.tylerCooldown > 0) s.tylerCooldown--;
-    if (s.parkingLotTalk > 0) {
-      s.parkingLotTalk--;
-      if (s.parkingLotTalk === 0) passiveLines.push('The parking lot talk wore off. The belief? Permanent. The +1 energy? Not.');
-    }
     const weatherLines = this.rollWeather();
     passiveLines.push(...weatherLines);
 
@@ -3813,8 +4646,13 @@ G.State = {
     }
     s.followReport = report;
 
+    const celebrations = (s.pendingCelebrations || []).slice();
+    s.pendingCelebrations = [];
+    for (const c of celebrations) passiveLines.push(c.title + ' ' + (c.lines || []).join(' '));
+
+    s._ending = false;
     this.autosave();
-    return { eventText, eventGood, rivalLines, passiveLines, bossTime, battleTime: s.pendingBattle, report };
+    return { eventText, eventGood, rivalLines, passiveLines, bossTime, battleTime: s.pendingBattle, report, celebrations };
   },
 
   // Can this event actually affect the current game state?
@@ -4060,7 +4898,7 @@ G.State = {
         const gain = Math.round(900 * this.followerGainMult());
         s.stats.followers += gain;
         this.addReputation(-5);
-        if (s.stats.followers >= 5000) { G.Profile.award('butterfly'); G.Profile.unlock('influencer', 'You reached 5,000 followers!'); }
+        if (s.stats.followers >= 5000) G.Profile.award('butterfly');
         return '(+' + gain + ' followers, -5 reputation, +1 great story)';
       }
     }
@@ -4090,10 +4928,7 @@ G.State = {
       this.addReputation(6);
       lines.push('YOU BEAT ' + boss.name + '!');
       lines.push('+' + G.money(boss.reward.cash) + ' bonus, +' + bossLeads + ' lead' + (bossLeads === 1 ? '' : 's') + ', +followers!');
-      if (boss.final) {
-        G.Profile.award('megaslayer');
-        if (s.stats.bossWins >= 3) G.Profile.unlock('veteran', 'You won every boss battle this season!');
-      }
+      if (boss.final) G.Profile.award('megaslayer');
     } else {
       s.rival.homesSold++;
       s.stats.happiness = G.clamp(s.stats.happiness - 6, 0, 100);
@@ -4107,15 +4942,13 @@ G.State = {
     s.dayOfMonth = 1;
     if (s.month >= G.Data.SEASON.months.length) {
       s.seasonOver = true;
-      // season-end unlocks
-      G.Profile.unlock('grandpa', 'You finished a season!');
-      if (s.stats.homesSold < s.rival.homesSold) {
-        G.Profile.unlock('rookie', 'You lost the season. The Rookie respects the grind.');
-      }
-      if (s.stats.followers >= 5000) G.Profile.unlock('influencer', 'You reached 5,000 followers!');
+      s.stats.wonSeason = this.playerWon();
+      G.Profile.bump('seasons');
+      if (G.Roster) G.Roster.evaluate(s);
       G.Save.clear();
     } else {
       this.rollWeather();
+      if (G.Roster) G.Roster.evaluate(s);
       this.autosave();
     }
     return { lines, seasonOver: s.seasonOver };
@@ -4130,6 +4963,7 @@ G.State = {
     s.rivalry++;
     const lines = [];
     if (won) {
+      s.stats.battleWins = (s.stats.battleWins || 0) + 1;
       const l = this.spawnLead(G.chance(0.5) ? 'luxury' : 'lakedev', { force: true });
       l.stage = 'active';
       l.listingMomentum = 50;
@@ -4764,16 +5598,18 @@ G.Engine.register('title', {
 
     // title
     const bounce = Math.sin(this.t * 2) * 2;
-    G.UI.text(ctx, 'BRIDGER', G.W / 2 - 64, 48 + bounce, { align: 'center', size: 22, color: '#c0562f', shadow: true });
-    G.UI.text(ctx, 'vs', G.W / 2, 56 + bounce, { align: 'center', size: 12, color: G.C.yellow, shadow: true });
-    G.UI.text(ctx, 'MALCOLM', G.W / 2 + 66, 48 + bounce, { align: 'center', size: 22, color: G.C.lime, shadow: true });
-    G.UI.text(ctx, '- REALTOR RIVALS -', G.W / 2, 80, { align: 'center', size: 12, color: G.C.white, shadow: true });
-    G.UI.text(ctx, 'A NORTHERN MINNESOTA SALES SHOWDOWN', G.W / 2, 98, { align: 'center', size: 7, color: G.C.gray });
+    G.UI.text(ctx, 'MALCOLM', G.W / 2 - 78, 36 + bounce, { align: 'center', size: 18, color: G.C.lime, shadow: true });
+    G.UI.text(ctx, 'VS', G.W / 2, 42 + bounce, { align: 'center', size: 12, color: G.C.yellow, shadow: true });
+    G.UI.text(ctx, 'BRIDGER', G.W / 2 + 78, 36 + bounce, { align: 'center', size: 18, color: '#e7a07a', shadow: true });
+    G.UI.text(ctx, 'PEMBERTON  -  GRAND RAPIDS', G.W / 2, 64, { align: 'center', size: 9, color: G.C.white, shadow: true });
+    G.UI.text(ctx, 'THE SEASON IS THIS RIVALRY', G.W / 2, 78, { align: 'center', size: 7, color: G.C.gray });
 
     // characters flanking the menu
     const hop = Math.abs(Math.sin(this.t * 3)) * 3;
-    G.drawSprite(ctx, G.Sprites.bridger, 120, 190 - hop, 3);
-    G.drawSprite(ctx, G.Sprites.malcolm, 318, 190 - (3 - hop), 3, true);
+    const left = G.Sprites.agent_malcolm || G.Sprites.malcolm;
+    const right = G.Sprites.agent_bridger || G.Sprites.bridger || G.Sprites.malcolm;
+    G.drawSprite(ctx, left, 120, 190 - hop, 3);
+    G.drawSprite(ctx, right, 318, 190 - (3 - hop), 3, true);
     G.drawSprite(ctx, G.Sprites.soldSign, 90, 216, 2);
     G.drawSprite(ctx, G.Sprites.soldSign, 372, 216, 2);
 
@@ -4790,59 +5626,73 @@ G.Engine.register('title', {
 </script>
 <script>
 // ============================================================
-// scenes/select.js - character selection carousel
-// 2 headliners + 4 unlockable secret agents
+// scenes/select.js - roster select
+// Malcolm, Parker, and Liz up top. Office agents below,
+// locked until a milestone, saved in localStorage.
 // ============================================================
 'use strict';
 
 G.Engine.register('select', {
-  ORDER: ['bridger', 'malcolm', 'grandpa', 'influencer', 'veteran', 'rookie', 'blake', 'tyler'],
-
   enter() {
     this.t = 0;
-    this.index = 0;
-    this.phase = 'char';      // char | difficulty
-    this.diffIndex = 1;       // default STANDARD
+    this.phase = 'char';
+    this.diffIndex = 1;
+    this.pace = 'quick';
+    this.scroll = 0;
+    const order = this.order();
+    const malcolm = order.indexOf('malcolm');
+    this.index = malcolm >= 0 ? malcolm : 0;
   },
 
   DIFFS: ['casual', 'standard', 'hard'],
 
-  charAt(i) { return G.Data.CHARACTERS[this.ORDER[i]]; },
-  isUnlocked(i) { return G.Profile.unlocked(this.ORDER[i]); },
+  order() { return G.Data.ROSTER || Object.keys(G.Data.CHARACTERS); },
+  charAt(i) { return G.Data.CHARACTERS[this.order()[i]]; },
+  isUnlocked(i) {
+    const ch = this.charAt(i);
+    return !!(ch && G.Profile.unlocked(ch.id));
+  },
+
+  visibleRows() { return Math.max(6, Math.floor((G.H - 46) / 16)); },
 
   update(dt) {
     this.t += dt;
     const I = G.Input;
-
     if (this.phase === 'difficulty') {
-      if (I.left())  { this.diffIndex = (this.diffIndex + 2) % 3; G.Audio.move(); }
-      if (I.right()) { this.diffIndex = (this.diffIndex + 1) % 3; G.Audio.move(); }
-      for (let i = 0; i < 3; i++) {
-        const x = 34 + i * 142;
-        if (I.clickedRect(x, 60, 132, 150, 4)) {
-          if (this.diffIndex === i) { this.startGame(); return; }
-          this.diffIndex = i; G.Audio.move();
-        }
-      }
-      if (I.confirm()) { this.startGame(); return; }
-      if (I.cancel()) { this.phase = 'char'; G.Audio.back(); }
+      this.updateDifficulty(I);
       return;
     }
 
-    if (I.left())  { this.index = (this.index + this.ORDER.length - 1) % this.ORDER.length; G.Audio.move(); }
-    if (I.right()) { this.index = (this.index + 1) % this.ORDER.length; G.Audio.move(); }
+    const n = this.order().length;
+    if (I.up()) { this.index = (this.index + n - 1) % n; G.Audio.move(); }
+    if (I.down()) { this.index = (this.index + 1) % n; G.Audio.move(); }
 
-    // thumbnail strip clicks
-    for (let i = 0; i < this.ORDER.length; i++) {
-      const x = G.W / 2 - this.ORDER.length * 22 + i * 44;
-      if (I.clickedRect(x, 218, 40, 40)) {
+    if (I.touch && I.drag.active) {
+      this._drag = (this._drag || 0) - I.drag.frameDY;
+      const vis = this.visibleRows();
+      const maxScroll = Math.max(0, n - vis);
+      while (this._drag >= 16 && this.scroll < maxScroll) { this.scroll++; this._drag -= 16; }
+      while (this._drag <= -16 && this.scroll > 0) { this.scroll--; this._drag += 16; }
+    }
+
+    const vis = this.visibleRows();
+    const maxScroll = Math.max(0, n - vis);
+    if (this.index < this.scroll) this.scroll = this.index;
+    if (this.index >= this.scroll + vis) this.scroll = this.index - vis + 1;
+    this.scroll = G.clamp(this.scroll, 0, maxScroll);
+
+    for (let row = 0; row < vis; row++) {
+      const i = this.scroll + row;
+      if (i >= n) break;
+      if (I.clickedRect(6, 24 + row * 16, 158, 15)) {
         if (this.index === i) this.pick();
         else { this.index = i; G.Audio.move(); }
       }
     }
-    // big card click
-    if (I.clickedRect(90, 30, 300, 180)) this.pick();
-
+    if (I.clickedRect(172, 24, G.W - 180, G.H - 40)) {
+      if (this.isUnlocked(this.index)) this.pick();
+      else G.Audio.bad();
+    }
     if (I.confirm()) this.pick();
     if (I.cancel()) G.Engine.goto('title');
   },
@@ -4853,10 +5703,26 @@ G.Engine.register('select', {
     this.phase = 'difficulty';
   },
 
+  updateDifficulty(I) {
+    if (I.left()) { this.diffIndex = (this.diffIndex + 2) % 3; G.Audio.move(); }
+    if (I.right()) { this.diffIndex = (this.diffIndex + 1) % 3; G.Audio.move(); }
+    for (let i = 0; i < 3; i++) {
+      const x = 16 + i * 154;
+      if (I.clickedRect(x, 48, 146, 130, 4)) {
+        if (this.diffIndex === i) { this.startGame(); return; }
+        this.diffIndex = i; G.Audio.move();
+      }
+    }
+    if (I.clickedRect(16, G.H - 46, 140, 18)) { this.pace = 'quick'; G.Audio.move(); }
+    if (I.clickedRect(164, G.H - 46, 140, 18)) { this.pace = 'full'; G.Audio.move(); }
+    if (I.confirm()) { this.startGame(); return; }
+    if (I.cancel()) { this.phase = 'char'; G.Audio.back(); }
+  },
+
   startGame() {
     G.Audio.fanfare();
     const ch = this.charAt(this.index);
-    G.State.newGame(ch.id, this.DIFFS[this.diffIndex]);
+    G.State.newGame(ch.id, this.DIFFS[this.diffIndex], this.pace);
     G.State.autosave();
     G.Engine.goto('map', { newDay: true });
   },
@@ -4864,119 +5730,141 @@ G.Engine.register('select', {
   render(ctx) {
     ctx.fillStyle = G.C.dusk;
     ctx.fillRect(0, 0, G.W, G.H);
+    if (this.phase === 'difficulty') { this.renderDifficulty(ctx); return; }
 
-    if (this.phase === 'difficulty') {
-      this.renderDifficulty(ctx);
-      return;
+    const unlockedN = G.Roster ? G.Roster.unlockedCount() : 0;
+    const officeN = G.Roster ? G.Roster.officeCount : 0;
+    G.UI.text(ctx, 'CHOOSE YOUR AGENT', 8, 6, { size: 12, color: G.C.yellow, shadow: true });
+    G.UI.text(ctx, 'OFFICE ' + unlockedN + '/' + officeN, G.W - 8, 8, { align: 'right', size: 8, color: G.C.cyan });
+
+    const n = this.order().length;
+    const vis = this.visibleRows();
+    for (let row = 0; row < vis; row++) {
+      const i = this.scroll + row;
+      if (i >= n) break;
+      const ch = this.charAt(i);
+      const un = this.isUnlocked(i);
+      const sel = i === this.index;
+      const y = 24 + row * 16;
+      ctx.fillStyle = sel ? G.C.navy : G.C.ink;
+      ctx.fillRect(6, y, 158, 15);
+      ctx.strokeStyle = sel ? G.C.yellow : G.C.slate;
+      ctx.strokeRect(6.5, y + 0.5, 157, 14);
+      if (un) {
+        G.drawSprite(ctx, G.Sprites[ch.sprite] || G.Sprites.silhouette, 8, y - 1, 1);
+        if (ch.look === 'broccoli' && G.sparkle) G.sparkle(ctx, 20, y + 4, this.t, 2);
+        G.UI.text(ctx, ch.short || ch.name, 28, y + 3, { size: 7, color: ch.color || G.C.white });
+      } else {
+        G.drawSprite(ctx, G.Sprites.silhouette, 8, y - 1, 1);
+        G.UI.text(ctx, ch.short || 'LOCKED', 28, y + 3, { size: 7, color: G.C.slate });
+      }
+      if (ch.badge && un) G.UI.text(ctx, ch.badge, 158, y + 3, { align: 'right', size: 6, color: G.C.yellow });
+      else if (!un) G.UI.text(ctx, 'LOCK', 158, y + 3, { align: 'right', size: 6, color: G.C.slate });
     }
 
-    G.UI.text(ctx, 'CHOOSE YOUR AGENT', G.W / 2, 8, { align: 'center', size: 13, color: G.C.yellow, shadow: true });
-    G.UI.text(ctx, G.CT('< LEFT / RIGHT >', '< TAP THE PORTRAITS BELOW >'), G.W / 2, 22, { align: 'center', size: 7, color: G.C.slate });
+    this.renderCard(ctx);
+    G.UI.text(ctx, G.CT('UP/DOWN, ENTER   [ESC] BACK', 'TAP A NAME, TAP THE CARD TO START'), G.W / 2, G.H - 10, { align: 'center', size: 6, color: G.C.gray });
+  },
 
+  renderCard(ctx) {
     const ch = this.charAt(this.index);
-    const unlocked = this.isUnlocked(this.index);
-
-    // big card
-    G.UI.panel(ctx, 90, 32, 300, 178, {
+    const un = this.isUnlocked(this.index);
+    const x = 172, y = 24, w = G.W - 180, h = G.H - 40;
+    G.UI.panel(ctx, x, y, w, h, {
       bg: G.C.navy,
-      border: unlocked ? G.C.yellow : G.C.slate,
-      title: unlocked ? (ch.name + ' - ' + ch.title) : '????? - SECRET AGENT',
-      titleBg: unlocked ? ch.color : G.C.dusk,
+      border: un ? (ch.badge ? G.C.yellow : G.C.white) : G.C.slate,
+      title: un ? ch.name : ch.name,
+      titleBg: un ? (ch.color || G.C.blue) : G.C.dusk,
+      titleColor: un && ch.color === G.C.yellow ? G.C.ink : G.C.white,
     });
+    const sprite = un ? (G.Sprites[ch.sprite] || G.Sprites.silhouette) : G.Sprites.silhouette;
+    const hop = un ? Math.abs(Math.sin(this.t * 4)) * 2 : 0;
+    G.drawSprite(ctx, sprite, x + 8, y + 20 - hop, 3);
+    if (un && ch.look === 'broccoli' && G.sparkle) G.sparkle(ctx, x + 46, y + 36 - hop, this.t, 4);
 
-    if (unlocked) {
-      const hop = Math.abs(Math.sin(this.t * 4)) * 3;
-      G.drawSprite(ctx, G.Sprites[ch.sprite], 108, 56 - hop, 4);
-
-      let ty = 50;
-      for (const line of G.UI.wrap(ctx, ch.bio.join(' '), 190, 7)) {
-        G.UI.text(ctx, line, 186, ty, { size: 7, color: G.C.gray });
+    let ty = y + 18;
+    const tx = x + 62;
+    const tw = w - 72;
+    if (un) {
+      G.UI.text(ctx, ch.title + (ch.badge ? '  [' + ch.badge + ']' : ''), tx, ty, { size: 7, color: G.C.yellow });
+      ty += 12;
+      for (const line of G.UI.wrap(ctx, ch.bio.join(' '), tw, 7).slice(0, 4)) {
+        G.UI.text(ctx, line, tx, ty, { size: 7, color: G.C.gray });
         ty += 8;
       }
-      ty += 4;
-      G.UI.text(ctx, 'STRENGTHS:', 186, ty, { size: 7, color: G.C.cyan }); ty += 9;
-      for (const st of ch.strengths) {
-        G.UI.text(ctx, '* ' + st, 190, ty, { size: 7, color: G.C.lime });
-        ty += 9;
-      }
       ty += 3;
-      G.UI.text(ctx, 'SPECIAL: ' + ch.ability.name, 104, Math.max(ty, 150), { size: 8, color: G.C.yellow });
-      let ay = Math.max(ty, 150) + 10;
-      for (const l of G.UI.wrap(ctx, ch.ability.desc, 274, 7)) {
-        G.UI.text(ctx, l, 104, ay, { size: 7, color: G.C.white });
-        ay += 8;
+      for (const st of ch.strengths) {
+        G.UI.text(ctx, '* ' + st, tx, ty, { size: 7, color: G.C.lime });
+        ty += 8;
       }
+      ty += 2;
+      G.UI.text(ctx, 'SPECIAL: ' + ch.ability.name, tx, ty, { size: 7, color: G.C.yellow });
+      ty += 9;
+      for (const line of G.UI.wrap(ctx, ch.ability.desc, tw, 7).slice(0, 3)) {
+        G.UI.text(ctx, line, tx, ty, { size: 7, color: G.C.white });
+        ty += 8;
+      }
+      G.UI.text(ctx, '"' + ch.catchphrase + '"', x + 10, y + h - 22, { size: 7, color: G.C.cyan });
       if (Math.floor(this.t * 2) % 2 === 0) {
-        G.UI.text(ctx, G.CT('PRESS ENTER!', 'TAP THE CARD!'), 240, 198, { align: 'center', size: 8, color: G.C.yellow });
+        G.UI.text(ctx, G.CT('ENTER TO PLAY', 'TAP THE CARD'), x + w - 8, y + h - 14, { align: 'right', size: 7, color: G.C.yellow });
       }
     } else {
-      // locked silhouette
-      ctx.fillStyle = G.C.ink;
-      ctx.fillRect(108, 56, 56, 68);
-      G.UI.text(ctx, '?', 136, 78, { align: 'center', size: 26, color: G.C.slate });
-      G.UI.text(ctx, 'LOCKED', 240, 90, { align: 'center', size: 12, color: G.C.slate });
-      G.UI.text(ctx, 'HOW TO UNLOCK:', 240, 120, { align: 'center', size: 8, color: G.C.cyan });
-      G.UI.text(ctx, ch.unlockHint, 240, 134, { align: 'center', size: 8, color: G.C.yellow });
-    }
-
-    // thumbnail strip
-    for (let i = 0; i < this.ORDER.length; i++) {
-      const c = this.charAt(i);
-      const un = this.isUnlocked(i);
-      const x = G.W / 2 - this.ORDER.length * 22 + i * 44;
-      const sel = i === this.index;
-      ctx.fillStyle = sel ? G.C.blue : G.C.ink;
-      ctx.fillRect(x, 218, 40, 40);
-      ctx.strokeStyle = sel ? G.C.yellow : G.C.slate;
-      ctx.strokeRect(x + 0.5, 218.5, 39, 39);
-      if (un) {
-        G.drawSprite(ctx, G.Sprites[c.sprite], x + 6, 220, 2);
-      } else {
-        G.UI.text(ctx, '?', x + 20, 228, { align: 'center', size: 14, color: G.C.slate });
+      G.UI.text(ctx, 'LOCKED', tx, ty, { size: 12, color: G.C.slate });
+      ty += 16;
+      G.UI.text(ctx, ch.title, tx, ty, { size: 7, color: G.C.gray });
+      ty += 14;
+      G.UI.text(ctx, 'HOW TO UNLOCK', tx, ty, { size: 7, color: G.C.cyan });
+      ty += 10;
+      for (const line of G.UI.wrap(ctx, ch.unlockHint || 'KEEP PLAYING', tw, 8)) {
+        G.UI.text(ctx, line, tx, ty, { size: 8, color: G.C.yellow });
+        ty += 10;
       }
+      ty += 6;
+      G.UI.text(ctx, 'Play as Malcolm. Rare desks open when you earn them.', tx, ty, { size: 7, color: G.C.gray });
+      ty += 9;
+      G.UI.text(ctx, 'Unlocks stay on this device.', tx, ty, { size: 7, color: G.C.gray });
     }
-
-    G.UI.text(ctx, G.CT('MOST HOMES SOLD BY END OF JUNE WINS. [ESC] BACK', 'MOST HOMES SOLD BY END OF JUNE WINS.'), G.W / 2, G.H - 8, { align: 'center', size: 6, color: G.C.gray });
   },
 
   renderDifficulty(ctx) {
     const ch = this.charAt(this.index);
-    G.UI.text(ctx, 'SELECT DIFFICULTY', G.W / 2, 10, { align: 'center', size: 13, color: G.C.yellow, shadow: true });
-    G.UI.text(ctx, ch.name + ' - HOW TOUGH IS THE MARKET?', G.W / 2, 28, { align: 'center', size: 8, color: G.C.gray });
+    G.UI.text(ctx, 'MARKET AND SEASON', G.W / 2, 8, { align: 'center', size: 13, color: G.C.yellow, shadow: true });
+    G.UI.text(ctx, ch.short + '  -  ' + ch.title, G.W / 2, 26, { align: 'center', size: 8, color: G.C.gray });
 
     const DETAIL = {
-      casual: ['4 starting leads', 'Patient leads', 'Relaxed rival', 'Deals close in 1 day'],
-      standard: ['3 starting leads', 'Leads cool daily', 'Hungry rival', 'Deals pend 2 days'],
-      hard: ['2 starting leads', 'Leads cool FAST', 'Relentless rival', 'More setbacks'],
+      casual: ['Patient leads', 'A sleepy rival', 'Good for learning'],
+      standard: ['Leads cool daily', 'A fair race', 'The intended game'],
+      hard: ['Leads cool fast', 'A hungry rival', 'More setbacks'],
     };
     const COLS = [G.C.green, G.C.blue, G.C.red];
     for (let i = 0; i < 3; i++) {
       const id = this.DIFFS[i];
       const B = G.Data.BALANCE[id];
-      const x = 34 + i * 142;
+      const x = 16 + i * 154;
       const sel = this.diffIndex === i;
-      G.UI.panel(ctx, x, 60, 132, 150, {
+      G.UI.panel(ctx, x, 48, 146, 132, {
         bg: sel ? G.C.navy : G.C.ink,
         border: sel ? G.C.yellow : G.C.slate,
-        title: B.label + (id === 'standard' ? ' *' : ''),
+        title: B.label,
         titleBg: COLS[i],
       });
-      let y = 82;
-      for (const line of G.UI.wrap(ctx, B.desc, 116, 7)) {
+      let y = 68;
+      for (const line of G.UI.wrap(ctx, B.desc, 130, 7)) {
         G.UI.text(ctx, line, x + 8, y, { size: 7, color: G.C.gray });
         y += 9;
       }
       y += 4;
       for (const d of DETAIL[id]) {
         G.UI.text(ctx, '* ' + d, x + 8, y, { size: 7, color: sel ? G.C.white : G.C.slate });
-        y += 10;
-      }
-      if (sel && Math.floor(this.t * 2) % 2 === 0) {
-        G.UI.text(ctx, G.CT('ENTER TO START', 'TAP TO START'), x + 66, 196, { align: 'center', size: 7, color: G.C.yellow });
+        y += 11;
       }
     }
-    G.UI.text(ctx, '* STANDARD is the intended experience', G.W / 2, 224, { align: 'center', size: 7, color: G.C.cyan });
-    G.UI.text(ctx, G.CT('< LEFT / RIGHT >  [ESC] BACK', 'TAP A CARD TO SELECT, TAP AGAIN TO START'), G.W / 2, 240, { align: 'center', size: 7, color: G.C.slate });
+
+    const qSel = this.pace === 'quick';
+    G.UI.button(ctx, qSel ? 'QUICK SEASON *' : 'QUICK SEASON', 16, G.H - 46, 140, 18, { size: 7, selected: qSel });
+    G.UI.button(ctx, !qSel ? 'FULL SEASON *' : 'FULL SEASON', 164, G.H - 46, 140, 18, { size: 7, selected: !qSel });
+    G.UI.text(ctx, qSel ? '5 DAYS A MONTH. A TIGHT RACE.' : '8 DAYS A MONTH. THE LONG HAUL.', 312, G.H - 42, { size: 6, color: G.C.gray });
+    G.UI.text(ctx, G.CT('ENTER STARTS  [ESC] BACK', 'TAP A MARKET, TAP AGAIN TO START'), G.W / 2, G.H - 12, { align: 'center', size: 7, color: G.C.slate });
   },
 });
 
@@ -5020,7 +5908,9 @@ G.Engine.register('howto', {
       ['FOLLOW UP fast (attendees by NEXT DAY!) to turn them into buyers,', G.C.white],
       ['sellers & referrals. Neglected listings = angry sellers.', G.C.white],
       ['', 0],
-      ['MENTORS: Brad, Jeff, Blake & Tyler - ONE mentor power-up per day.', G.C.orange],
+      ['MENTORS: Joel and Jeff. ONE mentor power-up per day.', G.C.orange],
+      ['DAILY GOAL: two solid tasks. Streaks pay cash and energy.', G.C.yellow],
+      ['QUICK SEASON is 5 days a month. FULL is 8. Same race, less grind.', G.C.gray],
       ['Jeff\'s commercial deals pay cash & score but do NOT count as homes.', G.C.orange],
       ['', 0],
       [null, 0], // controls line - filled at render time
@@ -5045,7 +5935,7 @@ G.Engine.register('howto', {
 <script>
 // ============================================================
 // scenes/map.js - the day hub: Northern MN map + action menu,
-// weather, Brad's bank, Jeff's plaza, and the occasional squatch
+// weather, Joel's bank, Jeff's plaza, and the occasional squatch
 // ============================================================
 'use strict';
 
@@ -5083,9 +5973,13 @@ G.Engine.register('map', {
     G.Audio.startMusic();
 
     if (params.newDay) {
-      const d = Math.min(s.dayOfMonth, G.Data.SEASON.daysPerMonth);
+      const d = Math.min(s.dayOfMonth, G.State.daysInMonth());
       const w = G.State.weatherData();
-      this.banner = { text: G.State.monthName() + ' DAY ' + d + '/' + G.Data.SEASON.daysPerMonth + ' - ' + w.label, t: 2.4 };
+      this.banner = {
+        text: G.State.monthName() + ' DAY ' + d + '/' + G.State.daysInMonth() + ' - ' + w.label,
+        sub: G.State.char().catchphrase || '',
+        t: 2.8,
+      };
     }
 
     if (params.result) {
@@ -5120,10 +6014,10 @@ G.Engine.register('map', {
     const mentorNote = (openNote) => s.mentorUsedToday ? 'MENTOR USED' : openNote;
     const mentorLock = s.mentorUsedToday; // one mentor power-up per day
     items.push({
-      label: '$ BRAD (BANK)', id: 'brad', kind: 'visit',
-      disabled: s.bradUsed || mentorLock,
-      note: s.bradUsed ? 'GONE' : mentorNote('FREE'),
-      desc: 'Visit Brad Nolan, The Mortgage Wizard. CLEAR TO CLOSE awaits. (1 mentor/day)',
+      label: '$ JOEL (BANK)', id: 'joel', kind: 'visit',
+      disabled: s.joelUsed || mentorLock,
+      note: s.joelUsed ? 'GONE' : mentorNote('FREE'),
+      desc: 'Visit Joel, the blond Mortgage Wizard. CLEAR TO CLOSE awaits. (1 mentor/day)',
     });
     const jeffAvail = !mentorLock && (!s.commercialUnlocked || (s.jeffCooldown <= 0 && s.energy >= G.State.actionCost('commercial')));
     items.push({
@@ -5131,18 +6025,6 @@ G.Engine.register('map', {
       disabled: !jeffAvail,
       note: !s.commercialUnlocked ? mentorNote('MEET') : (s.jeffCooldown > 0 ? s.jeffCooldown + 'D' : mentorNote('-2E')),
       desc: 'Visit Jeff Nobleza, The Commercial King. Big money (not homes sold). (1 mentor/day)',
-    });
-    items.push({
-      label: '> BLAKE (LAB)', id: 'blake', kind: 'visit',
-      disabled: s.blakeCooldown > 0 || mentorLock || s.energy < 1,
-      note: s.blakeCooldown > 0 ? s.blakeCooldown + 'D' : mentorNote('-1E'),
-      desc: 'Visit Blake Suddath, The Growth Guru. AI OVERDRIVE, SCALE MODE, or the RARE 22-min parking lot talk. (1 mentor/day)',
-    });
-    items.push({
-      label: '= TYLER (SYS)', id: 'tyler', kind: 'visit',
-      disabled: s.tylerCooldown > 0 || mentorLock || s.energy < 1,
-      note: s.tylerCooldown > 0 ? s.tylerCooldown + 'D' : mentorNote('-1E'),
-      desc: 'Visit Tyler Lewis, The Systems Architect. Cirql Scan + compounding systems. (1 mentor/day)',
     });
     const ab = G.State.char().ability;
     items.push({
@@ -5155,7 +6037,7 @@ G.Engine.register('map', {
   },
 
   buildMenu() {
-    const touch = G.Input.touch;
+    const touch = true;
     let items = [];
     if (touch) {
       // categorized, larger rows for fingers
@@ -5202,27 +6084,15 @@ G.Engine.register('map', {
       this.carTarget = { x: loc.x, y: loc.y + 12 };
       this.mode = 'drive';
       G.Audio.swoosh();
-    } else if (it.id === 'brad') {
+    } else if (it.id === 'joel') {
       const loc = G.Data.MAP.locations.bank;
-      this.pendingAction = { id: '_brad', loc: 'bank' };
+      this.pendingAction = { id: '_joel', loc: 'bank' };
       this.carTarget = { x: loc.x, y: loc.y + 12 };
       this.mode = 'drive';
       G.Audio.swoosh();
     } else if (it.id === 'jeff') {
       const loc = G.Data.MAP.locations.plaza;
       this.pendingAction = { id: '_jeff', loc: 'plaza' };
-      this.carTarget = { x: loc.x, y: loc.y + 12 };
-      this.mode = 'drive';
-      G.Audio.swoosh();
-    } else if (it.id === 'blake') {
-      const loc = G.Data.MAP.locations.growthlab;
-      this.pendingAction = { id: '_blake', loc: 'growthlab' };
-      this.carTarget = { x: loc.x, y: loc.y + 12 };
-      this.mode = 'drive';
-      G.Audio.swoosh();
-    } else if (it.id === 'tyler') {
-      const loc = G.Data.MAP.locations.systemslab;
-      this.pendingAction = { id: '_tyler', loc: 'systemslab' };
       this.carTarget = { x: loc.x, y: loc.y + 12 };
       this.mode = 'drive';
       G.Audio.swoosh();
@@ -5247,8 +6117,8 @@ G.Engine.register('map', {
   },
 
   // ----------------------------------------------------------
-  visitBrad() {
-    const res = G.State.visitBrad();
+  visitJoel() {
+    const res = G.State.visitJoel();
     if (res.sold) {
       G.Audio.cash();
       G.Engine.shake = 5;
@@ -5258,7 +6128,7 @@ G.Engine.register('map', {
     G.Popup.show({
       title: res.used ? 'THE BANK' : 'CLEAR TO CLOSE!',
       lines: res.lines,
-      sprite: 'bradNolan',
+      sprite: 'joel',
       color: G.C.yellow, textColor: G.C.white,
       onClose: () => this.buildMenu(),
     });
@@ -5297,51 +6167,6 @@ G.Engine.register('map', {
     }
   },
 
-  visitBlake() {
-    const res = G.State.visitBlake();
-    const scaling = G.State.s.scaleMode > 0 && !res.used;
-    if (!res.used) {
-      G.Audio[scaling ? 'fanfare' : 'ability']();
-      G.Engine.shake = scaling ? 5 : 3;
-      // AI drones + holographic charts swirl out
-      this.particles.spawn(278, 235, {
-        count: scaling ? 50 : 28,
-        colors: scaling ? [G.C.cyan, G.C.lime, G.C.sky, G.C.white] : [G.C.cyan, G.C.lime, G.C.sky],
-        life: 1.6, vyMin: -110, vyMax: -30,
-      });
-    }
-    G.Popup.show({
-      title: res.used ? 'GROWTH LAB' : (scaling ? 'SCALE MODE!!' : 'AI OVERDRIVE!'),
-      lines: res.lines,
-      sprite: 'blakeSuddath',
-      color: scaling ? G.C.cyan : G.C.lime,
-      onClose: () => this.buildMenu(),
-    });
-  },
-
-  visitTyler() {
-    const before = { sys: G.State.s.systemOverride, oh: G.State.s.openHouseEngine };
-    const res = G.State.visitTyler();
-    const override = G.State.s.systemOverride > before.sys;
-    if (!res.used) {
-      G.Audio[override ? 'fanfare' : 'ability']();
-      G.Engine.shake = override ? 5 : 2;
-      // holographic radar sweep + dashboards
-      this.particles.spawn(185, 228, {
-        count: override ? 44 : 24,
-        colors: override ? [G.C.sky, G.C.cyan, G.C.white, G.C.teal] : [G.C.sky, G.C.cyan, G.C.teal],
-        life: 1.6, vyMin: -100, vyMax: -30,
-      });
-    }
-    G.Popup.show({
-      title: res.used ? 'SYSTEMS LAB' : (override ? 'SYSTEM OVERRIDE!!' : 'CIRQL SCAN'),
-      lines: res.lines,
-      sprite: 'tylerLewis',
-      color: override ? G.C.sky : G.C.teal,
-      onClose: () => this.buildMenu(),
-    });
-  },
-
   // ----------------------------------------------------------
   resolveAction(actionId, score) {
     const res = G.State.performAction(actionId, score);
@@ -5357,14 +6182,23 @@ G.Engine.register('map', {
       color: res.sold > 0 ? G.C.green : G.C.blue,
       onClose: () => {
         this.buildMenu();
-        if (G.State.s.energy <= 0) {
+        const celeb = G.State.pullCelebrations();
+        const after = () => {
+          if (G.State.s.energy <= 0) {
+            G.Toast.push('OUT OF ENERGY', 'Shop, or end the day when you are ready.');
+          }
+        };
+        if (celeb.length) {
+          G.Audio.fanfare();
+          G.Engine.shake = 6;
+          this.particles.spawn(G.W / 2, 80, { count: 28, colors: [G.C.yellow, G.C.lime, G.C.cyan], life: 1.2 });
           G.Popup.show({
-            title: 'OUT OF ENERGY',
-            lines: ['You are running on fumes and gas station coffee.', 'Time to end the day.'],
-            color: G.C.slate,
-            onClose: () => this.endDay(),
+            title: celeb[0].title,
+            lines: celeb[0].lines,
+            color: G.C.green,
+            onClose: after,
           });
-        }
+        } else after();
       },
     });
   },
@@ -5379,14 +6213,15 @@ G.Engine.register('map', {
       // Never soft-lock the player if end-of-day processing throws:
       // force a minimal safe day advance so they can keep playing.
       G.Engine.reportError('endDay', e);
-      s.dayOfMonth++;
+      s._ending = false;
       let bossTime = false;
-      if (s.dayOfMonth > G.Data.SEASON.daysPerMonth) { s.pendingBoss = true; bossTime = true; }
+      if (!s._calendarMoved) {
+        s.dayOfMonth++;
+        if (s.dayOfMonth > G.State.daysInMonth()) { s.pendingBoss = true; bossTime = true; }
+      }
       s.energy = G.State.maxEnergy();
-      s.abilityUsed = false; s.bradUsed = false;
+      s.abilityUsed = false; s.joelUsed = false;
       if (s.jeffCooldown > 0) s.jeffCooldown--;
-      if (s.blakeCooldown > 0) s.blakeCooldown--;
-      if (s.tylerCooldown > 0) s.tylerCooldown--;
       try { G.State.rollWeather(); } catch (_) {}
       try { G.State.autosave(); } catch (_) {}
       r = { passiveLines: ['(An error was caught and the day advanced safely.)'], rivalLines: [], eventText: null, eventGood: false, bossTime };
@@ -5408,7 +6243,10 @@ G.Engine.register('map', {
     } else {
       lines.push('Your rival was suspiciously quiet today.');
     }
-    lines.push('', 'SCORE: YOU ' + s.stats.homesSold + ' - RIVAL ' + s.rival.homesSold);
+    const rivalName = (G.State.rivalChar().short) || 'BRIDGER';
+    lines.push('', 'SCORE: YOU ' + s.stats.homesSold + ' - ' + rivalName + ' ' + s.rival.homesSold);
+    lines.push('STREAK ' + (s.streak || 0) + '   BEST ' + (s.bestStreak || 0));
+    if (r.celebrations && r.celebrations.length) G.Audio.fanfare();
 
     G.Popup.show({
       title: 'END OF DAY', lines, color: G.C.navy,
@@ -5470,9 +6308,7 @@ G.Engine.register('map', {
         this.mode = 'menu';
         const a = this.pendingAction;
         this.pendingAction = null;
-        if (a.id === '_brad') { this.visitBrad(); return; }
-        if (a.id === '_blake') { this.visitBlake(); return; }
-        if (a.id === '_tyler') { this.visitTyler(); return; }
+        if (a.id === '_joel') { this.visitJoel(); return; }
         if (a.id === '_jeff') { this.visitJeff(); return; }
         if (a.minigame) {
           G.Engine.goto(a.minigame, { actionId: a.id });
@@ -5505,7 +6341,17 @@ G.Engine.register('map', {
       return;
     }
 
-    // hotkeys for the bottom nav
+    // hotkeys for the bottom nav and the action tabs
+    if (G.Input.p('q') || G.Input.left()) {
+      const i = Math.max(0, this.CATS.findIndex(c => c.id === this.cat));
+      this.cat = this.CATS[(i + this.CATS.length - 1) % this.CATS.length].id;
+      this.buildMenu(); G.Audio.move(); return;
+    }
+    if (G.Input.p('e') || G.Input.right()) {
+      const i = Math.max(0, this.CATS.findIndex(c => c.id === this.cat));
+      this.cat = this.CATS[(i + 1) % this.CATS.length].id;
+      this.buildMenu(); G.Audio.move(); return;
+    }
     if (G.Input.p('p')) { this.mode = 'pipeline'; this.pipeScroll = 0; G.Audio.select(); return; }
     if (G.Input.p('t')) { this.mode = 'stats'; G.Audio.select(); return; }
     if (G.Input.p('b')) { G.Engine.goto('shop'); G.Audio.select(); return; }
@@ -5535,8 +6381,11 @@ G.Engine.register('map', {
       const a = Math.min(1, this.banner.t);
       ctx.globalAlpha = a;
       ctx.fillStyle = G.C.ink;
-      ctx.fillRect(0, 110, G.W, 34);
-      G.UI.text(ctx, this.banner.text, G.W / 2, 122, { align: 'center', size: 12, color: G.C.yellow });
+      const bx = this.MAP_X;
+      const bw = G.W - this.MAP_X;
+      ctx.fillRect(bx, 108, bw, 40);
+      G.UI.text(ctx, this.banner.text, bx + bw / 2, 114, { align: 'center', size: 11, color: G.C.yellow });
+      if (this.banner.sub) G.UI.text(ctx, '"' + this.banner.sub + '"', bx + bw / 2, 130, { align: 'center', size: 7, color: G.C.white });
       ctx.globalAlpha = 1;
     }
   },
@@ -5604,10 +6453,8 @@ G.Engine.register('map', {
     let selLoc = null;
     if (selected) {
       if (selected.kind === 'action') selLoc = (G.Data.ACTIONS.find(a => a.id === selected.id) || {}).loc;
-      if (selected.id === 'brad') selLoc = 'bank';
+      if (selected.id === 'joel') selLoc = 'bank';
       if (selected.id === 'jeff') selLoc = 'plaza';
-      if (selected.id === 'blake') selLoc = 'growthlab';
-      if (selected.id === 'tyler') selLoc = 'systemslab';
     }
     for (const [key, loc] of Object.entries(G.Data.MAP.locations)) {
       const sp = G.Sprites[loc.sprite];
@@ -5686,7 +6533,9 @@ G.Engine.register('map', {
 
     const ch = G.State.char();
     G.drawSprite(ctx, G.Sprites[ch.sprite], 4, 4, 2);
-    G.UI.text(ctx, ch.name, 38, 6, { size: 9, color: ch.id === 'bridger' ? '#c0562f' : (ch.color || G.C.lime) });
+    if (ch.look === 'broccoli' && G.sparkle) G.sparkle(ctx, 28, 16, this.t, 3);
+    const nameCol = (ch.color === G.C.navy || ch.color === G.C.dusk) ? G.C.white : (ch.color || G.C.lime);
+    G.UI.text(ctx, ch.short || ch.name, 38, 6, { size: 8, color: nameCol });
     G.UI.text(ctx, G.money(s.cash), 38, 17, { size: 8, color: G.C.yellow });
 
     G.UI.text(ctx, 'ENERGY', 38, 28, { size: 6, color: G.C.gray });
@@ -5697,15 +6546,7 @@ G.Engine.register('map', {
       ctx.strokeRect(72.5 + i * 8, 28.5, 5, 5);
     }
 
-    // Coffee meter (playing Blake) + active buff badges (Blake / Tyler)
     let bx = 38;
-    if (G.State.perk() === 'blake') {
-      const c = s.coffee;
-      const col = c <= 0 ? G.C.red : c <= 34 ? G.C.orange : G.C.lime;
-      G.UI.text(ctx, 'CF', 38, 37, { size: 6, color: G.C.gray });
-      G.UI.bar(ctx, 51, 37, 24, 5, c / 100, col);
-      bx = 80;
-    }
     const buffs = G.State.activeBuffs();
     const blink = Math.floor(this.t * 3) % 2 === 0;
     for (const bf of buffs) {
@@ -5713,8 +6554,8 @@ G.Engine.register('map', {
       bx += G.UI.measure(ctx, bf.t, 6) + 5;
     }
 
-    // touch: category tabs above the menu
-    if (G.Input.touch) {
+    // category tabs above the menu (phone and desktop)
+    if (true) {
       let tx = 3;
       for (const c of this.CATS) {
         const sel = this.cat === c.id;
@@ -5753,16 +6594,25 @@ G.Engine.register('map', {
   renderHud(ctx) {
     const s = G.State.s;
     const w = 210, x = G.W - w - 4, y = 3;
+    const days = G.State.daysInMonth();
+    const total = days * G.Data.SEASON.months.length;
+    const done = s.month * days + Math.min(s.dayOfMonth, days) - 1;
     ctx.fillStyle = 'rgba(26,28,44,0.85)';
-    ctx.fillRect(x, y, w, 22);
+    ctx.fillRect(x, y, w, 36);
     ctx.strokeStyle = G.C.slate;
-    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, 21);
-    G.UI.text(ctx, G.State.monthName() + ' D' + Math.min(s.dayOfMonth, G.Data.SEASON.daysPerMonth) + '/' + G.Data.SEASON.daysPerMonth, x + 5, y + 3, { size: 7, color: G.C.white });
-    G.UI.text(ctx, 'YOU ' + s.stats.homesSold, x + 5, y + 12, { size: 7, color: G.C.lime });
-    G.UI.text(ctx, 'RIVAL ' + s.rival.homesSold, x + 50, y + 12, { size: 7, color: G.C.red });
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, 35);
+    G.UI.text(ctx, G.State.monthName() + ' D' + Math.min(s.dayOfMonth, days) + '/' + days, x + 5, y + 3, { size: 7, color: G.C.white });
     const wd = G.State.weatherData();
     G.UI.text(ctx, wd.label, x + w - 5, y + 3, { align: 'right', size: 7, color: G.C.cyan });
-    G.UI.text(ctx, 'LEADS ' + s.leads.length + '/' + G.State.bal().maxActivePipeline + '  FLW ' + s.stats.followers, x + w - 5, y + 12, { align: 'right', size: 7, color: G.C.yellow });
+    G.UI.bar(ctx, x + 5, y + 12, 70, 4, done / Math.max(1, total), G.C.lime);
+    G.UI.text(ctx, 'YOU ' + s.stats.homesSold, x + 80, y + 11, { size: 7, color: G.C.lime });
+    const rivalTag = (G.State.rivalChar().short || 'BRIDGER');
+    G.UI.text(ctx, rivalTag + ' ' + s.rival.homesSold, x + 118, y + 11, { size: 7, color: G.C.red });
+    const goal = Math.min(2, s.dayMarks || 0);
+    G.UI.text(ctx, 'STREAK ' + (s.streak || 0), x + 5, y + 18, { size: 7, color: (s.streak || 0) >= 3 ? G.C.yellow : G.C.gray });
+    G.UI.text(ctx, 'GOAL ' + goal + '/2', x + 70, y + 18, { size: 7, color: goal >= 2 ? G.C.lime : G.C.white });
+    G.UI.text(ctx, 'SCORE ' + G.State.seasonScore(), x + w - 5, y + 18, { align: 'right', size: 7, color: G.C.yellow });
+    G.UI.text(ctx, G.State.coachTip(), x + 5, y + 27, { size: 6, color: G.C.cyan });
   },
 
   renderStats(ctx) {
@@ -5787,6 +6637,7 @@ G.Engine.register('map', {
       ['BOSS WINS', s.stats.bossWins, G.C.purple],
       ['RIVALRY LEVEL', ['FRIENDLY', 'SPICY', 'FULL FEUD'][Math.min(2, Math.floor(s.rivalry / 2))], G.C.red],
       ['CASH ON HAND', G.money(s.cash), G.C.yellow],
+      ['STREAK / SCORE', (s.streak || 0) + ' / ' + G.State.seasonScore(), G.C.yellow],
     ];
     let y = 32;
     for (const [label, val, color] of rows) {
@@ -6471,7 +7322,7 @@ G.makeMinigame('showGame', {
   },
   bg: G.C.navy,
 
-  duration: 18,
+  duration: 12,
 
   init() {
     this.features = [
@@ -6610,7 +7461,7 @@ G.makeMinigame('negotiateGame', {
     ];
   },
   bg: G.C.ink,
-  duration: 15,
+  duration: 11,
 
   init() {
     this.bar = 0.35;
@@ -6691,7 +7542,7 @@ G.makeMinigame('inspectGame', {
     ];
   },
   bg: G.C.dusk,
-  duration: 16,
+  duration: 12,
 
   init() {
     const ISSUES = ['LEAKY FAUCET', 'SQUIRRELS (RUDE)', 'ROOF FROM 1971', 'RADON???', 'MYSTERY SWITCH', 'SPOOKY FURNACE', 'DOOR TO NOWHERE'];
@@ -6799,7 +7650,7 @@ G.makeMinigame('videoGame', {
     ];
   },
   bg: G.C.purple,
-  duration: 16,
+  duration: 12,
 
   LANE_BTNS: [
     { label: 'LEFT',  key: 'ArrowLeft',  x: 106, y: 216, w: 68, h: 38, size: 9 },
@@ -7029,7 +7880,7 @@ G.makeMinigame('openHouseGame', {
     ];
   },
   bg: G.C.teal,
-  duration: 20,
+  duration: 13,
 
   init() {
     this.px = G.W / 2;
@@ -7531,7 +8382,7 @@ G.Engine.register('battle', {
     G.drawSprite(ctx, G.Sprites[this.rival.sprite], 380, 46, 3, true);
     G.drawSprite(ctx, G.Sprites.cabin, G.W / 2 - 21, 40, 3);
     G.UI.text(ctx, 'YOU', 71, 100, { align: 'center', size: 8, color: G.C.lime });
-    G.UI.text(ctx, this.rival.name, 401, 100, { align: 'center', size: 8, color: G.C.red });
+    G.UI.text(ctx, this.rival.short || this.rival.name, 401, 100, { align: 'center', size: 8, color: G.C.red });
     G.UI.text(ctx, 'THE SELLERS', G.W / 2, 70, { align: 'center', size: 7, color: G.C.yellow });
 
     if (this.phase === 'intro') {
@@ -7560,6 +8411,9 @@ G.Engine.register('battle', {
         ctx.strokeStyle = sel ? G.C.yellow : G.C.slate;
         ctx.strokeRect(60.5, y + 0.5, 359, 25);
         G.UI.text(ctx, (sel ? '> ' : '  ') + this.opts[i].t, 68, y + 9, { size: 8, color: sel ? G.C.white : G.C.gray });
+        if (G.State.char().id === 'adam' && this.opts[i].ok) {
+          G.UI.text(ctx, 'ADAM KNOWS', 400, y + 9, { align: 'right', size: 6, color: G.C.yellow });
+        }
       }
       G.UI.text(ctx, G.CT('UP/DOWN + ENTER (OR CLICK)', 'TAP AN ANSWER'), G.W / 2, G.H - 44, { align: 'center', size: 7, color: G.C.slate });
     }
@@ -7668,9 +8522,9 @@ G.Engine.register('achievements', {
       y += 17;
     }
 
-    // secret agent roster
-    const unlockedChars = Object.keys(G.Data.SECRET_CHARACTERS).filter(id => p.unlocks[id]).length;
-    G.UI.text(ctx, 'SECRET AGENTS UNLOCKED: ' + unlockedChars + '/4', G.W / 2, G.H - 52, { align: 'center', size: 8, color: G.C.cyan });
+    const unlockedChars = G.Roster ? G.Roster.unlockedCount() : 0;
+    const officeN = G.Roster ? G.Roster.officeCount : 0;
+    G.UI.text(ctx, 'GRAND RAPIDS OFFICE UNLOCKED: ' + unlockedChars + '/' + officeN, G.W / 2, G.H - 52, { align: 'center', size: 8, color: G.C.cyan });
     G.UI.text(ctx, 'UP/DOWN SCROLL - [ESC] BACK', G.W / 2, G.H - 26, { align: 'center', size: 7, color: G.C.yellow });
   },
 });
@@ -7753,7 +8607,7 @@ G.Engine.register('seasonEnd', {
     else if (!this.tied) G.drawSprite(ctx, G.Sprites.trophy, themX + 42, 60, 2);
 
     G.UI.text(ctx, 'YOU: ' + s.stats.homesSold + ' HOMES', 170, 148, { align: 'center', size: 9, color: G.C.lime });
-    G.UI.text(ctx, rc.name + ': ' + s.rival.homesSold + ' HOMES', 310, 148, { align: 'center', size: 9, color: G.C.red });
+    G.UI.text(ctx, (rc.short || rc.name) + ': ' + s.rival.homesSold + ' HOMES', 310, 148, { align: 'center', size: 9, color: G.C.red });
 
     // stat strip (3 columns x 3 rows)
     const rows = [
@@ -7819,7 +8673,7 @@ G.Engine.register('leaderboard', {
       this.entries.forEach((e, i) => {
         const rowCol = i === 0 ? G.C.yellow : i === 1 ? G.C.gray : i === 2 ? G.C.orange : G.C.white;
         G.UI.text(ctx, String(i + 1), 56, y, { size: 8, color: rowCol });
-        G.UI.text(ctx, e.name, 76, y, { size: 8, color: e.name === 'BRIDGER' ? '#c0562f' : G.C.lime });
+        G.UI.text(ctx, e.name, 76, y, { size: 7, color: G.C.white });
         G.UI.text(ctx, String(e.homesSold), 170, y, { size: 8, color: rowCol });
         G.UI.text(ctx, G.money(e.commission), 220, y, { size: 8, color: G.C.yellow });
         G.UI.text(ctx, e.score.toLocaleString('en-US'), 330, y, { size: 8, color: rowCol });

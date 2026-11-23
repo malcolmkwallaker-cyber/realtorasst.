@@ -175,7 +175,7 @@ G.Engine.register('battle', {
     G.drawSprite(ctx, G.Sprites[this.rival.sprite], 380, 46, 3, true);
     G.drawSprite(ctx, G.Sprites.cabin, G.W / 2 - 21, 40, 3);
     G.UI.text(ctx, 'YOU', 71, 100, { align: 'center', size: 8, color: G.C.lime });
-    G.UI.text(ctx, this.rival.name, 401, 100, { align: 'center', size: 8, color: G.C.red });
+    G.UI.text(ctx, this.rival.short || this.rival.name, 401, 100, { align: 'center', size: 8, color: G.C.red });
     G.UI.text(ctx, 'THE SELLERS', G.W / 2, 70, { align: 'center', size: 7, color: G.C.yellow });
 
     if (this.phase === 'intro') {
@@ -204,6 +204,9 @@ G.Engine.register('battle', {
         ctx.strokeStyle = sel ? G.C.yellow : G.C.slate;
         ctx.strokeRect(60.5, y + 0.5, 359, 25);
         G.UI.text(ctx, (sel ? '> ' : '  ') + this.opts[i].t, 68, y + 9, { size: 8, color: sel ? G.C.white : G.C.gray });
+        if (G.State.char().id === 'adam' && this.opts[i].ok) {
+          G.UI.text(ctx, 'ADAM KNOWS', 400, y + 9, { align: 'right', size: 6, color: G.C.yellow });
+        }
       }
       G.UI.text(ctx, G.CT('UP/DOWN + ENTER (OR CLICK)', 'TAP AN ANSWER'), G.W / 2, G.H - 44, { align: 'center', size: 7, color: G.C.slate });
     }

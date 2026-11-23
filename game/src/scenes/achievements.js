@@ -51,9 +51,9 @@ G.Engine.register('achievements', {
       y += 17;
     }
 
-    // secret agent roster
-    const unlockedChars = Object.keys(G.Data.SECRET_CHARACTERS).filter(id => p.unlocks[id]).length;
-    G.UI.text(ctx, 'SECRET AGENTS UNLOCKED: ' + unlockedChars + '/4', G.W / 2, G.H - 52, { align: 'center', size: 8, color: G.C.cyan });
+    const unlockedChars = G.Roster ? G.Roster.unlockedCount() : 0;
+    const officeN = G.Roster ? G.Roster.officeCount : 0;
+    G.UI.text(ctx, 'GRAND RAPIDS OFFICE UNLOCKED: ' + unlockedChars + '/' + officeN, G.W / 2, G.H - 52, { align: 'center', size: 8, color: G.C.cyan });
     G.UI.text(ctx, 'UP/DOWN SCROLL - [ESC] BACK', G.W / 2, G.H - 26, { align: 'center', size: 7, color: G.C.yellow });
   },
 });

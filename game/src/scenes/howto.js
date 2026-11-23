@@ -36,7 +36,9 @@ G.Engine.register('howto', {
       ['FOLLOW UP fast (attendees by NEXT DAY!) to turn them into buyers,', G.C.white],
       ['sellers & referrals. Neglected listings = angry sellers.', G.C.white],
       ['', 0],
-      ['MENTORS: Brad, Jeff, Blake & Tyler - ONE mentor power-up per day.', G.C.orange],
+      ['MENTORS: Joel and Jeff. ONE mentor power-up per day.', G.C.orange],
+      ['DAILY GOAL: two solid tasks. Streaks pay cash and energy.', G.C.yellow],
+      ['QUICK SEASON is 5 days a month. FULL is 8. Same race, less grind.', G.C.gray],
       ['Jeff\'s commercial deals pay cash & score but do NOT count as homes.', G.C.orange],
       ['', 0],
       [null, 0], // controls line - filled at render time
