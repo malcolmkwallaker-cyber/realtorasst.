@@ -577,7 +577,6 @@ G.State = {
     if (id === 'inspect') adj += ch.inspectBonus || 0;
     if ((this.s.dayMarks || 0) === 0 && ch.id === 'adam') adj += 0.12;
     adj += Math.min(0.1, (this.s.streak || 0) * 0.02);
-    if (ch.id === 'jordan' && (this.s.streak || 0) >= 2) adj += 0.05;
     if (ch.id === 'scotty') adj += (this.s.stats.happiness - 50) / 900;
     if (id === 'listing' && this.has('matterport')) adj += 0.1;
     if (id === 'video') {
@@ -600,7 +599,7 @@ G.State = {
   closeLead(l, lines) {
     const s = this.s;
     const rate = l.commercial ? 0.005 : 0.027;
-    const comm = Math.round(l.value * rate * (l.commercial ? 1 : (this.char().commissionMult || 1)));
+    const comm = Math.round(l.value * rate * (this.char().commissionMult || 1));
     // Commercial deals are their own stat - they do NOT count as homes sold
     if (l.commercial) s.stats.commercialDeals++;
     else s.stats.homesSold++;
@@ -940,21 +939,24 @@ G.State = {
       case 'show': {
         let buyers = this.leadsInStage('active', 'appt').filter(l => !l.seller);
         buyers.sort((a, b) => (a.stage === 'active' ? -1 : 1) - (b.stage === 'active' ? -1 : 1));
-        const howMany = this.has('assistant') ? 2 : 1;
+        const howMany = (this.has('assistant') || ch.id === 'jordan') ? 2 : 1;
         const picked = buyers.slice(0, howMany);
+        const signAt = ch.id === 'jordan' ? 0.22 : 0.35;
+        const offerAt = ch.id === 'jordan' ? 0.4 : 0.55;
         if (s.effects.showPenalty) { s.effects.showPenalty = false; lines.push('(The lockbox finally opened. Your mitten will never be the same.)'); }
-        lines.push(grade(score) + ' Tour day!');
+        lines.push(grade(score) + (ch.id === 'jordan' ? ' Jordan knows this buyer already.' : ' Tour day!'));
         for (const l of picked) {
           this.touch(l);
           if (l.stage === 'appt') {
-            if (score >= 0.35) {
+            if (score >= signAt) {
               this.advance(l, 'active');
               lines.push(l.name + ' is now YOUR buyer client!');
             } else {
               lines.push(l.name + ' "didn\'t vibe with the carpet." Still at appt.');
             }
-          } else if (score >= 0.55) {
+          } else if (score >= offerAt) {
             this.advance(l, 'offer');
+            s.stats.offersWritten = (s.stats.offersWritten || 0) + 1;
             lines.push(l.name + ' FOUND THE ONE! (' + G.choice([
               'It was the hot tub.', 'The garage fits the boat AND the wheeler.',
               'A bald eagle flew by during the tour. Done deal.', 'Granite. Countertops.',
@@ -969,12 +971,22 @@ G.State = {
 
       case 'offer': {
         G.Profile.bump('offers');
-        const ready = this.offerReadyLeads();
-        const l = this.bestLead(ready);
-        this.touch(l);
-        this.advance(l, 'offer');
-        lines.push(G.choice(G.Data.FLAVOR.offer));
-        lines.push(l.name + ' (' + G.money(l.value) + ') is now UNDER OFFER.');
+        let ready = this.offerReadyLeads();
+        if (ch.id === 'jordan') {
+          const buyersOnly = ready.filter(l => !l.seller);
+          if (buyersOnly.length) ready = buyersOnly;
+        }
+        ready = ready.slice().sort((a, b) => b.value - a.value);
+        const count = ch.id === 'jordan' ? Math.min(2, ready.length) : 1;
+        const picked = ready.slice(0, count);
+        if (ch.id === 'jordan') lines.push('Jordan already had the offer language ready.');
+        for (const l of picked) {
+          this.touch(l);
+          this.advance(l, 'offer');
+          s.stats.offersWritten = (s.stats.offersWritten || 0) + 1;
+          lines.push(G.choice(G.Data.FLAVOR.offer));
+          lines.push(l.name + ' (' + G.money(l.value) + ') is now UNDER OFFER.');
+        }
         break;
       }
 
@@ -1246,6 +1258,41 @@ G.State = {
         const ref = this.spawnLead('referral');
         if (ref) { ref.warmth = 75; s.stats.referrals++; G.Profile.bump('referrals'); lines.push('+ REFERRAL: ' + ref.name + ' heard the owner was on it.'); }
         this.addReputation(4);
+        break;
+      }
+      case 'ideas': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const side = G.randInt(1200, 2800);
+        s.cash += side;
+        s.stats.commission += side;
+        lines.push('SIDE HUSTLE PAID: +' + G.money(side) + '. Bekkah says that one was obvious.');
+        const biz = this.spawnLead(G.chance(0.5) ? 'investor' : 'facebook');
+        if (biz) lines.push('+ LEAD: ' + biz.name + ' wants in on the idea. And a house.');
+        else lines.push('A future business partner called. Your pipeline is full, so she took a note.');
+        break;
+      }
+      case 'buyerday': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const buyer =
+          this.bestLead(this.leadsInStage('active').filter(l => !l.seller)) ||
+          this.bestLead(this.leadsInStage('appt').filter(l => !l.seller)) ||
+          this.bestLead(this.leadsInStage('hot').filter(l => !l.seller));
+        if (!buyer) {
+          lines.push(advanceBest() || 'No buyer on the hook yet. Jordan is already previewing three houses.');
+          break;
+        }
+        this.touch(buyer);
+        if (buyer.stage === 'active') {
+          this.advance(buyer, 'offer');
+          s.stats.offersWritten = (s.stats.offersWritten || 0) + 1;
+          lines.push(buyer.name + ' is UNDER OFFER. Written before lunch.');
+        } else if (buyer.stage === 'appt' || buyer.stage === 'hot' || buyer.stage === 'new') {
+          const next = { new: 'hot', hot: 'appt', appt: 'active' }[buyer.stage];
+          this.advance(buyer, next);
+          lines.push(buyer.name + ' moves to ' + G.Data.STAGE_LABELS[next] + '. That buyer is in good hands.');
+        } else {
+          lines.push(advanceBest() || 'The buy side is quiet. Jordan is fine with that for one hour.');
+        }
         break;
       }
       case 'welcome': {

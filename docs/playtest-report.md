@@ -101,7 +101,7 @@ seasons, and happiness). So the locks are reachable, not decorative.
 
 ## Two office personalities
 
-Kaila Wass plays as a Bigfork original: camo, a blaze-orange cap, woods and lake leads, and a truck that ignores blizzards. Her daily ability is Ice House Tour. Scotty Puglisi plays as a pastor's wife: hospitality, a hotdish, and a prayer chain that brings warm referrals. The chain is written as a kindness, not a joke. Jillian Bilden is drawn short on purpose and plays as a scrappy negotiator: plus 30 percent on hard talks, and Stand Your Ground sends the best offer to pending. All three still start locked. Kaila unlocks by selling a lake, cabin, hunting, or farm place. Scotty unlocks with two referrals in a season. Jillian unlocks by winning two negotiations.
+Kaila Wass plays as a Bigfork original: camo, a blaze-orange cap, woods and lake leads, and a truck that ignores blizzards. Her daily ability is Ice House Tour. Scotty Puglisi plays as a pastor's wife: hospitality, a hotdish, and a prayer chain that brings warm referrals. The chain is written as a kindness, not a joke. Jillian Bilden is drawn short on purpose and plays as a scrappy negotiator: plus 30 percent on hard talks, and Stand Your Ground sends the best offer to pending. Rebekkah Anderson goes by Bekkah. She talks side hustles all day, closings pay 18 percent more, and Twelve Businesses drops cash plus a lead. Jordan Hess is the buyer agent: easier showings, faster buyer signings, and two offers at once. They still start locked. Kaila unlocks by selling a lake, cabin, hunting, or farm place. Scotty unlocks with two referrals in a season. Jillian unlocks by winning two negotiations. Bekkah unlocks at $8,000 commission. Jordan unlocks by writing three offers.
 
 ## Still true
 
