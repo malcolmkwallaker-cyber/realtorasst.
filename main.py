@@ -157,3 +157,4 @@ This should read like advice from a top-producing mentor, not a textbook."""
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/northmn-game", StaticFiles(directory="northmn-game", html=True), name="northmn-game")

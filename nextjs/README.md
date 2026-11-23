@@ -61,6 +61,10 @@ Go to **Settings** and save your info (name, brokerage, markets, VA name, etc). 
 4. Add all four environment variables in Vercel project settings
 5. Deploy
 
+## North Desk
+
+The browser game for the whole Pemberton office lives in [`northmn-game/`](../northmn-game/index.html). Grand Rapids, the Iron Range, and Duluth. Open `northmn-game/index.html` in a browser. No build.
+
 ## Tech Stack
 
 - Next.js 14 (App Router)

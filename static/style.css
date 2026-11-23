@@ -86,6 +86,11 @@ body {
   gap: 4px;
 }
 
+a.nav-btn {
+  display: block;
+  text-decoration: none;
+}
+
 .nav-btn {
   width: 100%;
   background: none;
@@ -120,6 +125,11 @@ body {
   font-size: 11px;
   color: var(--text-dim);
   text-align: center;
+}
+
+.sidebar-footer a {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* MAIN CONTENT */
