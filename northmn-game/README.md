@@ -1,35 +1,27 @@
 # North Desk
 
-A season with the whole Pemberton Real Estate office. Grand Rapids is home. The work runs the Iron Range and down to Duluth. You can play as anyone. The rest of the desk keeps working.
+A top-down driving RPG for Pemberton Real Estate on the Grand Rapids, Iron Range, and Duluth corridor. No build. Open `index.html`.
 
-No build. Open `index.html` in a browser.
+## Drive
 
-## How to play
+WASD or arrows. W is gas, S or Space is brake. A and D steer. E hops out or into the car, and walks you through a door. H is the horn. P opens a text. M is the regional map.
 
-Twelve weeks: fall, winter, thaw, summer. Each week, pick one of two cards, then make the call. Your perk helps when the card is your kind of work. It is not a bigger season than anyone else's.
+On a phone, the pad is gas, brake, and steering. Text, Horn, Pull over, and Map sit beside it.
 
-The Grand Rapids desk wins by closing more homes than the Range desk and the Duluth desk. Your closings and your teammates' closings count together. Finish your four story beats and the desk gets one more closing. Same reward for every agent.
+Park in a driveway, get out, and walk the house: living room, kitchen, bedroom, and a lake deck or garage. Then negotiate. Pitch, Skills, Items, and Backup are the four commands. Backup calls the coworker who rode shotgun.
+
+## Texting and troopers
+
+Texts pop up on the highways. Pull over to answer, or answer while moving. Patrol cars watch US-2, US-169, and US-53. A phone at speed, or a showing-speed run, turns on the lights and a wanted star.
+
+Outrun them until the star cools, or pull over. The ticket is $150 and a one-liner. It is not a game over.
 
 ## Towns
 
-Grand Rapids side: Cohasset, Grand Rapids, Coleraine, Bovey.
+Grand Rapids side: Cohasset, Grand Rapids, Coleraine, Bovey, plus the Mississippi and Pokegama Lake.
 
-Iron Range: Nashwauk, Keewatin, Hibbing, Chisholm, Buhl, Mountain Iron, Virginia, Eveleth, Gilbert, Biwabik, Aurora, Hoyt Lakes.
+Iron Range: Nashwauk, Keewatin, Hibbing and the Hull-Rust pit, Chisholm, Buhl, Mountain Iron, Virginia, Eveleth, Gilbert, Biwabik, Aurora, Hoyt Lakes.
 
-Duluth side: Hermantown, Proctor, Duluth.
+Duluth side: Hermantown, Proctor, Duluth, Canal Park, the Aerial Lift Bridge, Park Point, and Lake Superior.
 
-## Edit a person
-
-Bios, catchphrases, perk names, stories, and pixel colors are in `src/roster.js`. That is the file to swap when new notes come in. Leave `id` and `perkId` alone unless you also change `src/perks.js`.
-
-Shirt and hair colors are there so the cards are easy to tell apart. They are not claims about anyone, except the looks called out in that file: Joel is blond, Gaige has broccoli hair (not a perm) and an earring, Matt has the beard, Jillian is the small mighty one.
-
-Tyler Lewis, Blake, and Brad are not on this desk.
-
-## Balance check
-
-```bash
-node tools/balance.js
-```
-
-The sim plays every agent for 1000 seasons with the same call skill (0.72) and the same desk around them. A win is finishing strictly ahead of both other desks.
+People, bios, and looks stay in `src/roster.js`.

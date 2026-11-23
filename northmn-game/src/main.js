@@ -1,355 +1,337 @@
-// North Desk. The whole Grand Rapids office, one season on the corridor.
+// Title, character select, HUD, phone, and the frame loop.
 'use strict';
 
 (function () {
   const G = globalThis.G;
   G.buildSprites();
+
   const app = document.getElementById('app');
-  let screen = 'title';
-  let selected = null;
-  let state = null;
+  const play = document.getElementById('play');
+  const view = document.getElementById('view');
+  const ctx = view.getContext('2d');
+  const atlas = document.getElementById('atlas');
+  const atlasCtx = atlas.getContext('2d');
+  let selected = 'malcolm';
+  let mode = 'title';
+  let battlePage = 'main';
+  let stamp = '';
 
   function esc(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
     });
   }
 
-  function canvasFor(agent, scale) {
-    const cv = document.createElement('canvas');
-    cv.className = 'sprite';
-    cv.setAttribute('aria-hidden', 'true');
-    G.paintSprite(cv, agent.sprite, scale);
-    return cv;
+  function order() {
+    const malcolm = G.agentById('malcolm');
+    const rest = G.ROSTER.filter(function (a) { return a.id !== 'malcolm'; });
+    rest.sort(function (a, b) { return a.short < b.short ? -1 : a.short > b.short ? 1 : 0; });
+    return [malcolm].concat(rest);
   }
 
-  function mount(html) {
-    app.innerHTML = html;
-  }
-
-  function go(next) {
-    screen = next;
-    draw();
-    window.scrollTo(0, 0);
-  }
-
-  function drawBanner() {
-    const wrap = document.createElement('div');
-    wrap.className = 'banner-wrap';
-    const cv = document.createElement('canvas');
-    G.drawBanner(cv);
-    wrap.appendChild(cv);
-    return wrap;
-  }
-
-  function renderTitle() {
-    mount(
+  function showTitle() {
+    mode = 'title';
+    app.hidden = false;
+    play.hidden = true;
+    const cont = G.Save.load();
+    app.innerHTML =
       '<p class="kicker">PEMBERTON REAL ESTATE</p>' +
       '<h1>NORTH DESK</h1>' +
-      '<p class="lede">One office. Every agent. Grand Rapids, the Iron Range, and Duluth.</p>' +
-      '<p>Twelve weeks. Fall, winter, thaw, summer. You play as anyone. The rest of the desk keeps working. The Grand Rapids desk wins by closing more homes than the Range desk and the Duluth desk.</p>' +
-      '<div class="rail" id="rail"></div>' +
-      '<div class="stack" style="margin-top:12px">' +
-      '<button class="btn" id="go-select" type="button">See the whole desk</button>' +
-      '<button class="btn alt" id="go-how" type="button">How the season works</button>' +
-      '</div>'
-    );
-    app.insertBefore(drawBanner(), app.firstChild);
-    const rail = document.getElementById('rail');
-    G.ROSTER.forEach(function (a) { rail.appendChild(canvasFor(a, 2)); });
-    document.getElementById('go-select').onclick = function () { go('select'); };
-    document.getElementById('go-how').onclick = function () { go('how'); };
+      '<p class="lede">Top-down on US-2, US-169, and US-53. Drive, hop out, walk the house, close the deal.</p>' +
+      '<p>Troopers mind the highways. Pull over to text, or answer while moving and enjoy the lights. A ticket is $150 and a joke. Never a game over.</p>' +
+      '<div class="stack">' +
+      '<button class="btn" id="new" type="button">New game</button>' +
+      (cont ? '<button class="btn alt" id="cont" type="button">Continue as ' + esc(G.agentById(cont.id).short) + '</button>' : '') +
+      '</div>';
+    document.getElementById('new').onclick = function () { showSelect(); };
+    const c = document.getElementById('cont');
+    if (c) c.onclick = function () { begin(cont); };
   }
 
-  function townList(region) {
-    return G.townsIn(region).map(function (t) { return esc(t.name); }).join(', ');
-  }
-
-  function renderHow() {
-    mount(
-      '<p class="kicker">HOW TO PLAY</p>' +
-      '<h1>THE SEASON</h1>' +
-      '<p class="lede">You are one agent on a full desk. Nobody carries the season alone.</p>' +
-      '<p>Each week, two cards show up on the corridor. Take the one that fits your perk when you can. Then make the call. Three choices. One of them is the work you actually do.</p>' +
-      '<p>Your perk fires when you take your kind of card. It is not stronger than anyone else\'s. A finished personal story adds one closing for the desk, same for every agent.</p>' +
-      '<p>Win: Grand Rapids closings, yours plus the desk\'s, ahead of both the Range desk and the Duluth desk.</p>' +
-      '<p class="group-label">GRAND RAPIDS</p><p>' + townList('home') + '</p>' +
-      '<p class="group-label">IRON RANGE</p><p>' + townList('range') + '</p>' +
-      '<p class="group-label">DULUTH</p><p>' + townList('duluth') + '</p>' +
-      '<div class="stack" style="margin-top:12px">' +
-      '<button class="btn" id="go-select" type="button">Choose an agent</button>' +
-      '<button class="btn alt" id="go-title" type="button">Back</button>' +
-      '</div>'
-    );
-    document.getElementById('go-select').onclick = function () { go('select'); };
-    document.getElementById('go-title').onclick = function () { go('title'); };
-  }
-
-  function renderSelect() {
-    mount(
-      '<p class="kicker">EVERYONE IS IN</p>' +
-      '<h1>THE DESK</h1>' +
-      '<p>All ' + G.ROSTER.length + ' agents are unlocked. Pick who you will play. The others stay on the desk.</p>' +
+  function showSelect() {
+    mode = 'select';
+    app.hidden = false;
+    play.hidden = true;
+    app.innerHTML =
+      '<p class="kicker">THE WHOLE DESK</p>' +
+      '<h1>PICK A DRIVER</h1>' +
+      '<p>Malcolm is first. All 18 are unlocked. Everyone else is back at the Grand Rapids office.</p>' +
       '<div class="cards" id="cards"></div>' +
-      '<div id="detail"></div>' +
       '<div class="stack" style="margin-top:12px">' +
-      '<button class="btn" id="play" type="button" disabled>Pick someone</button>' +
+      '<button class="btn" id="begin" type="button">Drive as Malcolm</button>' +
       '<button class="btn alt" id="back" type="button">Back</button>' +
-      '</div>'
-    );
+      '</div>';
     const cards = document.getElementById('cards');
-    G.ROSTER.forEach(function (a) {
+    order().forEach(function (a) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'card' + (selected === a.id ? ' on' : '');
-      b.appendChild(canvasFor(a, 3));
+      const cv = document.createElement('canvas');
+      G.paintSprite(cv, a.sprite, 3);
+      b.appendChild(cv);
       const nm = document.createElement('div');
       nm.className = 'nm';
-      nm.textContent = a.short;
+      nm.textContent = a.short + (a.id === 'malcolm' ? ' · start here' : '');
       const pk = document.createElement('div');
       pk.className = 'pk';
       pk.textContent = a.perkName;
       b.appendChild(nm);
       b.appendChild(pk);
-      b.onclick = function () {
-        selected = a.id;
-        try { localStorage.setItem('north-desk-agent', a.id); } catch (e) { /* ignore */ }
-        renderSelect();
-        const det = document.getElementById('detail');
-        if (det) det.scrollIntoView({ block: 'nearest' });
-      };
+      b.onclick = function () { selected = a.id; showSelect(); };
       cards.appendChild(b);
     });
-    const detail = document.getElementById('detail');
-    const play = document.getElementById('play');
-    if (selected) {
-      const a = G.agentById(selected);
-      detail.innerHTML =
-        '<div class="detail" style="margin-top:12px">' +
-        '<h2>' + esc(a.name) + '</h2>' +
-        '<p class="catch">' + esc(a.title) + ' · ' + esc(a.perkName) + '</p>' +
-        '<p>"' + esc(a.catchphrase) + '"</p>' +
-        a.bio.map(function (line) { return '<p>' + esc(line) + '</p>'; }).join('') +
-        '<p>' + esc(a.perkBlurb) + '</p>' +
-        '<p>Story: ' + esc(a.storyTitle) + '</p>' +
+    document.getElementById('begin').textContent = 'Drive as ' + G.agentById(selected).short;
+    document.getElementById('begin').onclick = function () {
+      G.Save.clear();
+      begin(G.Save.fresh(selected));
+    };
+    document.getElementById('back').onclick = showTitle;
+  }
+
+  function begin(save) {
+    mode = 'play';
+    stamp = '';
+    app.hidden = true;
+    play.hidden = false;
+    battlePage = 'main';
+    G.Game.start(save.id, save);
+    G.Audio.blip();
+  }
+
+  function sync() {
+    if (mode !== 'play') return;
+    const v = G.Game.view();
+    const s = v.save;
+    document.getElementById('who').textContent = v.who.short + ' LV' + s.lv + ' · ' + v.vehicle;
+    document.getElementById('where').textContent = v.place === 'world'
+      ? (v.inCar ? 'Driving ' + v.speed : 'On foot')
+      : (v.place === 'office' ? 'Pemberton Office' : 'Home tour ' + v.tour + '/4');
+    document.getElementById('cash').textContent = '$' + s.money + ' · deals ' + s.deals;
+    document.querySelector('#hp > i').style.width = Math.round(100 * s.energy / s.energyMax) + '%';
+    document.querySelector('#mp > i').style.width = Math.round(100 * s.focus / s.focusMax) + '%';
+    document.getElementById('notice').textContent = v.notice;
+    document.getElementById('heat').hidden = !v.wanted;
+    document.getElementById('heat').textContent = v.wanted ? 'WANTED *  pull over for a $150 joke ticket, or lose them' : '';
+    document.getElementById('mute').textContent = G.Audio.muted() ? 'Sound off' : 'Sound on';
+
+    const sig = [
+      v.menu || '',
+      v.phone ? v.phone.from + v.phone.text : '',
+      v.dialogue ? v.dialogue.i + v.dialogue.lines[v.dialogue.i] : '',
+      v.battle ? v.battle.phase + ':' + battlePage + ':' + v.battle.log.length + ':' + v.battle.hp : '',
+      v.tour,
+      s.money,
+      v.place,
+    ].join('|');
+    if (sig === stamp) return;
+    stamp = sig;
+
+    const phone = document.getElementById('phone');
+    if (v.phone) {
+      phone.hidden = false;
+      phone.innerHTML =
+        '<h2>' + esc(v.phone.from) + '</h2>' +
+        '<p class="lede">' + esc(v.phone.text) + '</p>' +
+        '<div class="cmds">' +
+        '<button class="btn good" id="reply-safe" type="button">Pull over and reply</button>' +
+        '<button class="btn" id="reply-risk" type="button">Reply while driving</button>' +
         '</div>';
-      play.disabled = false;
-      play.textContent = 'Play as ' + a.short;
+      document.getElementById('reply-safe').onclick = function () { G.Game.reply(false); };
+      document.getElementById('reply-risk').onclick = function () { G.Game.reply(true); };
+    } else phone.hidden = true;
+
+    const dlg = document.getElementById('dialogue');
+    if (v.dialogue) {
+      dlg.hidden = false;
+      document.getElementById('dlg-who').textContent = v.dialogue.speaker;
+      document.getElementById('dlg-text').textContent = v.dialogue.lines[v.dialogue.i];
+    } else dlg.hidden = true;
+
+    const battle = document.getElementById('battle');
+    if (v.battle) {
+      battle.hidden = false;
+      document.getElementById('foe').textContent = v.battle.title;
+      document.querySelector('#deal > i').style.width = Math.round(100 * v.battle.hp / v.battle.max) + '%';
+      document.getElementById('deal-n').textContent = v.battle.hp + '/' + v.battle.max;
+      document.getElementById('log').innerHTML = v.battle.log.slice(-3).map(function (line) {
+        return '<div>' + esc(line) + '</div>';
+      }).join('');
+      const cmds = document.getElementById('cmds');
+      if (v.battle.phase !== 'fight') {
+        cmds.innerHTML = '<button class="btn good" id="battle-done" type="button">' +
+          (v.battle.phase === 'won' ? 'Pocket the commission' : 'They will call back') + '</button>';
+        document.getElementById('battle-done').onclick = function () { G.Game.closeBattle(); };
+      } else if (battlePage === 'skills') {
+        cmds.innerHTML = v.skills.map(function (sk) {
+          return '<button class="btn" data-skill="' + esc(sk.id) + '" type="button">' + esc(sk.name) + ' · ' + sk.cost + ' Focus</button>';
+        }).join('') + '<button class="btn alt" id="cmd-back" type="button">Back</button>';
+        cmds.querySelectorAll('[data-skill]').forEach(function (btn) {
+          btn.onclick = function () { G.Game.battleAct('skill', btn.getAttribute('data-skill')); battlePage = 'main'; };
+        });
+        document.getElementById('cmd-back').onclick = function () { battlePage = 'main'; };
+      } else if (battlePage === 'items') {
+        [['coffee', 'Caribou Coffee'], ['staging', 'Staging Kit'], ['tires', 'Snow Tires'], ['drone', 'Drone'], ['snack', 'Onion-Free Snack']].forEach(function () {});
+        const items = [['coffee', 'Caribou Coffee'], ['staging', 'Staging Kit'], ['tires', 'Snow Tires'], ['drone', 'Drone'], ['snack', 'Onion-Free Snack']];
+        cmds.innerHTML = items.map(function (it) {
+          return '<button class="btn" data-item="' + it[0] + '" type="button">' + it[1] + ' × ' + (s.items[it[0]] || 0) + '</button>';
+        }).join('') + '<button class="btn alt" id="cmd-back" type="button">Back</button>';
+        cmds.querySelectorAll('[data-item]').forEach(function (btn) {
+          btn.onclick = function () { G.Game.battleAct('item', btn.getAttribute('data-item')); battlePage = 'main'; };
+        });
+        document.getElementById('cmd-back').onclick = function () { battlePage = 'main'; };
+      } else {
+        cmds.innerHTML =
+          '<button class="btn" id="cmd-pitch" type="button">Pitch</button>' +
+          '<button class="btn" id="cmd-skills" type="button">Skills</button>' +
+          '<button class="btn" id="cmd-items" type="button">Items</button>' +
+          '<button class="btn" id="cmd-backup" type="button">Backup</button>';
+        document.getElementById('cmd-pitch').onclick = function () { G.Game.battleAct('pitch'); };
+        document.getElementById('cmd-skills').onclick = function () { battlePage = 'skills'; };
+        document.getElementById('cmd-items').onclick = function () { battlePage = 'items'; };
+        document.getElementById('cmd-backup').onclick = function () { G.Game.battleAct('backup'); };
+      }
+    } else battle.hidden = true;
+
+    const menu = document.getElementById('menu');
+    const atlasWrap = document.getElementById('atlas-wrap');
+    if (v.menu === 'map') {
+      menu.hidden = true;
+      atlasWrap.hidden = false;
+      G.Game.drawFullMap(atlasCtx, atlas.width, atlas.height);
+    } else {
+      atlasWrap.hidden = true;
+      if (!v.menu) menu.hidden = true;
+      else if (v.menu === 'quest') {
+        menu.hidden = false;
+        menu.innerHTML = '<h2>Quest log</h2>' + v.quests.map(function (q) {
+          return '<p><strong style="color:#ffcd75">' + esc(q.name) + '</strong><br>' + esc(q.text) + '</p>';
+        }).join('') + '<p>Partner: ' + (v.partner ? esc(v.partner.short) : 'none') + '</p>' +
+          '<button class="btn alt" id="m-close" type="button">Close</button>';
+        document.getElementById('m-close').onclick = function () { G.Game.closeMenu(); };
+      } else if (v.menu === 'shop') {
+        menu.hidden = false;
+        const stock = [
+          ['suv', 'AWD SUV', 2500],
+          ['truck', 'Heated-Seat Luxury Truck', 6000],
+          ['tires', 'Snow Tires', 100],
+          ['drone', 'Drone', 200],
+          ['staging', 'Staging Kit', 80],
+          ['coffee', 'Caribou Coffee', 40],
+          ['snack', 'Onion-Free Snack', 15],
+        ];
+        menu.innerHTML = '<h2>Office counter</h2><div class="stack">' + stock.map(function (it) {
+          return '<button class="btn" data-buy="' + it[0] + '" data-price="' + it[2] + '" type="button">' + it[1] + ' $' + it[2] + '</button>';
+        }).join('') + '<button class="btn alt" id="m-close" type="button">Leave</button></div>';
+        menu.querySelectorAll('[data-buy]').forEach(function (btn) {
+          btn.onclick = function () { G.Game.buy(btn.getAttribute('data-buy'), Number(btn.getAttribute('data-price'))); };
+        });
+        document.getElementById('m-close').onclick = function () { G.Game.closeMenu(); };
+      } else {
+        menu.hidden = false;
+        menu.innerHTML =
+          '<h2>Desk</h2><div class="stack">' +
+          '<button class="btn" id="m-quest" type="button">Quest log</button>' +
+          '<button class="btn" id="m-map" type="button">Full regional map</button>' +
+          '<button class="btn" id="m-shop" type="button">Upgrades</button>' +
+          '<button class="btn" id="m-save" type="button">Save</button>' +
+          '<button class="btn alt" id="m-close" type="button">Close</button></div>';
+        document.getElementById('m-quest').onclick = function () { G.Game.openMenu('quest'); };
+        document.getElementById('m-map').onclick = function () { G.Game.openMenu('map'); };
+        document.getElementById('m-shop').onclick = function () { G.Game.openMenu('shop'); };
+        document.getElementById('m-save').onclick = function () { G.Save.write(G.Game.view().save); G.Game.closeMenu(); };
+        document.getElementById('m-close').onclick = function () { G.Game.closeMenu(); };
+      }
     }
-    play.onclick = function () { if (selected) startGame(selected); };
-    document.getElementById('back').onclick = function () { go('title'); };
+
+    const tour = document.getElementById('tour');
+    if (v.place === 'house' && !v.battle) {
+      tour.hidden = false;
+      document.getElementById('tour-go').disabled = v.tour < 2;
+      document.getElementById('tour-go').textContent = v.tour < 2 ? 'Walk two rooms first' : 'Handle their question';
+    } else tour.hidden = true;
   }
 
-  function startGame(id) {
-    selected = id;
-    state = G.Rules.newGame(id);
-    G.Rules.beginWeek(state, Math.random);
-    screen = 'play';
-    draw();
-  }
+  const keyNames = {
+    ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down',
+    a: 'left', d: 'right', w: 'up', s: 'down',
+    ' ': 'down',
+  };
 
-  function regionPills(here) {
-    const parts = [];
-    ['home', 'range', 'duluth'].forEach(function (region) {
-      parts.push('<div class="group-label">' + esc(G.REGIONS[region].label) + '</div><div class="towns">');
-      G.townsIn(region).forEach(function (t) {
-        const on = here && t.id === here ? ' class="here"' : '';
-        parts.push('<i' + on + '>' + esc(t.name) + '</i>');
-      });
-      parts.push('</div>');
-    });
-    return parts.join('');
-  }
+  window.addEventListener('keydown', function (e) {
+    if (mode !== 'play') return;
+    const name = keyNames[e.key];
+    if (name) { G.Game.setKey(name, true); e.preventDefault(); }
+    if (e.key === 'e' || e.key === 'E' || e.key === 'Enter') { G.Game.interact(); e.preventDefault(); }
+    if (e.key === 'm' || e.key === 'M') G.Game.openMenu(G.Game.view().menu ? null : 'map');
+    if (e.key === 'p' || e.key === 'P') G.Game.openPhone();
+    if (e.key === 'h' || e.key === 'H') G.Game.horn();
+  });
+  window.addEventListener('keyup', function (e) {
+    const name = keyNames[e.key];
+    if (name) G.Game.setKey(name, false);
+  });
 
-  function scoreBlock() {
-    const pendingStory = state.storyBeats >= 4 ? G.BALANCE.storyBonus : 0;
-    const us = state.units + state.teammates + pendingStory;
-    return (
-      '<div class="score">' +
-      '<div class="us"><strong>' + us + '</strong><span>GRAND RAPIDS</span></div>' +
-      '<div class="range"><strong>' + state.rangeUnits + '</strong><span>RANGE DESK</span></div>' +
-      '<div class="duluth"><strong>' + state.duluthUnits + '</strong><span>DULUTH DESK</span></div>' +
-      '</div>' +
-      '<div class="regions">' +
-      '<span>HOME ' + state.regions.home + '</span>' +
-      '<span>RANGE ' + state.regions.range + '</span>' +
-      '<span>DULUTH ' + state.regions.duluth + '</span>' +
-      '<span>YOU ' + state.units + ' · DESK ' + state.teammates + '</span>' +
-      '<span>STORY ' + state.storyBeats + '/4</span>' +
-      '</div>'
-    );
-  }
+  document.querySelectorAll('#pad [data-dir]').forEach(function (btn) {
+    const dir = btn.getAttribute('data-dir');
+    function down(ev) { ev.preventDefault(); G.Game.setPad(dir, true); }
+    function up(ev) { ev.preventDefault(); G.Game.setPad(dir, false); }
+    btn.addEventListener('pointerdown', down);
+    btn.addEventListener('pointerup', up);
+    btn.addEventListener('pointerleave', up);
+    btn.addEventListener('pointercancel', up);
+  });
+  document.getElementById('btn-a').onclick = function () { G.Game.interact(); };
+  document.getElementById('btn-b').onclick = function () {
+    const v = G.Game.view();
+    if (v.menu) G.Game.closeMenu();
+    else G.Game.openMenu('root');
+  };
+  document.getElementById('btn-phone').onclick = function () { G.Game.openPhone(); };
+  document.getElementById('hud-phone').onclick = function () { G.Game.openPhone(); };
+  document.getElementById('btn-horn').onclick = function () { G.Game.horn(); };
+  document.getElementById('btn-pull').onclick = function () { G.Game.pullOver(); };
+  document.getElementById('hud-menu').onclick = function () { G.Game.openMenu('root'); };
+  document.getElementById('mute').onclick = function () { G.Audio.toggle(); };
+  document.getElementById('dlg-next').onclick = function () { G.Game.interact(); };
+  document.getElementById('atlas-close').onclick = function () { G.Game.closeMenu(); };
+  document.getElementById('tour-go').onclick = function () { G.Game.startTalk(); };
 
-  function renderPlay() {
-    const a = G.agentById(state.agentId);
-    const shownWeek = Math.min(state.week, G.BALANCE.weeks - 1);
-    const season = G.Flavor.season(shownWeek);
-    const weekLabel = state.phase === 'done'
-      ? 'SEASON OVER'
-      : season.name.toUpperCase() + ' · WEEK ' + (shownWeek + 1) + '/' + G.BALANCE.weeks;
-    mount('<div id="top"></div><div id="body"></div>');
-    const top = document.getElementById('top');
-    top.innerHTML =
-      '<div class="meta"><span>' + esc(weekLabel) + '</span>' +
-      '<span>' + esc(season.line) + '</span></div>' +
-      scoreBlock() +
-      '<div class="who" id="who"></div>' +
-      '<div class="rail" id="rail"></div>';
-    const who = document.getElementById('who');
-    who.appendChild(canvasFor(a, 3));
-    const label = document.createElement('div');
-    label.innerHTML = '<div class="name">' + esc(a.name) + '</div><div class="perk">' + esc(a.perkName) + '</div>';
-    who.appendChild(label);
-    const rail = document.getElementById('rail');
-    G.ROSTER.forEach(function (mate) {
-      const cv = canvasFor(mate, 2);
-      if (mate.id === a.id) cv.classList.add('on');
-      rail.appendChild(cv);
-    });
-
-    const body = document.getElementById('body');
-    const phase = state.phase;
-    if (phase === 'offer') renderOffers(body, a);
-    else if (phase === 'call') renderCall(body, a);
-    else if (phase === 'story') renderStory(body, a);
-    else if (phase === 'recap') renderRecap(body);
-    else if (phase === 'done') renderDone(body, a);
-    else {
-      const never = phase;
-      body.textContent = 'Lost the week: ' + never;
+  let last = 0;
+  function frame(t) {
+    const dt = Math.min(0.05, (t - last) / 1000 || 0);
+    last = t;
+    if (mode === 'play') {
+      G.Game.update(dt);
+      G.Game.draw(ctx, view.width, view.height);
+      sync();
     }
+    requestAnimationFrame(frame);
   }
+  requestAnimationFrame(frame);
 
-  function renderOffers(body, a) {
-    const here = state.job && state.job.townId;
-    let html = '<h2>Pick a card</h2><div class="stack" id="offers"></div>' + regionPills(here);
-    body.innerHTML = html;
-    const box = document.getElementById('offers');
-    state.offers.forEach(function (job, i) {
-      const mine = job.perkTag === a.perkId;
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'btn' + (mine ? ' good' : '');
-      b.innerHTML = '<strong>' + esc(job.title) + ' · ' + esc(job.townName) + '</strong><br>' +
-        esc(job.text) +
-        (mine ? '<br><span class="hint">Your perk is on this card.</span>' : '');
-      b.onclick = function () {
-        G.Rules.chooseOffer(state, i);
-        draw();
-      };
-      box.appendChild(b);
-    });
-  }
+  window.addEventListener('error', function (e) {
+    const pre = document.createElement('pre');
+    pre.id = 'err';
+    pre.textContent = String(e.message || e.error);
+    document.body.appendChild(pre);
+  });
 
-  function renderCall(body, a) {
-    const job = state.job;
-    const showHint = a.perkId === 'know' && job.region === 'duluth' && job.hint;
-    body.innerHTML =
-      '<h2>' + esc(job.title) + ' · ' + esc(job.townName) + '</h2>' +
-      '<p class="lede">' + esc(job.text) + '</p>' +
-      (showHint ? '<p class="hint">' + esc(job.hint) + '</p>' : '') +
-      '<div class="stack" id="calls"></div>' +
-      regionPills(job.townId);
-    const box = document.getElementById('calls');
-    job.choices.forEach(function (choice, i) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'btn';
-      b.textContent = choice;
-      b.onclick = function () {
-        G.Rules.chooseCall(state, i, Math.random);
-        draw();
-      };
-      box.appendChild(b);
-    });
-  }
-
-  function renderStory(body, a) {
-    const beat = a.beats[state.storyBeats];
-    const job = state.result;
-    if (!beat) {
-      state.phase = 'recap';
-      renderRecap(body);
-      return;
+  const shot = new URLSearchParams(location.search).get('shot');
+  if (shot === 'select') showSelect();
+  else if (shot === 'drive' || shot === 'house' || shot === 'deal') {
+    begin(G.Save.fresh(shot === 'deal' ? 'tania' : 'malcolm'));
+    if (shot === 'drive') G.Game.openPhone();
+    if (shot === 'house' || shot === 'deal') {
+      const cabin = G.Geo.BUILDINGS[1];
+      const st = G.Game.state;
+      st.place = 'house';
+      st.room = cabin;
+      st.save.inCar = false;
+      st.save.x = 90;
+      st.save.y = 80;
+      st.tour.live = 'Living room';
+      st.tour.kit = 'Kitchen';
     }
-    body.innerHTML =
-      '<p class="stamp ' + (job.ok ? '' : 'no') + '">' + (job.ok ? 'CLOSED' : 'STILL OPEN') + '</p>' +
-      '<p>' + esc(job.line) + '</p>' +
-      '<h2>' + esc(a.storyTitle) + '</h2>' +
-      '<p class="lede">' + esc(beat.text) + '</p>' +
-      '<div class="stack">' +
-      '<button class="btn" id="sa" type="button">' + esc(beat.a) + '</button>' +
-      '<button class="btn alt" id="sb" type="button">' + esc(beat.b) + '</button>' +
-      '</div>';
-    document.getElementById('sa').onclick = function () {
-      G.Rules.chooseStory(state, 0);
-      draw();
-    };
-    document.getElementById('sb').onclick = function () {
-      G.Rules.chooseStory(state, 1);
-      draw();
-    };
-  }
-
-  function renderRecap(body) {
-    const job = state.result;
-    const note = state.storyPick ? '<p>Story: ' + esc(state.storyPick) + '</p>' : '';
-    body.innerHTML =
-      '<p class="stamp ' + (job.ok ? '' : 'no') + '">' + (job.ok ? 'CLOSED' : 'STILL OPEN') + '</p>' +
-      '<p class="lede">' + esc(job.line) + '</p>' +
-      note +
-      '<ul class="log">' + state.log.map(function (line) { return '<li>' + esc(line) + '</li>'; }).join('') + '</ul>' +
-      '<div class="stack" style="margin-top:12px"><button class="btn" id="next" type="button">Next week</button></div>';
-    document.getElementById('next').onclick = function () {
-      G.Rules.endWeek(state, Math.random);
-      draw();
-    };
-  }
-
-  function renderDone(body, a) {
-    const score = G.Rules.officeScore(state);
-    const headline = state.won
-      ? 'The Grand Rapids desk takes the season.'
-      : state.tied
-        ? 'The Grand Rapids desk finishes level for the season.'
-        : 'Another desk finishes ahead. The corridor is still the office\'s.';
-    body.innerHTML =
-      '<h2>' + esc(headline) + '</h2>' +
-      '<p class="lede">You played as ' + esc(a.name) + '. Story: ' + esc(a.storyTitle) + ' (' + state.storyBeats + '/4).</p>' +
-      '<p>Grand Rapids ' + score + ' · Range desk ' + state.rangeUnits + ' · Duluth desk ' + state.duluthUnits + '.</p>' +
-      '<p>Your closings ' + state.units + '. The rest of the desk ' + state.teammates + '.</p>' +
-      '<ul class="log">' + state.log.map(function (line) { return '<li>' + esc(line) + '</li>'; }).join('') + '</ul>' +
-      '<div class="stack" style="margin-top:12px">' +
-      '<button class="btn" id="again" type="button">Same agent, new season</button>' +
-      '<button class="btn alt" id="switch" type="button">Pick someone else</button>' +
-      '</div>';
-    document.getElementById('again').onclick = function () { startGame(a.id); };
-    document.getElementById('switch').onclick = function () { go('select'); };
-  }
-
-  function draw() {
-    if (screen === 'title') renderTitle();
-    else if (screen === 'how') renderHow();
-    else if (screen === 'select') renderSelect();
-    else if (screen === 'play') renderPlay();
-    else {
-      const never = screen;
-      app.textContent = 'Unknown screen ' + never;
-    }
-  }
-
-  try {
-    const saved = localStorage.getItem('north-desk-agent');
-    if (saved && G.agentById(saved).id === saved) selected = saved;
-  } catch (e) { /* ignore */ }
-
-  const params = new URLSearchParams(location.search);
-  const shot = params.get('shot');
-  if (shot === 'select') screen = 'select';
-  if (shot === 'how') screen = 'how';
-  if (shot === 'play') {
-    startGame(params.get('as') || 'tania');
-    return;
-  }
-  draw();
+    if (shot === 'deal') G.Game.startTalk();
+  } else showTitle();
 })();
