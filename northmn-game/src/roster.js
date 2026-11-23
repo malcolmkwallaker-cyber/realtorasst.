@@ -5,10 +5,13 @@
 // here. Keep `id` and `perkId` as they are so the season math in
 // perks.js still lines up.
 //
-// Shirt and hair colors are pixel labels so the cards are easy to
-// tell apart. They are not biographical claims, except where a
-// note below names a look (Joel blond, Gaige broccoli and an
-// earring, Matt's beard, Jillian small).
+// Hair colors and styles below are the looks Malcolm called out
+// for the cards: Adam balding with brown sides, Bridger red,
+// Emily blond, Gaige broccoli (do not restyle), Jillian small
+// with purple hair, Jordan blond with a short beard, Kaila brown,
+// Liz brown, Matt's black beard, Parker strawberry blond, and
+// blond hair for Bekkah, Scotty, Stephanie, and Tania. Joel stays
+// blond. Malcolm, Bethany, and Deb stay as drawn.
 //
 // Not on this desk: Tyler Lewis, Blake, Brad.
 // Joel has no last name in the notes we have.
@@ -47,7 +50,7 @@
         { text: 'Hunter and angler on his own time. The file is the job.', a: 'Stay on the comps', b: 'Name the fact and move' },
         { text: 'Duluth is his ground. He still works the Grand Rapids desk.', a: 'Count it for the desk', b: 'Hand the note to the office' },
       ],
-      look: { style: 'default', hair: '#3a3f52', shirt: C.gray, trim: C.orange },
+      look: { style: 'bald', hair: '#6b4226', shirt: C.gray, trim: C.orange },
     }),
     person({
       id: 'bethany',
@@ -98,7 +101,7 @@
         { text: 'Bridge Out Ahead can record later. The number comes first.', a: 'Set the price', b: 'Write the price down' },
         { text: 'One of the birds is named Malcolm. The bird does not set the price. Bridger does.', a: 'Publish the number', b: 'Explain the number' },
       ],
-      look: { style: 'bird', hair: '#5a3a2a', shirt: C.navy, trim: '#e7a07a' },
+      look: { style: 'bird', hair: '#d24a32', shirt: C.navy, trim: '#e7a07a' },
     }),
     person({
       id: 'deb',
@@ -146,7 +149,7 @@
         { text: 'She studied abroad in Ireland and ran MemSTAR Studio. The lead still gets a human reply.', a: 'Reply as a person', b: 'Set the appointment' },
         { text: 'Kayak another day. Board game night another night. This hour is the Zillow lead.', a: 'Book the showing', b: 'Confirm the time' },
       ],
-      look: { style: 'default', hair: '#6b4226', shirt: '#c2478f', trim: C.white },
+      look: { style: 'default', hair: '#f6d15a', shirt: '#c2478f', trim: C.white },
     }),
     person({
       id: 'gaige',
@@ -196,7 +199,7 @@
         { text: 'Goose and James are with her. The offer does not wait.', a: 'Send the offer', b: 'Read it once more, then send' },
         { text: 'Small agent, but a mighty one.', a: 'Stand on the number', b: 'Deliver it kindly' },
       ],
-      look: { style: 'tiny', hair: '#3a3f52', shirt: C.red, trim: C.yellow },
+      look: { style: 'tiny', hair: '#9b4dff', shirt: C.red, trim: C.yellow },
     }),
     person({
       id: 'joel',
@@ -244,7 +247,7 @@
         { text: 'A first-time buyer asks if the house is sound. He answers from the work he did before the license.', a: 'Answer from the build', b: 'Show them what to look at' },
         { text: 'The first home is the point.', a: 'Write the offer with them', b: 'Slow down until they are ready' },
       ],
-      look: { style: 'default', hair: '#3a3f52', shirt: C.blue, trim: C.sky },
+      look: { style: 'shortbeard', hair: '#f6d15a', beard: '#8a5a32', shirt: C.blue, trim: C.sky },
     }),
     person({
       id: 'kaila',
@@ -270,19 +273,19 @@
         { text: 'She knows a guy north of Grand Rapids. He calls back. The work stays on this map.', a: 'Take the callback', b: 'Write down what he said' },
         { text: 'Onions are the arch nemesis. They are not at this table.', a: 'Keep onions off the table', b: 'Feed everyone something else' },
       ],
-      look: { style: 'default', hair: '#c0a060', shirt: '#3d5c34', trim: '#e07020' },
+      look: { style: 'default', hair: '#6b4226', shirt: '#3d5c34', trim: '#e07020' },
     }),
     person({
       id: 'liz',
       perkId: 'checklist',
       name: 'Liz Rein',
       short: 'Liz',
-      title: 'COO',
+      title: 'COO, Second in Command',
       perkName: 'The Checklist',
-      perkBlurb: 'Second in command. She really runs the show. A 100-item checklist, in complete sentences.',
+      perkBlurb: 'Second in command of the whole company. She really runs the show. A 100-item checklist, in complete sentences.',
       catchphrase: 'Complete sentences.',
       bio: [
-        'COO. Second in command. She really runs the show.',
+        'COO. Second in command of the whole company. She really runs the show.',
         'A decade as a commercial real estate and construction litigator.',
         'A 100-item checklist. The complete-sentences line.',
       ],
@@ -292,10 +295,10 @@
       beats: [
         { text: 'The checklist has 100 items. Liz starts at the top.', a: 'Start at one', b: 'Read the whole list' },
         { text: 'A decade as a commercial real estate and construction litigator. This file gets complete sentences.', a: 'Write it in full', b: 'Fix the vague line' },
-        { text: 'Second in command. She is already deep in the hundred.', a: 'Do the next item', b: 'Assign the next item' },
+        { text: 'Second in command of the whole company. She is already deep in the hundred.', a: 'Do the next item', b: 'Assign the next item' },
         { text: 'The show runs because the list got finished.', a: 'Close the list', b: 'Hand the list back done' },
       ],
-      look: { style: 'default', hair: '#8a5a44', shirt: C.sky, trim: C.white },
+      look: { style: 'female', hair: '#6b4226', shirt: C.sky, trim: C.white },
     }),
     person({
       id: 'malcolm',
@@ -345,7 +348,7 @@
         { text: 'The beard enters first. Office joke: it could cure cancer. The flip still needs a price.', a: 'Price the flip', b: 'Steady the room, then price it' },
         { text: 'Marketplace house. Beard on duty.', a: 'Write the offer', b: 'Call the seller back' },
       ],
-      look: { style: 'beard', hair: '#3a3f52', shirt: C.slate, trim: C.yellow },
+      look: { style: 'beard', hair: '#3a3f52', beard: '#14120f', beardHi: '#3a342c', shirt: C.slate, trim: C.yellow },
     }),
     person({
       id: 'parker',
@@ -370,7 +373,7 @@
         { text: 'He ran the No. 1 eXp team worldwide. This week he asks what the handbook says.', a: 'Follow the page', b: 'Ask the desk what the page should say' },
         { text: 'CEO call. One decision, then the desk runs it.', a: 'Decide and hand it off', b: 'Decide and stay to help' },
       ],
-      look: { style: 'default', hair: '#3a3f52', shirt: C.navy, trim: C.yellow },
+      look: { style: 'default', hair: '#e09458', shirt: C.navy, trim: C.yellow },
     }),
     person({
       id: 'bekkah',
@@ -395,7 +398,7 @@
         { text: 'Tower and Lake Vermilion are part of her listing work. This week\'s card stays on the corridor, with the same eye.', a: 'Use the eye here', b: 'Write the grant note' },
         { text: 'Grant finder, then the frame.', a: 'Send the grant path', b: 'Send the new cut' },
       ],
-      look: { style: 'default', hair: '#6b4226', shirt: C.orange, trim: C.yellow },
+      look: { style: 'female', hair: '#f0d078', shirt: C.orange, trim: C.yellow },
     }),
     person({
       id: 'scotty',
@@ -419,7 +422,7 @@
         { text: 'A year in is enough to ask the next question.', a: 'Ask it', b: 'Ask the desk' },
         { text: 'Figure-out-able. Then the next step.', a: 'Do the next step', b: 'Hand the next step off' },
       ],
-      look: { style: 'default', hair: '#6b4226', shirt: '#f0d8c8', trim: C.yellow },
+      look: { style: 'female', hair: '#f0d078', shirt: '#f0d8c8', trim: C.yellow },
     }),
     person({
       id: 'stephanie',
@@ -445,7 +448,7 @@
         { text: 'Cirque du Soleil and watercolor are hers. The listing still needs a buyer.', a: 'Go find the buyer', b: 'Show the house honestly' },
         { text: 'Any home. Even the stubborn one.', a: 'Stay on it', b: 'Bring the buyer through' },
       ],
-      look: { style: 'default', hair: '#3a3f52', shirt: C.blue, trim: C.white },
+      look: { style: 'female', hair: '#f0d078', shirt: C.blue, trim: C.white },
     }),
     person({
       id: 'tania',
@@ -471,7 +474,7 @@
         { text: 'Most-reviewed on the North Team Zillow profile. She still returns the call.', a: 'Return it', b: 'Return it today' },
         { text: 'Iron Range expert, from Hibbing out to the Range towns on this map.', a: 'Take the Range card', b: 'Bring the desk along' },
       ],
-      look: { style: 'default', hair: '#3a3f52', shirt: '#6b2a22', trim: '#c4553a' },
+      look: { style: 'female', hair: '#f0d078', shirt: '#6b2a22', trim: '#c4553a' },
     }),
   ];
 

@@ -43,23 +43,86 @@
     if (style === 'tiny') {
       return G.makeSprite([
         '..............',
-        '..............',
-        '..............',
-        '..............',
-        '.....HHHH.....',
         '....HHHHHH....',
-        '....HSSSSSH...',
-        '....HSKSKSH...',
-        '.....SSWWSS...',
-        '..F..SSSSS..F.',
-        '...FBBBBBBF...',
+        '...HHHHHHHH...',
+        '..HHHSSSSHHH..',
+        '..HHSKSKSHHH..',
+        '..HHSSWWSSHH..',
+        '.FHHSSSSSSHF..',
+        '..F.BBBBBB.F..',
         '....BBBBBB....',
         '....DD..DD....',
         '....DD..DD....',
         '...KK....KK...',
         '..............',
         '..............',
+        '..............',
+        '..............',
+        '..............',
       ], { H: hair, S: skin, K: C.ink, W: C.white, B: shirt, F: trim, D: C.dusk });
+    }
+    if (style === 'female') {
+      return G.makeSprite([
+        '...HHHHHHHH...',
+        '..HHHHHHHHHH..',
+        '.HHHSSSSSSHHH.',
+        '.HHSKSSKSSHHH.',
+        '.HHSSWWSSSHHH.',
+        '.HHSSSSSSSHH..',
+        '..H.BBBBB.HH..',
+        '...BBBBBBB.H..',
+        '..BBBBBOBBBH..',
+        '..S.BBOBBB.S..',
+        '....BBBBBB....',
+        '....BBBBBB....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+        '..............',
+      ], { H: hair, S: skin, K: C.ink, W: C.white, B: shirt, O: trim, D: C.dusk });
+    }
+    if (style === 'bald') {
+      return G.makeSprite([
+        '......SS......',
+        '.....SSSS.....',
+        '....SSSSSS....',
+        '...HSSSSSSH...',
+        '..HHSKSSKSHH..',
+        '..HHSSWWSSHH..',
+        '..H.SSSSSS.H..',
+        '....BBBBBB....',
+        '...BBBBBBBB...',
+        '..BBBBOBBBB...',
+        '..S.BBOBBB.S..',
+        '....BBBBBB....',
+        '....BBBBBB....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+      ], { H: hair, S: skin, K: C.ink, W: C.white, B: shirt, O: trim, D: C.dusk });
+    }
+    if (style === 'shortbeard') {
+      return G.makeSprite([
+        '....HHHHHH....',
+        '...HHHHHHHH...',
+        '...HSSSSSSH...',
+        '...HSKSSKSH...',
+        '..THSSWWSSHT..',
+        '..T.RRRRRR.T..',
+        '..T.RRRRRR....',
+        '..TRBBBBBBR...',
+        '..TBBBBBBBB...',
+        '..BBBBOBBBB...',
+        '..S.BBOBBB.S..',
+        '....BBBBBB....',
+        '....BBBBBB....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+      ], { H: hair, S: skin, K: C.ink, W: C.white, B: shirt, O: trim, D: C.dusk, T: trim, R: look.beard || '#8a5a32' });
     }
     if (style === 'broccoli') {
       return G.makeSprite([
@@ -88,20 +151,20 @@
         '...HHHHHHHH...',
         '...HSSSSSSH...',
         '...HSKSSKSH...',
-        '....SSWWSS....',
+        '..THSSWWSSHT..',
+        '..T.RRRRRR.T..',
         '...RRRRRRRR...',
         '..RRRRRRRRRR..',
         '..RRRrRRRrRR..',
-        '..RRRRRRRRRR..',
-        '...RRRRRRRR...',
-        '..S.RRRRRR.S..',
-        '....RRRRRR....',
+        '...RRBBBBBR...',
+        '..S.BBBBBB.S..',
+        '....BBBBBB....',
+        '....BBBBBB....',
         '....DD..DD....',
         '....DD..DD....',
         '....DD..DD....',
         '...KK....KK...',
-        '..............',
-      ], { H: hair, S: skin, K: C.ink, W: C.white, R: '#4a3424', r: '#7a5a3a', D: C.dusk });
+      ], { H: hair, S: skin, K: C.ink, W: C.white, B: shirt, T: trim, R: look.beard || '#4a3424', r: look.beardHi || '#7a5a3a', D: C.dusk });
     }
     if (style === 'bird') {
       return G.makeSprite([
