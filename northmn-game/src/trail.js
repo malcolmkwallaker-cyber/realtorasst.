@@ -60,7 +60,7 @@
       { who: 'jordan', text: 'Jordan walked a foundation at the stop and shook on it.', deals: 1 },
       { who: 'adam', text: 'Adam already knew the weather. You miss the worst of it.', health: 4 },
       { who: 'bethany', text: 'Bethany checked the whole crew in. Nurse\'s heart, still on the clock.', health: 8 },
-      { who: 'scotty', text: 'Scotty says everything is figure-out-able, and the spare tire agrees.', tires: 0, health: 5 },
+      { who: 'scotty', text: 'Scotty says everything is figure-out-able, and the spare tire agrees.', health: 5 },
       { who: 'stephanie', text: 'Stephanie could sell the turnout. A buyer bites.', deals: 1 },
       { who: 'bekkah', text: 'Bekkah framed the lake in one photo. A grant-shaped smile follows.', money: 70 },
       { who: 'jillian', text: 'Jillian, small and mighty, parallel-parked the SUV. Goose and James approve.', morale: 6 },
@@ -70,7 +70,7 @@
       { text: 'A lockbox froze solid in the wind.', locks: -1 },
       { text: 'Somebody caught Caribou Withdrawal.', health: -8, morale: -4 },
       { text: 'MLS Burnout rolls through the back seat.', morale: -10 },
-      { text: 'Frozen Lockbox Finger. A winter kit would have helped.', health: -7 },
+      { text: 'Frozen Lockbox Finger.', health: -7, protect: 'kits', saved: 'A winter kit thawed the lockbox finger.' },
       { text: 'A deer considered the bumper and chose the ditch.', morale: 2 },
       { text: 'Mine dust on the windshield. You drive the next mile by memory.', fuel: -1 },
       { text: 'Lake wind shoves the SUV. Coffee saves the mood.', coffee: -1 },
@@ -122,11 +122,27 @@
 
   function weatherFor(miles) {
     const roll = Math.random();
-    if (miles > 200 && roll < 0.45) return 'Lake wind';
-    if (miles > 120 && roll < 0.35) return 'Blizzard';
-    if (miles > 70 && roll < 0.3) return 'Mine dust';
-    if (roll < 0.2) return 'Flurries';
-    if (roll < 0.45) return 'Cloudy';
+    if (miles > 200) {
+      if (roll < 0.34) return 'Lake wind';
+      if (roll < 0.5) return 'Flurries';
+      if (roll < 0.66) return 'Cloudy';
+      return 'Clear';
+    }
+    if (miles > 120) {
+      if (roll < 0.28) return 'Blizzard';
+      if (roll < 0.46) return 'Mine dust';
+      if (roll < 0.6) return 'Flurries';
+      if (roll < 0.75) return 'Cloudy';
+      return 'Clear';
+    }
+    if (miles > 70) {
+      if (roll < 0.32) return 'Mine dust';
+      if (roll < 0.48) return 'Flurries';
+      if (roll < 0.68) return 'Cloudy';
+      return 'Clear';
+    }
+    if (roll < 0.18) return 'Flurries';
+    if (roll < 0.4) return 'Cloudy';
     return 'Clear';
   }
 
@@ -164,7 +180,13 @@
     if (has(state, 'liz')) miles += 3;
     if (has(state, 'deb') && state.miles > 100) miles += 2;
     if (has(state, 'tania') && state.miles > 50 && state.miles < 190) miles += 2;
-    if (state.weather === 'Blizzard') miles = Math.max(6, miles - 8);
+    if (state.weather === 'Blizzard') {
+      if (state.kits > 0) {
+        state.kits -= 1;
+        miles = Math.max(10, miles - 3);
+        notes.push('A winter kit kept the blizzard to a crawl.');
+      } else miles = Math.max(6, miles - 8);
+    }
     if (state.weather === 'Mine dust') miles = Math.max(8, miles - 3);
     state.miles += miles;
     state.fuel = Math.max(0, state.fuel - pace.fuel);
@@ -183,10 +205,7 @@
     const arrived = LANDMARKS[state.nextStop] && state.miles >= LANDMARKS[state.nextStop].miles;
     let event = null;
     if (!arrived && Math.random() < 0.72) event = pickEvent(state);
-    if (event) {
-      applyEvent(state, event);
-      notes.push(event.text);
-    }
+    if (event) notes.push(applyEvent(state, event));
     notes.unshift(miles + ' miles. ' + state.weather + '.');
     state.log.unshift(notes[0]);
     if (!alive(state)) return { dead: 'crew', where: nextName(state), notes: notes };
@@ -210,6 +229,13 @@
   }
 
   function applyEvent(state, ev) {
+    let text = ev.text;
+    let health = ev.health || 0;
+    if (ev.protect === 'kits' && state.kits > 0) {
+      state.kits -= 1;
+      health = 0;
+      text = ev.saved;
+    }
     if (ev.morale) state.morale = Math.max(0, Math.min(100, state.morale + ev.morale));
     if (ev.money) state.money = Math.max(0, state.money + ev.money);
     if (ev.coffee) state.coffee = Math.max(0, state.coffee + ev.coffee);
@@ -217,10 +243,9 @@
     if (ev.locks) state.locks = Math.max(0, state.locks + ev.locks);
     if (ev.deals) state.deals += ev.deals;
     if (ev.bonusMiles) state.miles += ev.bonusMiles;
-    if (ev.health) {
-      if (ev.health > 0) heal(state, ev.health);
-      else hurt(state, -ev.health);
-    }
+    if (health > 0) heal(state, health);
+    if (health < 0) hurt(state, -health);
+    return text;
   }
 
   function score(state) {

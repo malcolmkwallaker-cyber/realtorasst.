@@ -220,8 +220,13 @@
     document.getElementById('go').onclick = function () {
       anim = 1.3;
       pending = 'travel';
+      document.getElementById('go').disabled = true;
+      document.getElementById('hunt').disabled = true;
+      document.getElementById('ice').disabled = true;
     };
     document.getElementById('hunt').onclick = function () {
+      pending = null;
+      anim = 0;
       if (state.signs <= 0) { state.log.unshift('No yard signs. The general store has them.'); trailScreen(); return; }
       state.signs -= 1;
       hunt = new G.Play.Hunt();
@@ -229,6 +234,8 @@
       huntScreen();
     };
     document.getElementById('ice').onclick = function () {
+      pending = null;
+      anim = 0;
       highway = new G.Play.Highway();
       screen = 'highway';
       highwayScreen();
@@ -263,6 +270,7 @@
       btn.addEventListener('pointerdown', down);
       btn.addEventListener('pointerup', up);
       btn.addEventListener('pointerleave', up);
+      btn.addEventListener('pointercancel', up);
     });
   }
 
@@ -309,18 +317,31 @@
     };
   }
 
+  function releaseKeys() {
+    keys.left = false;
+    keys.right = false;
+    keys.up = false;
+    keys.down = false;
+    keys.throw = false;
+  }
+
   function townScreen(mark, done) {
     screen = 'town';
+    releaseKeys();
     document.getElementById('stage').hidden = true;
+    if (done) {
+      app.innerHTML = '<p class="kicker">CANAL PARK</p><h1>' + esc(mark.name).toUpperCase() + '</h1>' +
+        '<p class="lede">' + esc(mark.detail) + '</p>' +
+        '<button class="btn" id="finish" type="button">See the score</button>';
+      document.getElementById('finish').onclick = function () { scoreScreen(); };
+      return;
+    }
     app.innerHTML = '<p class="kicker">LANDMARK</p><h1>' + esc(mark.name).toUpperCase() + '</h1>' +
       '<p class="lede">' + esc(mark.detail) + '</p>' +
       '<div class="stack">' +
-      (done ? '<button class="btn" id="finish" type="button">See the score</button>' : '') +
       '<button class="btn" id="rest" type="button">Rest the crew</button>' +
       '<button class="btn" id="close" type="button">Close a local deal</button>' +
       '<button class="btn alt" id="on" type="button">Back on the trail</button></div>';
-    const fin = document.getElementById('finish');
-    if (fin) fin.onclick = function () { scoreScreen(); };
     document.getElementById('rest').onclick = function () {
       G.Trail.heal(state, 18);
       state.morale = Math.min(100, state.morale + 6);
@@ -350,15 +371,15 @@
       '<p class="lede">' + esc(cause) + ' outside ' + esc(where) + '.</p>' +
       '<p>' + state.miles + ' miles. ' + state.deals + ' deals. The coffee was ' + state.coffee + '.</p>' +
       '<button class="btn" id="again" type="button">Try the trail again</button>';
-    saveHof(false);
+    saveHof(G.Trail.score(state), false);
     document.getElementById('again').onclick = title;
   }
 
   function scoreScreen() {
     screen = 'score';
     document.getElementById('stage').hidden = true;
-    const points = G.Trail.score(state);
-    saveHof(true);
+    const points = G.Trail.score(state) + 500;
+    saveHof(points, true);
     const hof = loadHof();
     app.innerHTML = '<p class="kicker">CANAL PARK</p><h1>YOU REACHED THE BRIDGE</h1>' +
       '<p class="lede">' + esc(agent(state.lead).name) + ' and the crew made Duluth.</p>' +
@@ -373,8 +394,8 @@
     try { return JSON.parse(localStorage.getItem('north-desk-trail-hof') || '[]'); } catch (e) { return []; }
   }
 
-  function saveHof(won) {
-    const row = { name: agent(state.lead).short, score: G.Trail.score(state) + (won ? 500 : 0), won: !!won };
+  function saveHof(points, won) {
+    const row = { name: agent(state.lead).short, score: points, won: !!won };
     const list = loadHof();
     list.push(row);
     list.sort(function (a, b) { return b.score - a.score; });
@@ -416,6 +437,7 @@
           state.morale = Math.min(100, state.morale + hunt.score);
           state.log.unshift('Lead hunt: ' + hunt.score + ' signs that stuck.');
           hunt = null;
+          releaseKeys();
           trailScreen();
         }
       } else if (screen === 'highway' && highway) {
@@ -428,9 +450,14 @@
             state.log.unshift('A trooper liked your texting. $150, and a wink.');
           }
           if (highway.hits >= 5) {
-            G.Trail.hurt(state, 10);
-            state.fuel = Math.max(0, state.fuel - 1);
-            state.log.unshift('The ice won a round.');
+            if (state.tires > 0) {
+              state.tires -= 1;
+              state.log.unshift('A spare tire ate the worst of the ice.');
+            } else {
+              G.Trail.hurt(state, 10);
+              state.fuel = Math.max(0, state.fuel - 1);
+              state.log.unshift('The ice won a round.');
+            }
           } else {
             state.miles += 6 + highway.texts * 2;
             state.morale = Math.min(100, state.morale + 4);
@@ -438,8 +465,9 @@
           }
           const mark = highway.mark;
           highway = null;
-          if (!G.Trail.party(state).some(function (id) { return state.health[id] > 0; })) return tomb('crew');
-          if (fromCrossing && mark) townScreen(mark, false);
+          releaseKeys();
+          if (!G.Trail.party(state).some(function (id) { return state.health[id] > 0; })) tomb('crew');
+          else if (fromCrossing && mark) townScreen(mark, false);
           else trailScreen();
         }
       }
