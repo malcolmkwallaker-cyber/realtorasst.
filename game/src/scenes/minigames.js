@@ -507,7 +507,7 @@ G.makeMinigame('showGame', {
   },
   bg: G.C.navy,
 
-  duration: 18,
+  duration: 12,
 
   init() {
     this.features = [
@@ -646,7 +646,7 @@ G.makeMinigame('negotiateGame', {
     ];
   },
   bg: G.C.ink,
-  duration: 15,
+  duration: 11,
 
   init() {
     this.bar = 0.35;
@@ -727,7 +727,7 @@ G.makeMinigame('inspectGame', {
     ];
   },
   bg: G.C.dusk,
-  duration: 16,
+  duration: 12,
 
   init() {
     const ISSUES = ['LEAKY FAUCET', 'SQUIRRELS (RUDE)', 'ROOF FROM 1971', 'RADON???', 'MYSTERY SWITCH', 'SPOOKY FURNACE', 'DOOR TO NOWHERE'];
@@ -835,7 +835,7 @@ G.makeMinigame('videoGame', {
     ];
   },
   bg: G.C.purple,
-  duration: 16,
+  duration: 12,
 
   LANE_BTNS: [
     { label: 'LEFT',  key: 'ArrowLeft',  x: 106, y: 216, w: 68, h: 38, size: 9 },
@@ -1065,7 +1065,7 @@ G.makeMinigame('openHouseGame', {
     ];
   },
   bg: G.C.teal,
-  duration: 20,
+  duration: 13,
 
   init() {
     this.px = G.W / 2;

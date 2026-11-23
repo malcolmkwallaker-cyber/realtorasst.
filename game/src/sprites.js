@@ -545,73 +545,6 @@ G.makeSprite = (rows, colors) => {
     '..WWWWDDWWWW..',
   ], { Y: C.yellow, W: C.gray, D: '#6b4226' });
 
-  // BLAKE SUDDATH: The Growth Guru - quarter-zip, earbuds, laptop, coffee, phone
-  // Black hair + goatee, no earbuds, crossed-keys logo on the shirt (white on teal)
-  S.blakeSuddath = G.makeSprite([
-    '....HHHHHH....',
-    '...HHHHHHHH...',
-    '...HSSSSSSH...',
-    '...HSKSSKSH...',
-    '....SSSSSS....',
-    '....XWWWWX....',
-    '....SXXXXS....',
-    '....QQQQQQ....',
-    '...QWQQQQWQ...',
-    '..L.QWQQWQ.C..',
-    '..L.QQWWQQ.P..',
-    '....QWQQWQ....',
-    '....JJJJJJ....',
-    '....JJ..JJ....',
-    '....JJ..JJ....',
-    '....JJ..JJ....',
-    '...NN....NN...',
-  ], { H: '#232433', X: '#232433', S: '#e8b796', K: C.ink, W: C.white, Q: '#232433', L: C.gray, C: C.orange, P: C.sky, J: '#3a3f52', N: C.white });
-
-  // Growth Lab: modern glass building with a holo chart
-  S.growthlab = G.makeSprite([
-    '...G..G..G....',
-    '...G.GG.GG....',
-    '..CCCCCCCCCC..',
-    '.CCCCCCCCCCCC.',
-    '..TWWTWWTWWT..',
-    '..TWWTWWTWWT..',
-    '..TTTTDDTTTT..',
-    '..TTTTDDTTTT..',
-  ], { G: C.lime, C: C.cyan, T: C.teal, W: C.sky, D: C.ink });
-
-  // TYLER LEWIS: The Systems Architect - black hair, clean-shaven, black shirt
-  // with the Cirql logo (cyan "C" + gradient ring dots), tablet + smartwatch
-  S.tylerLewis = G.makeSprite([
-    '....HHHHHH....',
-    '...HHHHHHHH...',
-    '...HSSSSSSH...',
-    '...HSKSSKSH...',
-    '....SSSSSS....',
-    '....SSSSSS....',
-    '....SSSSSS....',
-    '....ZZUZZZ....',
-    '....ZZIIZZ....',
-    '..T.UZIZZU.M..',
-    '..T.ZZIZZZ.S..',
-    '....ZZIIZZ....',
-    '....ZZUZZZ....',
-    '....JJ..JJ....',
-    '....JJ..JJ....',
-    '....JJ..JJ....',
-    '...NN....NN...',
-  ], { H: '#232433', S: '#e8b796', K: C.ink, Z: '#232433', I: C.cyan, U: C.blue, T: C.cyan, M: C.red, J: '#3a3f52', N: C.white });
-
-  // Systems Lab: dark server building with data lights
-  S.systemslab = G.makeSprite([
-    '..KKKKKKKKKK..',
-    '..KCKCKCKCKK..',
-    '..KCKCKCKCKK..',
-    '..KKKKKKKKKK..',
-    '..KWWKWWKWWK..',
-    '..KWWKWWKWWK..',
-    '..KKKKDDKKKK..',
-  ], { K: '#232433', C: C.cyan, W: C.sky, D: C.teal });
-
   // AI drone: tiny hovering helper (for particles / flair)
   S.aidrone = G.makeSprite([
     'C.C',
@@ -633,6 +566,7 @@ G.makeSprite = (rows, colors) => {
 
 // Draw a sprite scaled (integer scale keeps it crisp)
 G.drawSprite = (ctx, sprite, x, y, scale = 1, flip = false) => {
+  if (!sprite) return;
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   if (flip) {
