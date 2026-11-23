@@ -1,6 +1,6 @@
 // ============================================================
 // scenes/map.js - the day hub: Northern MN map + action menu,
-// weather, Brad's bank, Jeff's plaza, and the occasional squatch
+// weather, Joel's bank, Jeff's plaza, and the occasional squatch
 // ============================================================
 'use strict';
 
@@ -79,10 +79,10 @@ G.Engine.register('map', {
     const mentorNote = (openNote) => s.mentorUsedToday ? 'MENTOR USED' : openNote;
     const mentorLock = s.mentorUsedToday; // one mentor power-up per day
     items.push({
-      label: '$ BRAD (BANK)', id: 'brad', kind: 'visit',
-      disabled: s.bradUsed || mentorLock,
-      note: s.bradUsed ? 'GONE' : mentorNote('FREE'),
-      desc: 'Visit Brad Nolan, The Mortgage Wizard. CLEAR TO CLOSE awaits. (1 mentor/day)',
+      label: '$ JOEL (BANK)', id: 'joel', kind: 'visit',
+      disabled: s.joelUsed || mentorLock,
+      note: s.joelUsed ? 'GONE' : mentorNote('FREE'),
+      desc: 'Visit Joel, the blond Mortgage Wizard. CLEAR TO CLOSE awaits. (1 mentor/day)',
     });
     const jeffAvail = !mentorLock && (!s.commercialUnlocked || (s.jeffCooldown <= 0 && s.energy >= G.State.actionCost('commercial')));
     items.push({
@@ -149,9 +149,9 @@ G.Engine.register('map', {
       this.carTarget = { x: loc.x, y: loc.y + 12 };
       this.mode = 'drive';
       G.Audio.swoosh();
-    } else if (it.id === 'brad') {
+    } else if (it.id === 'joel') {
       const loc = G.Data.MAP.locations.bank;
-      this.pendingAction = { id: '_brad', loc: 'bank' };
+      this.pendingAction = { id: '_joel', loc: 'bank' };
       this.carTarget = { x: loc.x, y: loc.y + 12 };
       this.mode = 'drive';
       G.Audio.swoosh();
@@ -182,8 +182,8 @@ G.Engine.register('map', {
   },
 
   // ----------------------------------------------------------
-  visitBrad() {
-    const res = G.State.visitBrad();
+  visitJoel() {
+    const res = G.State.visitJoel();
     if (res.sold) {
       G.Audio.cash();
       G.Engine.shake = 5;
@@ -193,7 +193,7 @@ G.Engine.register('map', {
     G.Popup.show({
       title: res.used ? 'THE BANK' : 'CLEAR TO CLOSE!',
       lines: res.lines,
-      sprite: 'bradNolan',
+      sprite: 'joel',
       color: G.C.yellow, textColor: G.C.white,
       onClose: () => this.buildMenu(),
     });
@@ -285,7 +285,7 @@ G.Engine.register('map', {
         if (s.dayOfMonth > G.State.daysInMonth()) { s.pendingBoss = true; bossTime = true; }
       }
       s.energy = G.State.maxEnergy();
-      s.abilityUsed = false; s.bradUsed = false;
+      s.abilityUsed = false; s.joelUsed = false;
       if (s.jeffCooldown > 0) s.jeffCooldown--;
       try { G.State.rollWeather(); } catch (_) {}
       try { G.State.autosave(); } catch (_) {}
@@ -373,7 +373,7 @@ G.Engine.register('map', {
         this.mode = 'menu';
         const a = this.pendingAction;
         this.pendingAction = null;
-        if (a.id === '_brad') { this.visitBrad(); return; }
+        if (a.id === '_joel') { this.visitJoel(); return; }
         if (a.id === '_jeff') { this.visitJeff(); return; }
         if (a.minigame) {
           G.Engine.goto(a.minigame, { actionId: a.id });
@@ -518,7 +518,7 @@ G.Engine.register('map', {
     let selLoc = null;
     if (selected) {
       if (selected.kind === 'action') selLoc = (G.Data.ACTIONS.find(a => a.id === selected.id) || {}).loc;
-      if (selected.id === 'brad') selLoc = 'bank';
+      if (selected.id === 'joel') selLoc = 'bank';
       if (selected.id === 'jeff') selLoc = 'plaza';
     }
     for (const [key, loc] of Object.entries(G.Data.MAP.locations)) {

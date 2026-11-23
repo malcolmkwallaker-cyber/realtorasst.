@@ -58,7 +58,7 @@ npm run dist:win    # build an installer .exe
   `NEW → WARM → APPT SET → CLIENT → OFFER IN → PENDING → SOLD`
 - **Shop:** spend commission on 11 upgrades (drone, CRM, AI assistant,
   transaction coordinator, better vehicle...).
-- **Legendary power-ups:** visit **Brad Nolan, The Mortgage Wizard** at the
+- **Legendary power-ups:** visit **Joel, the blond Mortgage Wizard** at the
   bank (Clear to Close — and the rare *Weekend Underwriting* closes every
   pending deal at once) and **Jeff Nobleza, The Commercial King** at the
   plaza (Commercial Takeover unlocks apartments, retail, warehouses,

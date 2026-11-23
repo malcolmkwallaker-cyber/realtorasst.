@@ -736,8 +736,8 @@ G.makeSprite = (rows, colors) => {
 
   // ============ EXPANSION SPRITES ============
 
-  // BRAD NOLAN: blond lending legend, gray suit, gold tie, golden folder
-  S.bradNolan = G.makeSprite([
+  // JOEL: blond mortgage wizard, gray suit, gold tie, golden folder
+  S.joel = G.makeSprite([
     '....YYYYYY....',
     '...YYYYYYYY...',
     '...YSSSSSSY...',
@@ -755,7 +755,7 @@ G.makeSprite = (rows, colors) => {
     '....DD..DD....',
     '....DD..DD....',
     '...KK....KK...',
-  ], { Y: '#232433', S: '#f0c9a0', K: C.ink, W: C.white, G: C.gray, T: C.yellow, D: C.dusk, F: C.yellow });
+  ], { Y: '#f0d090', S: '#f0c9a0', K: C.ink, W: C.white, G: C.gray, T: C.yellow, D: C.dusk, F: C.yellow });
 
   // JEFF NOBLEZA: sharp charcoal blazer, glasses, blueprints in hand
   S.jeffNobleza = G.makeSprite([
@@ -1318,14 +1318,14 @@ G.Data.FLAVOR = {
   // ----------------------------------------------------------
   // Legendary character power-ups
   // ----------------------------------------------------------
-  D.BRAD = {
-    name: 'BRAD NOLAN',
+  D.JOEL = {
+    name: 'JOEL',
     title: 'THE MORTGAGE WIZARD',
-    sprite: 'bradNolan',
+    sprite: 'joel',
     ability: 'CLEAR TO CLOSE',
     rare: 'WEEKEND UNDERWRITING',
     intro: [
-      'Local lending legend. His rate sheet glows.',
+      'Blond lending legend. His rate sheet glows.',
       'He pulls out a GOLDEN LOAN FOLDER.',
       'Paperwork flies everywhere.',
     ],
@@ -2760,7 +2760,7 @@ G.State = {
       seasonOver: false,
       effects: { snowTomorrow: false, preapproved: false },
       weather: null,
-      bradUsed: false,
+      joelUsed: false,
       jeffCooldown: 0,
       blakeCooldown: 0,
       aiOverdrive: 0,
@@ -2830,7 +2830,7 @@ G.State = {
     st.effects = st.effects || { snowTomorrow: false };
     st.effects.preapproved = st.effects.preapproved || false;
     st.weather = st.weather || null;
-    st.bradUsed = st.bradUsed || false;
+    st.joelUsed = st.joelUsed || st.bradUsed || false;
     st.jeffCooldown = st.jeffCooldown || 0;
     st.blakeCooldown = st.blakeCooldown || 0;
     st.aiOverdrive = st.aiOverdrive || 0;
@@ -3291,7 +3291,7 @@ G.State = {
   },
 
   // ----------------------------------------------------------
-  // Close a single lead: shared by close action, Brad, commercial
+  // Close a single lead: shared by close action, Joel, commercial
   // ----------------------------------------------------------
   closeLead(l, lines) {
     const s = this.s;
@@ -3700,7 +3700,7 @@ G.State = {
         let power = G.clamp(score + ch.negotiateBonus, 0, 1);
         if (s.effects.preapproved) {
           power = 1;
-          lines.push('BRAD\'S PRE-APPROVAL DID THE TALKING. No contingencies. No mercy.');
+          lines.push('JOEL\'S PRE-APPROVAL DID THE TALKING. No contingencies. No mercy.');
           s.effects.preapproved = false;
         }
         if (power >= 0.45) {
@@ -3794,7 +3794,7 @@ G.State = {
   },
 
   // ----------------------------------------------------------
-  // Legendary power-ups: Brad Nolan & Jeff Nobleza
+  // Legendary power-ups: Joel & Jeff Nobleza
   // ----------------------------------------------------------
   // One major mentor benefit per day - visiting a second mentor gets a rain check
   mentorBusy() {
@@ -3806,14 +3806,14 @@ G.State = {
     ]), '(One mentor power-up per day - come back tomorrow.)'], used: true };
   },
 
-  visitBrad() {
+  visitJoel() {
     const s = this.s;
-    if (s.bradUsed) return { lines: ['Brad is out closing loans. Back tomorrow. His voicemail is just air horns.'], used: true };
+    if (s.joelUsed) return { lines: ['Joel is out closing loans. Back tomorrow. His voicemail is just air horns.'], used: true };
     const busy = this.mentorBusy();
     if (busy) return busy;
-    s.bradUsed = true;
+    s.joelUsed = true;
     s.mentorUsedToday = true;
-    const B = G.Data.BRAD;
+    const B = G.Data.JOEL;
     const lines = [B.name + ' - ' + B.title];
     lines.push(...B.intro);
     lines.push(G.choice(B.lines));
@@ -4632,7 +4632,7 @@ G.State = {
     s.effects.preapproved = false;
 
     s.abilityUsed = false;
-    s.bradUsed = false;
+    s.joelUsed = false;
     s.mentorUsedToday = false;
     if (s.jeffCooldown > 0) s.jeffCooldown--;
     const weatherLines = this.rollWeather();
@@ -5908,7 +5908,7 @@ G.Engine.register('howto', {
       ['FOLLOW UP fast (attendees by NEXT DAY!) to turn them into buyers,', G.C.white],
       ['sellers & referrals. Neglected listings = angry sellers.', G.C.white],
       ['', 0],
-      ['MENTORS: Brad and Jeff. ONE mentor power-up per day.', G.C.orange],
+      ['MENTORS: Joel and Jeff. ONE mentor power-up per day.', G.C.orange],
       ['DAILY GOAL: two solid tasks. Streaks pay cash and energy.', G.C.yellow],
       ['QUICK SEASON is 5 days a month. FULL is 8. Same race, less grind.', G.C.gray],
       ['Jeff\'s commercial deals pay cash & score but do NOT count as homes.', G.C.orange],
@@ -5935,7 +5935,7 @@ G.Engine.register('howto', {
 <script>
 // ============================================================
 // scenes/map.js - the day hub: Northern MN map + action menu,
-// weather, Brad's bank, Jeff's plaza, and the occasional squatch
+// weather, Joel's bank, Jeff's plaza, and the occasional squatch
 // ============================================================
 'use strict';
 
@@ -6014,10 +6014,10 @@ G.Engine.register('map', {
     const mentorNote = (openNote) => s.mentorUsedToday ? 'MENTOR USED' : openNote;
     const mentorLock = s.mentorUsedToday; // one mentor power-up per day
     items.push({
-      label: '$ BRAD (BANK)', id: 'brad', kind: 'visit',
-      disabled: s.bradUsed || mentorLock,
-      note: s.bradUsed ? 'GONE' : mentorNote('FREE'),
-      desc: 'Visit Brad Nolan, The Mortgage Wizard. CLEAR TO CLOSE awaits. (1 mentor/day)',
+      label: '$ JOEL (BANK)', id: 'joel', kind: 'visit',
+      disabled: s.joelUsed || mentorLock,
+      note: s.joelUsed ? 'GONE' : mentorNote('FREE'),
+      desc: 'Visit Joel, the blond Mortgage Wizard. CLEAR TO CLOSE awaits. (1 mentor/day)',
     });
     const jeffAvail = !mentorLock && (!s.commercialUnlocked || (s.jeffCooldown <= 0 && s.energy >= G.State.actionCost('commercial')));
     items.push({
@@ -6084,9 +6084,9 @@ G.Engine.register('map', {
       this.carTarget = { x: loc.x, y: loc.y + 12 };
       this.mode = 'drive';
       G.Audio.swoosh();
-    } else if (it.id === 'brad') {
+    } else if (it.id === 'joel') {
       const loc = G.Data.MAP.locations.bank;
-      this.pendingAction = { id: '_brad', loc: 'bank' };
+      this.pendingAction = { id: '_joel', loc: 'bank' };
       this.carTarget = { x: loc.x, y: loc.y + 12 };
       this.mode = 'drive';
       G.Audio.swoosh();
@@ -6117,8 +6117,8 @@ G.Engine.register('map', {
   },
 
   // ----------------------------------------------------------
-  visitBrad() {
-    const res = G.State.visitBrad();
+  visitJoel() {
+    const res = G.State.visitJoel();
     if (res.sold) {
       G.Audio.cash();
       G.Engine.shake = 5;
@@ -6128,7 +6128,7 @@ G.Engine.register('map', {
     G.Popup.show({
       title: res.used ? 'THE BANK' : 'CLEAR TO CLOSE!',
       lines: res.lines,
-      sprite: 'bradNolan',
+      sprite: 'joel',
       color: G.C.yellow, textColor: G.C.white,
       onClose: () => this.buildMenu(),
     });
@@ -6220,7 +6220,7 @@ G.Engine.register('map', {
         if (s.dayOfMonth > G.State.daysInMonth()) { s.pendingBoss = true; bossTime = true; }
       }
       s.energy = G.State.maxEnergy();
-      s.abilityUsed = false; s.bradUsed = false;
+      s.abilityUsed = false; s.joelUsed = false;
       if (s.jeffCooldown > 0) s.jeffCooldown--;
       try { G.State.rollWeather(); } catch (_) {}
       try { G.State.autosave(); } catch (_) {}
@@ -6308,7 +6308,7 @@ G.Engine.register('map', {
         this.mode = 'menu';
         const a = this.pendingAction;
         this.pendingAction = null;
-        if (a.id === '_brad') { this.visitBrad(); return; }
+        if (a.id === '_joel') { this.visitJoel(); return; }
         if (a.id === '_jeff') { this.visitJeff(); return; }
         if (a.minigame) {
           G.Engine.goto(a.minigame, { actionId: a.id });
@@ -6453,7 +6453,7 @@ G.Engine.register('map', {
     let selLoc = null;
     if (selected) {
       if (selected.kind === 'action') selLoc = (G.Data.ACTIONS.find(a => a.id === selected.id) || {}).loc;
-      if (selected.id === 'brad') selLoc = 'bank';
+      if (selected.id === 'joel') selLoc = 'bank';
       if (selected.id === 'jeff') selLoc = 'plaza';
     }
     for (const [key, loc] of Object.entries(G.Data.MAP.locations)) {

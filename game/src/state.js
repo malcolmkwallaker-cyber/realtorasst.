@@ -101,7 +101,7 @@ G.State = {
       seasonOver: false,
       effects: { snowTomorrow: false, preapproved: false },
       weather: null,
-      bradUsed: false,
+      joelUsed: false,
       jeffCooldown: 0,
       blakeCooldown: 0,
       aiOverdrive: 0,
@@ -171,7 +171,7 @@ G.State = {
     st.effects = st.effects || { snowTomorrow: false };
     st.effects.preapproved = st.effects.preapproved || false;
     st.weather = st.weather || null;
-    st.bradUsed = st.bradUsed || false;
+    st.joelUsed = st.joelUsed || st.bradUsed || false;
     st.jeffCooldown = st.jeffCooldown || 0;
     st.blakeCooldown = st.blakeCooldown || 0;
     st.aiOverdrive = st.aiOverdrive || 0;
@@ -632,7 +632,7 @@ G.State = {
   },
 
   // ----------------------------------------------------------
-  // Close a single lead: shared by close action, Brad, commercial
+  // Close a single lead: shared by close action, Joel, commercial
   // ----------------------------------------------------------
   closeLead(l, lines) {
     const s = this.s;
@@ -1041,7 +1041,7 @@ G.State = {
         let power = G.clamp(score + ch.negotiateBonus, 0, 1);
         if (s.effects.preapproved) {
           power = 1;
-          lines.push('BRAD\'S PRE-APPROVAL DID THE TALKING. No contingencies. No mercy.');
+          lines.push('JOEL\'S PRE-APPROVAL DID THE TALKING. No contingencies. No mercy.');
           s.effects.preapproved = false;
         }
         if (power >= 0.45) {
@@ -1135,7 +1135,7 @@ G.State = {
   },
 
   // ----------------------------------------------------------
-  // Legendary power-ups: Brad Nolan & Jeff Nobleza
+  // Legendary power-ups: Joel & Jeff Nobleza
   // ----------------------------------------------------------
   // One major mentor benefit per day - visiting a second mentor gets a rain check
   mentorBusy() {
@@ -1147,14 +1147,14 @@ G.State = {
     ]), '(One mentor power-up per day - come back tomorrow.)'], used: true };
   },
 
-  visitBrad() {
+  visitJoel() {
     const s = this.s;
-    if (s.bradUsed) return { lines: ['Brad is out closing loans. Back tomorrow. His voicemail is just air horns.'], used: true };
+    if (s.joelUsed) return { lines: ['Joel is out closing loans. Back tomorrow. His voicemail is just air horns.'], used: true };
     const busy = this.mentorBusy();
     if (busy) return busy;
-    s.bradUsed = true;
+    s.joelUsed = true;
     s.mentorUsedToday = true;
-    const B = G.Data.BRAD;
+    const B = G.Data.JOEL;
     const lines = [B.name + ' - ' + B.title];
     lines.push(...B.intro);
     lines.push(G.choice(B.lines));
@@ -1973,7 +1973,7 @@ G.State = {
     s.effects.preapproved = false;
 
     s.abilityUsed = false;
-    s.bradUsed = false;
+    s.joelUsed = false;
     s.mentorUsedToday = false;
     if (s.jeffCooldown > 0) s.jeffCooldown--;
     const weatherLines = this.rollWeather();

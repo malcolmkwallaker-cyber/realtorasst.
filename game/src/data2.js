@@ -12,14 +12,14 @@
   // ----------------------------------------------------------
   // Legendary character power-ups
   // ----------------------------------------------------------
-  D.BRAD = {
-    name: 'BRAD NOLAN',
+  D.JOEL = {
+    name: 'JOEL',
     title: 'THE MORTGAGE WIZARD',
-    sprite: 'bradNolan',
+    sprite: 'joel',
     ability: 'CLEAR TO CLOSE',
     rare: 'WEEKEND UNDERWRITING',
     intro: [
-      'Local lending legend. His rate sheet glows.',
+      'Blond lending legend. His rate sheet glows.',
       'He pulls out a GOLDEN LOAN FOLDER.',
       'Paperwork flies everywhere.',
     ],

@@ -315,8 +315,8 @@ G.makeSprite = (rows, colors) => {
 
   // ============ EXPANSION SPRITES ============
 
-  // BRAD NOLAN: blond lending legend, gray suit, gold tie, golden folder
-  S.bradNolan = G.makeSprite([
+  // JOEL: blond mortgage wizard, gray suit, gold tie, golden folder
+  S.joel = G.makeSprite([
     '....YYYYYY....',
     '...YYYYYYYY...',
     '...YSSSSSSY...',
@@ -334,7 +334,7 @@ G.makeSprite = (rows, colors) => {
     '....DD..DD....',
     '....DD..DD....',
     '...KK....KK...',
-  ], { Y: '#232433', S: '#f0c9a0', K: C.ink, W: C.white, G: C.gray, T: C.yellow, D: C.dusk, F: C.yellow });
+  ], { Y: '#f0d090', S: '#f0c9a0', K: C.ink, W: C.white, G: C.gray, T: C.yellow, D: C.dusk, F: C.yellow });
 
   // JEFF NOBLEZA: sharp charcoal blazer, glasses, blueprints in hand
   S.jeffNobleza = G.makeSprite([
