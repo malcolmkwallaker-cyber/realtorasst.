@@ -248,7 +248,13 @@ G.State = {
   // ----------------------------------------------------------
   char() { return G.Data.CHARACTERS[this.s.charId] || G.Data.CHARACTERS.malcolm; },
   perk() { return this.char().perk || this.char().id || null; },
-  rivalChar() { return G.Data.RIVAL || { id: 'billboard', name: 'BILLBOARD', sprite: 'rivalBroker' }; },
+  rivalChar() {
+    // The season is Malcolm Wallaker vs Bridger Hopkins.
+    // Playing anyone else, you are still chasing Bridger. Playing Bridger, Malcolm is the one across the table.
+    const me = this.char();
+    if (me && me.id === 'bridger') return G.Data.CHARACTERS.malcolm;
+    return G.Data.CHARACTERS.bridger;
+  },
   daysInMonth() { return (this.s && this.s.daysPerMonth) || G.Data.SEASON.daysPerMonth; },
   has(up) { return !!this.s.upgrades[up]; },
   commercialOk() { return this.s.commercialUnlocked || this.has('commercialdiv'); },
@@ -383,6 +389,8 @@ G.State = {
             if (this.has('waterfrontOffice')) w *= 2;
           }
           if (t.outdoors && (ch.outdoorsWeight || 1) > 1) w *= ch.outdoorsWeight;
+          if ((t.id === 'facebook' || t.id === 'zestimate') && ch.id === 'emily') w *= 2.6;
+          if (t.relo && (ch.reloWeight || 1) > 1) w *= ch.reloWeight;
           if (t.luxury && this.has('luxdiv')) w *= 2;
           if (t.relo && this.has('privatejet')) w *= 2;
           if ((t.id === 'cabin' || t.id === 'cabininv' || t.id === 'vacation') && this.has('cabinexpert')) w *= 1.5;
@@ -400,6 +408,8 @@ G.State = {
 
     let warmth = G.clamp(type.warmth + G.randInt(-10, 10), 5, 95);
     if ((type.outdoors || type.lake) && this.char().id === 'kaila') warmth = G.clamp(warmth + 8, 5, 100);
+    if ((type.id === 'facebook' || type.id === 'zestimate') && this.char().id === 'emily') warmth = G.clamp(warmth + 12, 5, 100);
+    if (type.relo && this.char().id === 'deb') warmth = G.clamp(warmth + 12, 5, 100);
     if (type.lake && this.has('fishingboat')) warmth = G.clamp(warmth + 10, 5, 100);
     if (type.lake && this.has('lakecert')) warmth = G.clamp(warmth + 10, 5, 100);
     if (type.outdoors && this.has('atv')) warmth = G.clamp(warmth + 15, 5, 100);
@@ -414,6 +424,9 @@ G.State = {
       seller: !!type.seller,
       lake: !!type.lake,
       outdoors: !!(type.outdoors || type.lake),
+      online: type.id === 'facebook' || type.id === 'zestimate',
+      range: false,
+      town: null,
       luxury: !!type.luxury,
       commercial: !!type.commercial,
       value,
@@ -431,8 +444,31 @@ G.State = {
       attendedOpenHouse: opts.stage === 'attendee',
       followUpDeadline: opts.stage === 'attendee' ? this.bal().attendeeDeadline : null,
     };
+    const rangeChance = this.char().id === 'tania' ? 0.5 : 0.1;
+    if (!lead.commercial && G.chance(rangeChance)) this.tagRange(lead);
     s.leads.push(lead);
     s.stats.leadsReceived++;
+    return lead;
+  },
+
+  // Bridger's number: fair price, buyers show up, the listing is not a trophy.
+  priceRight(lead, lines) {
+    if (!lead) return;
+    lead.overpriced = false;
+    lead.pricedRight = true;
+    lead.listingMomentum = Math.max(lead.listingMomentum || 0, 52);
+    this.s.stats.perfectPrices = (this.s.stats.perfectPrices || 0) + 1;
+    if (lines) lines.push('PRICE IS RIGHT: ' + lead.name + ' listed at ' + G.money(lead.value) + '.');
+  },
+
+  tagRange(lead) {
+    const towns = G.Data.RANGE_TOWNS || ['HIBBING', 'VIRGINIA', 'EVELETH', 'CHISHOLM'];
+    lead.range = true;
+    lead.town = G.choice(towns);
+    if (lead.label.indexOf(lead.town) !== 0) lead.label = lead.town + ' ' + lead.label;
+    const bump = this.char().id === 'tania' ? (this.char().rangeValue || 1.12) : 1.04;
+    lead.value = Math.round(lead.value * bump);
+    if (this.char().id === 'tania') lead.warmth = G.clamp(lead.warmth + 14, 5, 100);
     return lead;
   },
 
@@ -575,7 +611,9 @@ G.State = {
       adj += ch.showBonus || 0;
     }
     if (id === 'inspect') adj += ch.inspectBonus || 0;
-    if ((this.s.dayMarks || 0) === 0 && ch.id === 'adam') adj += 0.12;
+    if (ch.id === 'malcolm') adj += Math.min(0.08, (this.s.teamRecruits || 0) * 0.02);
+    if (ch.id === 'adam' && (id === 'listing' || id === 'negotiate' || id === 'show')) adj += 0.08;
+    if ((this.s.broccoliDays || 0) > 0) adj += 0.08;
     adj += Math.min(0.1, (this.s.streak || 0) * 0.02);
     if (ch.id === 'scotty') adj += (this.s.stats.happiness - 50) / 900;
     if (id === 'listing' && this.has('matterport')) adj += 0.1;
@@ -587,7 +625,7 @@ G.State = {
     if (this.s.scaleMode > 0) adj += 0.05;   // Scale Mode: everything a touch smoother
     if (this.s.parkingLotTalk > 0) adj += 0.05; // legacy buff, no longer granted
     // county road detour: tomorrow's tours suffer
-    if (this.s.effects.detour > 0 && (id === 'show' || id === 'openhouse')) adj -= 0.15;
+    if (this.s.effects.detour > 0 && (id === 'show' || id === 'openhouse') && ch.id !== 'deb') adj -= 0.15;
     // market visibility: known agents draw better open house crowds
     if (id === 'openhouse') adj += (this.s.marketVisibility - 40) / 500;
     return adj;
@@ -637,6 +675,7 @@ G.State = {
       s.stats.lakeSold = (s.stats.lakeSold || 0) + 1;
     }
     if (l.lake || l.outdoors) s.stats.outdoorsSold = (s.stats.outdoorsSold || 0) + 1;
+    if (l.range) s.stats.rangeSold = (s.stats.rangeSold || 0) + 1;
     if (!l.commercial && s.month === 0) s.stats.aprilClose = true;
     if (!l.commercial && s.stats.homesSold === 1) {
       this.celebrate('firstHome', 'FIRST KEYS!', ['The first closing of the season.', 'Uff da, that feels good.']);
@@ -683,7 +722,11 @@ G.State = {
         for (const l of picked) {
           this.touch(l);
           l.warmth = G.clamp(l.warmth + Math.round(10 + 10 * score), 0, 100);
-          if (l.stage === 'new' && l.warmth >= bal.warmThreshold) {
+          if (ch.id === 'emily' && l.online && score >= 0.4 && (l.stage === 'new' || l.stage === 'hot')) {
+            this.advance(l, 'appt');
+            s.stats.zillowFlips = (s.stats.zillowFlips || 0) + 1;
+            lines.push(l.name + ' went from a Zillow ping to an appointment.');
+          } else if (l.stage === 'new' && l.warmth >= bal.warmThreshold) {
             this.advance(l, 'hot'); lines.push(l.name + ' warmed up! (' + l.label + ')');
           } else if (l.stage === 'hot' && l.warmth >= bal.apptThreshold) {
             this.advance(l, 'appt'); lines.push(l.name + ' booked an appointment!');
@@ -921,6 +964,7 @@ G.State = {
         const bonus = ch.listingBonus + (this.has('drone') ? 0.15 : 0);
         if (score + bonus >= 0.5) {
           this.advance(l, 'active');
+          if (ch.id === 'bridger') this.priceRight(l, lines);
           if (ch.valueBonus) l.value = Math.round(l.value * (1 + ch.valueBonus));
           if (this.has('drone')) l.value = Math.round(l.value * 1.1);
           if (this.has('staging')) l.value = Math.round(l.value * 1.05);
@@ -1228,6 +1272,33 @@ G.State = {
 
     lines.push(ch.ability.name + '!');
     switch (effect) {
+      case 'priceisright': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const listing = this.leadsInStage('active').filter(l => l.seller)
+          .sort((a, b) => ((b.overpriced ? 1 : 0) - (a.overpriced ? 1 : 0)) || ((a.listingMomentum || 50) - (b.listingMomentum || 50)))[0];
+        if (listing) {
+          this.priceRight(listing, lines);
+          lines.push(listing.name + ' is priced for the buyers who are actually out there.');
+          break;
+        }
+        lines.push('No listing to reprice yet. The next pricing call still runs through Bridger.');
+        break;
+      }
+      case 'recruit': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const desk = (G.Roster && G.Roster.office) || [];
+        const hire = desk.length ? G.choice(desk) : null;
+        s.teamRecruits = (s.teamRecruits || 0) + 1;
+        const zip = Math.min(4, s.teamRecruits);
+        for (const l of s.leads) l.warmth = G.clamp(l.warmth + 3 + zip, 0, 100);
+        if (hire) lines.push(hire.short + ' JOINS THE DESK. The whole team just got a lift.');
+        lines.push('TEAM SIZE ' + (1 + s.teamRecruits) + '. Every lead felt the extra hands.');
+        if (G.chance(0.55)) {
+          const extra = this.spawnLead();
+          if (extra) lines.push('+ LEAD: ' + extra.name + ' came in because the office showed up.');
+        }
+        break;
+      }
       case 'viral': {
         const gain = Math.round(G.randInt(280, 760) * this.followerGainMult());
         s.stats.followers += gain;
@@ -1313,6 +1384,7 @@ G.State = {
         break;
       }
       case 'clearIssue': {
+        if (ch.id === 'deb' && ch.ability.lines) lines.push(G.choice(ch.ability.lines));
         const issue = this.leadsInStage('pending').find(l => l.issue);
         if (issue) { issue.issue = false; lines.push(issue.name + ' inspection worry: talked down.'); }
         else lines.push(advanceBest() || 'Everyone is steady. That counts.');
@@ -1406,6 +1478,159 @@ G.State = {
         s.stats.happiness = G.clamp(s.stats.happiness + bump, 0, 100);
         for (const l of s.leads) l.warmth = G.clamp(l.warmth + 4, 0, 100);
         lines.push('+' + bump + ' HAPPINESS. The whole pipeline felt that.');
+        break;
+      }
+      case 'broccoli': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        s.broccoliDays = Math.max(s.broccoliDays || 0, 2);
+        lines.push(advanceBest() || 'The boost is planted. The earring is on duty.');
+        lines.push('BROCCOLI BOOST for 2 days. The earring keeps score.');
+        break;
+      }
+      case 'miracle': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const sick = this.leadsInStage('pending').find(l => l.issue || l.delay > 0);
+        if (sick) {
+          sick.issue = false;
+          sick.delay = 0;
+          s.stats.dealsRescued = (s.stats.dealsRescued || 0) + 1;
+          lines.push(sick.name + ' is back on track. The beard took the meeting.');
+          break;
+        }
+        const fading = s.leads.filter(l => {
+          const risk = this.leadRisk(l);
+          return risk === 'ABOUT TO GHOST' || risk === 'AT RISK';
+        })[0];
+        if (fading) {
+          this.touch(fading);
+          fading.warmth = G.clamp(fading.warmth + 25, 0, 100);
+          s.stats.dealsRescued = (s.stats.dealsRescued || 0) + 1;
+          lines.push(fading.name + ' picked up. Trust came back with the beard.');
+          break;
+        }
+        lines.push(advanceBest() || 'Every deal is healthy. The beard is resting, kindly.');
+        break;
+      }
+      case 'zillow': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const online = s.leads.filter(l => l.online && (l.stage === 'new' || l.stage === 'hot')).slice(0, 2);
+        if (!online.length) {
+          const l = this.spawnLead('zestimate');
+          if (l) {
+            l.online = true;
+            this.advance(l, 'appt');
+            s.stats.zillowFlips = (s.stats.zillowFlips || 0) + 1;
+            lines.push(l.name + ' came off Zillow and already has an appointment.');
+          } else lines.push('The inbox pinged. The pipeline is full.');
+          break;
+        }
+        for (const l of online) {
+          this.touch(l);
+          this.advance(l, 'appt');
+          s.stats.zillowFlips = (s.stats.zillowFlips || 0) + 1;
+          lines.push(l.name + ' flipped from online to an appointment.');
+        }
+        break;
+      }
+      case 'nurse': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const bump = Math.round(10 * (ch.happyMult || 1));
+        s.stats.happiness = G.clamp(s.stats.happiness + bump, 0, 100);
+        const hurting = s.leads.filter(l => this.leadRisk(l) !== 'SAFE');
+        for (const l of hurting) { this.touch(l); l.warmth = G.clamp(l.warmth + 16, 0, 100); }
+        lines.push('+' + bump + ' MORALE. ' + (hurting.length ? hurting.length + ' clients felt looked after.' : 'The office exhaled.'));
+        break;
+      }
+      case 'know': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        lines.push(G.choice([
+          'Market fact: sunset-side frontage still sells the lake.',
+          'Market fact: fishing opener week is when the north fills up.',
+          'Market fact: a legal dock is worth more than a new couch.',
+        ]));
+        const lead = this.bestLead(s.leads);
+        if (lead) {
+          const motive = lead.seller
+            ? 'They want a clean exit and to feel respected.'
+            : (lead.lake ? 'They want the dock more than the kitchen.' : 'They want to feel sure before they sign.');
+          lines.push(lead.name + ' (' + lead.warmth + ' warmth): ' + motive);
+          const next = { new: 'hot', hot: 'appt', appt: 'active', active: 'offer', offer: 'pending' }[lead.stage];
+          if (next) {
+            this.advance(lead, next);
+            lines.push('Moved to ' + G.Data.STAGE_LABELS[next] + '. Adam had already guessed.');
+          }
+        } else lines.push('No file to read yet. He is reciting lake facts anyway.');
+        break;
+      }
+      case 'sellany': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const sellers = this.leadsInStage('active').filter(l => l.seller);
+        const tough = sellers.slice().sort((a, b) => ((b.overpriced ? 1 : 0) - (a.overpriced ? 1 : 0)) || ((a.listingMomentum || 50) - (b.listingMomentum || 50)))[0];
+        if (tough) {
+          const wasTough = !!tough.overpriced || (tough.listingMomentum || 50) < 40;
+          tough.overpriced = false;
+          tough.listingMomentum = 85;
+          this.advance(tough, 'offer');
+          if (wasTough) s.stats.toughOffers = (s.stats.toughOffers || 0) + 1;
+          lines.push(tough.name + ' has an offer. Even the tough ones move.');
+          break;
+        }
+        const appt = this.leadsInStage('appt').find(l => l.seller);
+        if (appt) {
+          this.advance(appt, 'active');
+          lines.push('LISTING TAKEN: ' + appt.name + '. She can sell this one too.');
+          break;
+        }
+        lines.push(advanceBest() || 'No listing on the hook. She is already picturing the sign.');
+        break;
+      }
+      case 'range': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const l = this.spawnLead(G.chance(0.5) ? 'signcall' : 'facebook');
+        if (l) {
+          this.tagRange(l);
+          l.warmth = Math.max(l.warmth, 72);
+          lines.push('+ ' + l.town + ': ' + l.name + ' is ready to talk.');
+        } else lines.push('A Range buyer called. The pipeline is full, so she named a diner and a time.');
+        for (const r of s.leads.filter(x => x.range)) r.warmth = G.clamp(r.warmth + 8, 0, 100);
+        break;
+      }
+      case 'ceo': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        for (const l of s.leads) l.warmth = G.clamp(l.warmth + 8, 0, 100);
+        const big = this.spawnLead(G.chance(0.5) ? 'luxury' : 'lakehome');
+        if (big) {
+          big.value = Math.round(big.value * 1.25);
+          big.warmth = Math.max(big.warmth, 70);
+          lines.push('+ BIGGER DEAL: ' + big.name + ' at ' + G.money(big.value) + '.');
+        } else lines.push('A bigger deal called. The pipeline is full, so he took the name himself.');
+        const stipend = 2500;
+        s.cash += stipend;
+        s.stats.commission += stipend;
+        this.addReputation(5);
+        lines.push('THE COMPANY BACKS YOU: +' + G.money(stipend) + '. The whole book warmed up.');
+        lines.push(advanceBest() || 'Nothing to push. The lift is still on the team.');
+        break;
+      }
+      case 'happen': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        let cleared = 0;
+        for (const l of this.leadsInStage('pending')) {
+          if (l.issue || l.delay > 0) {
+            l.issue = false;
+            l.delay = 0;
+            cleared++;
+          }
+          if (l.daysInStage < 2) l.daysInStage = 2;
+        }
+        if (cleared) lines.push(cleared + ' blocker' + (cleared === 1 ? '' : 's') + ' cleared. Those files can close.');
+        const stalled = s.leads.filter(l => this.leadRisk(l) === 'ABOUT TO GHOST' || this.leadRisk(l) === 'AT RISK')[0];
+        if (stalled) {
+          this.touch(stalled);
+          stalled.warmth = G.clamp(stalled.warmth + 20, 0, 100);
+          lines.push(stalled.name + ' was stalled. Liz unstalled them.');
+        }
+        lines.push(advanceBest() || 'The desk is clear. She already moved on to the next thing.');
         break;
       }
       case 'advance': {
@@ -1581,7 +1806,9 @@ G.State = {
       if (l.listingMomentum == null) l.listingMomentum = 50;
       if (l.expectsOpenHouse === undefined) l.expectsOpenHouse = G.chance(0.4);
       l.listingMomentum = G.clamp(l.listingMomentum - 6 + (this.has('photographer') ? 3 : 0), 0, 100);
-      if (l.daysInStage >= 1 && !l.overpriced && G.chance(l.listingMomentum / 250 + (this.has('photographer') ? 0.08 : 0))) {
+      const stephanie = this.char().id === 'stephanie';
+      if (l.daysInStage >= 1 && (!l.overpriced || stephanie) && G.chance(l.listingMomentum / 250 + (this.has('photographer') ? 0.08 : 0) + (stephanie ? 0.08 : 0))) {
+        if (l.overpriced) { l.overpriced = false; s.stats.toughOffers = (s.stats.toughOffers || 0) + 1; }
         this.advance(l, 'offer');
         passiveLines.push('MOMENTUM: an offer came in on ' + l.name + '\'s listing!');
         continue;
@@ -1611,7 +1838,11 @@ G.State = {
     // 4. rival AI + trash talk scaled by rivalry
     const rivalLines = [];
     const rc = this.rivalChar();
-    const closeChance = bal.rivalCloseChances[Math.min(s.month, 2)] + (this.char().rivalPressure || 0);
+    let closeChance = bal.rivalCloseChances[Math.min(s.month, 2)] + (this.char().rivalPressure || 0);
+    // The real rivalry shows up. Malcolm and Bridger chase each other harder than a normal market.
+    if ((this.char().id === 'malcolm' && rc.id === 'bridger') || (this.char().id === 'bridger' && rc.id === 'malcolm')) {
+      closeChance += 0.10;
+    }
     let rivalCloses = G.chance(closeChance) ? 1 : 0;
     if (G.chance(bal.rivalDoubleChance)) rivalCloses++;
     for (let i = 0; i < rivalCloses; i++) {
@@ -1624,7 +1855,7 @@ G.State = {
     }
     s.rival.followers += G.randInt(20, 120);
     const tier = Math.min(2, Math.floor(s.rivalry / 2));
-    const talkPool = (G.Data.TRASH_TALK[rc.id] || G.Data.TRASH_TALK.billboard)[tier];
+    const talkPool = (G.Data.TRASH_TALK[rc.id] || G.Data.TRASH_TALK.bridger)[tier];
     if (G.chance(0.35 + tier * 0.15)) {
       rivalLines.push(G.choice(talkPool));
     } else if (!rivalCloses && G.chance(0.5)) {
@@ -1704,6 +1935,34 @@ G.State = {
       passiveLines.push('Daily goal: ' + marked + '/' + goal + ' solid tasks.');
     }
     s.dayMarks = 0;
+    // Head to head: Bridger takes the listing if Malcolm overpriced it.
+    // Playing Bridger, Malcolm overprices one out in the market and you price it instead.
+    if (this.char().id === 'malcolm') {
+      const ripe = this.leadsInStage('active').filter(l => l.seller && l.overpriced);
+      if (ripe.length && G.chance(0.7)) {
+        const lost = ripe[0];
+        this.removeLead(lost);
+        s.rival.homesSold++;
+        s.rivalry++;
+        passiveLines.push('BRIDGER priced ' + lost.name + ' right and took the listing. Malcolm had aimed too high.');
+      }
+    } else if (this.char().id === 'bridger' && G.chance(0.1)) {
+      const stolen = this.spawnLead(G.chance(0.5) ? 'expired' : 'fsbo', { stage: 'appt' });
+      if (stolen) {
+        stolen.seller = true;
+        this.priceRight(stolen, null);
+        passiveLines.push('MALCOLM overpriced a listing. BRIDGER took it at ' + G.money(stolen.value) + '.');
+      }
+    }
+    if (this.char().id === 'malcolm' && (s.teamRecruits || 0) > 0) {
+      const zip = Math.min(3, s.teamRecruits);
+      for (const l of s.leads) l.warmth = G.clamp(l.warmth + zip + 1, 0, 100);
+      passiveLines.push('THE DESK (' + s.teamRecruits + ' recruit' + (s.teamRecruits === 1 ? '' : 's') + ') worked the book overnight.');
+    }
+    if (s.broccoliDays > 0) {
+      s.broccoliDays--;
+      if (s.broccoliDays === 0) passiveLines.push('The broccoli boost settled. The earring is just shiny again.');
+    }
     if (G.Roster) G.Roster.evaluate(s);
 
     let energyPenalty = 0;
@@ -2045,6 +2304,7 @@ G.State = {
     s.rivalry++;
     const lines = [];
     if (won) {
+      s.stats.battleWins = (s.stats.battleWins || 0) + 1;
       const l = this.spawnLead(G.chance(0.5) ? 'luxury' : 'lakedev', { force: true });
       l.stage = 'active';
       l.listingMomentum = 50;

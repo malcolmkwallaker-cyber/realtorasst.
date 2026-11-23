@@ -125,6 +125,7 @@ G.Engine.register('select', {
       ctx.strokeRect(6.5, y + 0.5, 157, 14);
       if (un) {
         G.drawSprite(ctx, G.Sprites[ch.sprite] || G.Sprites.silhouette, 8, y - 1, 1);
+        if (ch.look === 'broccoli' && G.sparkle) G.sparkle(ctx, 20, y + 4, this.t, 2);
         G.UI.text(ctx, ch.short || ch.name, 28, y + 3, { size: 7, color: ch.color || G.C.white });
       } else {
         G.drawSprite(ctx, G.Sprites.silhouette, 8, y - 1, 1);
@@ -152,6 +153,7 @@ G.Engine.register('select', {
     const sprite = un ? (G.Sprites[ch.sprite] || G.Sprites.silhouette) : G.Sprites.silhouette;
     const hop = un ? Math.abs(Math.sin(this.t * 4)) * 2 : 0;
     G.drawSprite(ctx, sprite, x + 8, y + 20 - hop, 3);
+    if (un && ch.look === 'broccoli' && G.sparkle) G.sparkle(ctx, x + 46, y + 36 - hop, this.t, 4);
 
     let ty = y + 18;
     const tx = x + 62;
@@ -191,7 +193,7 @@ G.Engine.register('select', {
         ty += 10;
       }
       ty += 6;
-      G.UI.text(ctx, 'Win milestones as Malcolm, Parker, or Liz.', tx, ty, { size: 7, color: G.C.gray });
+      G.UI.text(ctx, 'Play as Malcolm. Rare desks open when you earn them.', tx, ty, { size: 7, color: G.C.gray });
       ty += 9;
       G.UI.text(ctx, 'Unlocks stay on this device.', tx, ty, { size: 7, color: G.C.gray });
     }

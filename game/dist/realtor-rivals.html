@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>North Season - Pemberton Real Estate</title>
+<title>Malcolm vs Bridger - Pemberton Real Estate</title>
 <style>
   html, body {
     margin: 0; padding: 0;
@@ -1594,10 +1594,15 @@ G.Data.FLAVOR = {
   // Dynamic rivalry: trash talk tiers + head-to-head battles
   // ----------------------------------------------------------
   D.TRASH_TALK = {
-    billboard: [
-      ['BILLBOARD: "Nice little sale. I will put it on a bench."', 'BILLBOARD bought another highway sign. It is mostly a photo of his truck.'],
-      ['BILLBOARD: "My jingle is stuck in your head. You are welcome."', 'A BILLBOARD ad calls your listing "cozy," which is bold.'],
-      ['BILLBOARD: "We close a home every time the light turns green."', 'BILLBOARD sent a fruit basket. The note just says "NICE TRY."'],
+    bridger: [
+      ['BRIDGER: "Nice sale, Malcolm. I will allow it."', 'BRIDGER: "Head to head again. This is the fun part."'],
+      ['BRIDGER: "The lake can have two favorites. I am still in it."', 'BRIDGER: "See you at the next listing. Bring the good stuff."'],
+      ['BRIDGER: "You recruited backup. Cute. I am still across the table."', 'BRIDGER: "That one was clean. Annoying. But clean."'],
+    ],
+    malcolm: [
+      ['MALCOLM: "Bridger, that was sharp. I am still coming."', 'MALCOLM: "The desk is loud today. You can hear us, right?"'],
+      ['MALCOLM: "Head to head. Nobody else I would rather chase."', 'MALCOLM: "Good close. I wrote it down. Then I planned the next one."'],
+      ['MALCOLM: "Recruiting does not make me softer. It makes the office faster."', 'MALCOLM: "See you at the sign. Loser buys the coffee."'],
     ],
   };
 
@@ -1661,7 +1666,7 @@ G.Data.FLAVOR = {
 // characters.js - THE roster. Edit this file to change who is
 // playable, how they play, and how office agents unlock.
 //
-// Malcolm Wallaker, Parker Pemberton, and Liz Rein start unlocked.
+// Malcolm Wallaker starts unlocked. Parker (CEO) and Liz (operator) are rare.
 // Everyone else is a Grand Rapids office agent. They begin locked
 // and unlock through play. Progress is saved in localStorage.
 //
@@ -1745,6 +1750,94 @@ G.Data.FLAVOR = {
         '..............',
       ], { H: hair, S: skin, K: C.ink, W: C.white, B: shirt, F: trim || C.orange, D: C.dusk });
     }
+    if (look === 'broccoli') {
+      // Big curly top, one gold earring. The hair enters the room first.
+      return G.makeSprite([
+        'GGGGGGGGGGGGGG',
+        '.GGGgGGGgGGGg.',
+        'GGGgGGGgGGGgGG',
+        '.GGgGGGgGGGgG.',
+        '..GSSSSSSSG...',
+        '..GSSKSSKSG.E.',
+        '...GSSWWSS..E.',
+        '....SSSSSS....',
+        '...BBBBBBB....',
+        '..BBBBBBBBB...',
+        '..S.BBBBBB.S..',
+        '....BBBBBB....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+        '..............',
+      ], { G: '#3f8f3a', g: '#7dce55', S: skin, K: C.ink, W: C.white, E: '#ffd24a', B: shirt, D: C.dusk });
+    }
+    if (look === 'beard') {
+      // The beard is the whole portrait. It has seniority.
+      return G.makeSprite([
+        '....HHHHHH....',
+        '...HHHHHHHH...',
+        '...HSSSSSSH...',
+        '...HSKSSKSH...',
+        '....SSWWSS....',
+        '...RRRRRRRR...',
+        '..RRRRRRRRRR..',
+        '..RRRrRRRrRR..',
+        '..RRRRRRRRRR..',
+        '...RRRRRRRR...',
+        '..S.RRRRRR.S..',
+        '....RRRRRR....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+        '..............',
+      ], { H: hair, S: skin, K: C.ink, W: C.white, R: '#4a3424', r: '#7a5a3a', D: C.dusk, B: shirt });
+    }
+    if (look === 'flyer') {
+      // Steady as ever, plus the carry-on she will not gate-check.
+      return G.makeSprite([
+        '....HHHHHH....',
+        '...HHHHHHHH...',
+        '...HSSSSSSH...',
+        '...HSKSSKSH...',
+        '..THSSSSSSHT..',
+        '..T.SSWWSS.T..',
+        '..T.SSSSSS....',
+        '..T.BBBBBB.UU.',
+        '..TBBBBBBBBUU.',
+        '..BBBBOBBB.UU.',
+        '..S.BBOBBB....',
+        '....BBBBBB....',
+        '....BBBBBB....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+      ], { H: hair, S: skin, K: C.ink, W: C.white, B: shirt, O: trim || C.yellow, D: C.dusk, T: trim || shirt, U: '#d7c4a3' });
+    }
+    if (look === 'range') {
+      // Flannel and a cap. Hibbing to Eveleth, she knows the road.
+      return G.makeSprite([
+        '....CCCCCCCC..',
+        '...CCCCCCCCC..',
+        '...CSSSSSSC...',
+        '...CSKSSKSC...',
+        '....SSSSSS....',
+        '....SSWWSS....',
+        '....SSSSSS....',
+        '...FLFLFLFL...',
+        '..FLFLFLFLFL..',
+        '..SFLFLFLFL.S.',
+        '....FLFLFL....',
+        '....FLFLFL....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+        '..............',
+      ], { C: '#8d1d2c', S: skin, K: C.ink, W: C.white, F: '#6b2a22', L: '#c4553a', D: C.dusk });
+    }
     return G.makeSprite([
       '....HHHHHH....',
       '...HHHHHHHH...',
@@ -1814,65 +1907,91 @@ G.Data.FLAVOR = {
       role: 'leader',
       color: C.green, accent: C.sky,
       hair: '#6b4226', shirt: C.green, trim: C.sky,
-      catchphrase: 'Let us put this lake on the internet.',
+      catchphrase: 'The season is me and Bridger. The desk makes us better.',
       bio: [
-        'Office leader in Grand Rapids.',
-        'Leads with a camera, a follow-up, and a lake story.',
-        'The default agent. The season starts with him.',
+        'Office leader in Grand Rapids. The default agent.',
+        'His season is the head-to-head with Bridger Hopkins.',
+        'He recruits agents, and the whole team gets louder.',
       ],
-      strengths: ['VIDEO +25%', 'OPEN HOUSE +10%', 'LAKE LEADS x2'],
+      strengths: ['OFFICE LEADER', 'RECRUITS LIFT THE TEAM', 'HEAD TO HEAD WITH BRIDGER'],
       ability: {
-        name: 'VIRAL VIDEO',
-        effect: 'viral',
-        desc: 'Post a ridiculous, good-hearted listing video. Leads and followers show up. Once per day.',
+        name: 'OFFICE LEADER',
+        effect: 'recruit',
+        desc: 'Bring an agent onto the desk. The recruit boosts the whole team: warmer leads and a little extra zip. Once per day.',
+        lines: [
+          'New agent on the floor. Everybody just got backup.',
+          'Recruiting day. The book belongs to the whole office now.',
+          'One more teammate. Bridger can hear the desk from here.',
+        ],
       },
-      videoBonus: 0.25, openHouseBonus: 0.10, lakeLeadWeight: 2,
+      videoBonus: 0.05, openHouseBonus: 0.05, lakeLeadWeight: 1.2,
     }),
     make({
       id: 'parker',
       name: 'PARKER PEMBERTON',
       short: 'PARKER',
-      title: 'Owner, Pemberton Real Estate',
+      title: 'CEO, Pemberton Real Estate',
       role: 'owner',
-      badge: 'OWNER',
+      badge: 'CEO',
+      secret: true,
       color: C.yellow, accent: C.white,
       hair: '#3a3f52', shirt: C.navy, trim: C.yellow,
-      catchphrase: 'Make them feel looked after.',
+      catchphrase: 'CEO mode. The whole desk gets a lift.',
       bio: [
-        'Owner of Pemberton Real Estate.',
-        'Boss-tier: more energy and a stronger close.',
-        'The rival brokerage notices when the owner is in the field.',
+        'Owner and CEO of Pemberton Real Estate.',
+        'Rare. You earn the chair by winning the season and the final boss.',
+        'Bigger deals, more energy, and the market notices the boss is in.',
       ],
-      strengths: ['+1 ENERGY', 'COMMISSION +12%', 'RIVAL TRIES HARDER'],
+      strengths: ['CEO MODE', '+1 ENERGY', 'COMMISSION +25%', 'BIGGER DEALS'],
       ability: {
-        name: 'THE OWNER CALLS',
-        effect: 'owner',
-        desc: 'One call from the owner. Your best lead jumps a stage and a referral appears. Once per day.',
+        name: 'CEO MODE',
+        effect: 'ceo',
+        desc: 'Lift the whole book. Every lead warms up, a bigger deal appears, and the company puts cash behind it. Once per day.',
+        lines: [
+          'He did not raise his voice. The pipeline stood up straighter.',
+          'The whole desk eats when this one moves.',
+          'Bigger deal. Same kindness. That is the job.',
+        ],
       },
-      energyMod: 1, commissionMult: 1.12, negotiateBonus: 0.12, listingBonus: 0.08,
-      rivalPressure: 0.08, startCash: 8000, startReputation: 68,
+      energyMod: 1, commissionMult: 1.25, negotiateBonus: 0.15, listingBonus: 0.12,
+      luxuryValueBonus: 0.15, rivalPressure: 0.1, startCash: 15000, startReputation: 78,
+      unlock: {
+        hint: 'BEAT THE FINAL BOSS AND WIN THE SEASON',
+        met: (s) => !!s.stats.wonSeason && (s.stats.bossWins || 0) >= 3,
+      },
     }),
     make({
       id: 'liz',
       name: 'LIZ REIN',
       short: 'LIZ',
-      title: 'The Follow-Through',
-      role: 'starter',
+      title: 'Second in Command',
+      role: 'operator',
+      badge: 'OPS',
+      secret: true,
       color: C.sky, accent: C.white,
       hair: '#8a5a44', shirt: C.sky, trim: C.white,
-      catchphrase: 'A quick hello keeps a deal alive.',
+      catchphrase: 'Consider it done. I will make it happen.',
       bio: [
-        'Pemberton Real Estate.',
-        'Shows up for the follow-up. Leads cool slower around her.',
-        'Wins by staying in touch, not by shouting.',
+        'Pemberton Real Estate. Second chair. She runs the show.',
+        'Rare. Win a season with 8 homes and the desk is hers.',
+        'Blockers move. Stalled files finish. Deals cross the line.',
       ],
-      strengths: ['FOLLOW UP +2', 'LEADS COOL SLOWER', 'REFERRALS +'],
+      strengths: ['MAKES IT HAPPEN', 'CLEARS BLOCKERS', 'FOLLOW UP +2'],
       ability: {
-        name: 'CHECK-IN ROUND',
-        effect: 'warmAll',
-        desc: 'A kind lap through the people who are slipping. Warmth up, ghosting down. Once per day.',
+        name: 'MAKES IT HAPPEN',
+        effect: 'happen',
+        desc: 'Clear the blockers. Inspections, delays, and a stalled deal get pushed across the line. Once per day.',
+        lines: [
+          'She said "on it" and the file was already moving.',
+          'The stall ended because Liz decided it would.',
+          'No drama. The thing that was stuck is not stuck.',
+        ],
       },
-      followupBonus: 2, decayMult: 0.72, referralBonus: 0.1, videoBonus: -0.05,
+      followupBonus: 2, decayMult: 0.75, referralBonus: 0.08,
+      unlock: {
+        hint: 'WIN A SEASON WITH 8 HOMES SOLD',
+        met: (s) => !!s.stats.wonSeason && (s.stats.homesSold || 0) >= 8,
+      },
     }),
   ];
 
@@ -1941,19 +2060,24 @@ G.Data.FLAVOR = {
       role: 'office', secret: true,
       color: C.lime, accent: C.white,
       hair: '#c0a060', shirt: C.teal, trim: C.lime,
-      catchphrase: 'Slow is smooth. Smooth gets to closing.',
+      catchphrase: 'Slow is smooth. I have also made this drive from the airport.',
       bio: [
-        'Grand Rapids office.',
+        'Grand Rapids office. Steady, and a travel hand.',
         'Keeps jittery deals from bolting.',
-        'Leads ghost less often on her watch.',
+        'Out-of-town buyers land softly. She already knows the gate.',
       ],
-      strengths: ['GHOSTING DOWN', 'LEADS COOL SLOWER'],
+      strengths: ['GHOSTING DOWN', 'LEADS COOL SLOWER', 'FREQUENT FLYER'],
       ability: {
         name: 'STEADY NOW',
         effect: 'clearIssue',
-        desc: 'Talk a snag down. An inspection issue clears, or a lead steps forward. Once per day.',
+        desc: 'Talk a snag down, even if the buyer is still on a layover. An issue clears, or a lead steps forward. Once per day.',
+        lines: [
+          'She talked them through it between connections.',
+          'The out-of-town buyer landed. Deb already had the car.',
+          'Miles on the card. Patience in the file. Both count.',
+        ],
       },
-      decayMult: 0.8, ghostMult: 0.65,
+      decayMult: 0.8, ghostMult: 0.65, reloWeight: 2.2, look: 'flyer',
       unlock: { hint: 'WIN A SEASON', met: (s) => !!s.stats.wonSeason },
     }),
     make({
@@ -1988,24 +2112,29 @@ G.Data.FLAVOR = {
       id: 'bridger',
       name: 'BRIDGER HOPKINS',
       short: 'BRIDGER',
-      title: 'The Kind Closer',
+      title: 'Price Is Right',
       role: 'office', secret: true,
       color: '#e7a07a', accent: C.yellow,
       hair: '#8a3a2a', shirt: C.navy, trim: '#e7a07a',
-      catchphrase: 'A clean offer is a kind offer.',
+      catchphrase: 'Price it right and the sign does the rest.',
       bio: [
-        'Grand Rapids office.',
-        'Good at the moment a maybe becomes a yes.',
-        'Negotiates like a neighbor, not a hammer.',
+        'The other half of the season. Malcolm across the table.',
+        'Every pricing call runs through him. He lands the number.',
+        'If Malcolm overprices, Bridger is already in the driveway.',
       ],
-      strengths: ['NEGOTIATE +20%', 'LISTING PITCH +10%'],
+      strengths: ['PRICE IS RIGHT', 'LISTINGS MOVE', 'STEALS AN OVERPRICED LISTING'],
       ability: {
-        name: 'CLEAN OFFER',
-        effect: 'advance',
-        desc: 'Put a tidy offer on the table. Your best lead jumps a stage. Once per day.',
+        name: 'PRICE IS RIGHT',
+        effect: 'priceisright',
+        desc: 'Set the perfect list price. A listing sheds a bad number and draws an offer. Once per day.',
+        lines: [
+          'He said the number once. The seller nodded.',
+          'Not high. Not cute. The price the market will actually pay.',
+          'Malcolm can recruit the desk. Bridger will price the house.',
+        ],
       },
-      negotiateBonus: 0.2, listingBonus: 0.1,
-      unlock: { hint: 'GET 3 DEALS TO PENDING IN ONE SEASON', met: (s) => (s.stats.pendings || 0) >= 3 },
+      listingBonus: 0.08, negotiateBonus: 0,
+      unlock: { hint: 'LAND THE RIGHT PRICE ON 2 LISTINGS', met: (s) => (s.stats.perfectPrices || 0) >= 2 },
     }),
     make({
       id: 'matt',
@@ -2015,20 +2144,25 @@ G.Data.FLAVOR = {
       role: 'office', secret: true,
       color: C.yellow, accent: C.white,
       hair: '#3a3f52', shirt: C.slate, trim: C.yellow,
-      catchphrase: 'The right price finds the right buyer.',
+      catchphrase: 'The beard has seen worse deals than this. We are fine.',
       bio: [
-        'Grand Rapids office.',
-        'Pricing is the game, and the game is fair.',
-        'Listings he touches tend to be worth a little more.',
+        'Grand Rapids office. The beard is the legend.',
+        'Folks joke it could fix a Monday. It does fix deals.',
+        'A comeback with a smile under all that seniority.',
       ],
-      strengths: ['LISTING VALUE +8%', 'LUXURY +10%'],
+      strengths: ['MIRACLE BEARD', 'RESCUES SICK DEALS', 'COMEBACK CLOSER'],
       ability: {
-        name: 'PRICE IT RIGHT',
-        effect: 'price',
-        desc: 'Revisit the price with care. A listing gains value and momentum. Once per day.',
+        name: 'MIRACLE BEARD',
+        effect: 'miracle',
+        desc: 'The beard goes to work. A stuck inspection, a delay, or a cooling lead gets another chance. Once per day.',
+        lines: [
+          'They joke the beard could fix a whole Monday.',
+          'It did not say a word. The deal sat up anyway.',
+          'Comeback energy, politely, from behind the beard.',
+        ],
       },
-      valueBonus: 0.08, luxuryValueBonus: 0.1, listingBonus: 0.08,
-      unlock: { hint: 'EARN $12,000 COMMISSION IN ONE SEASON', met: (s) => s.stats.commission >= 12000 },
+      look: 'beard',
+      unlock: { hint: 'RESCUE 2 DEALS IN ONE SEASON', met: (s) => (s.stats.dealsRescued || 0) >= 2 },
     }),
     make({
       id: 'bethany',
@@ -2038,20 +2172,25 @@ G.Data.FLAVOR = {
       role: 'office', secret: true,
       color: C.lime, accent: C.sky,
       hair: '#c0a060', shirt: C.lime, trim: C.sky,
-      catchphrase: 'We will know it when we walk in.',
+      catchphrase: 'You are not a bother. Tell me what you need.',
       bio: [
-        'Grand Rapids office.',
-        'Showings are her favorite room in the job.',
-        'Buyers find "the one" a little faster.',
+        'Grand Rapids office. A nurse\'s heart in a listing folder.',
+        'She notices when someone is slipping, and she stays.',
+        'Trust comes back. Morale comes back with it.',
       ],
-      strengths: ['SHOWINGS +12%', 'TOUR ADVANCE'],
+      strengths: ['NURSE\'S HEART', 'TRUST COMES BACK', 'MORALE UP'],
       ability: {
-        name: 'THE RIGHT HOUSE',
-        effect: 'advance',
-        desc: 'Walk a buyer into the right kitchen. Your best lead jumps a stage. Once per day.',
+        name: 'NURSE\'S HEART',
+        effect: 'nurse',
+        desc: 'A careful check-in. At-risk clients feel looked after, and the office morale lifts. Once per day.',
+        lines: [
+          'She asked how they were doing before she asked about the house.',
+          'Nobody got a lecture. They got a person who stayed.',
+          'Trust is a vital sign. Hers just improved.',
+        ],
       },
-      showBonus: 0.12,
-      unlock: { hint: 'SIGN 3 BUYER CLIENTS IN ONE SEASON', met: (s) => (s.stats.buyers || 0) >= 3 },
+      happyMult: 1.45, decayMult: 0.82,
+      unlock: { hint: 'REACH 85 CLIENT HAPPINESS', met: (s) => s.stats.happiness >= 85 },
     }),
     make({
       id: 'emily',
@@ -2061,20 +2200,24 @@ G.Data.FLAVOR = {
       role: 'office', secret: true,
       color: '#e7a0c8', accent: C.white,
       hair: '#6b4226', shirt: '#c2478f', trim: C.white,
-      catchphrase: 'Good work gets talked about.',
+      catchphrase: 'That Zillow ping is a person. I answer like one.',
       bio: [
-        'Grand Rapids office.',
-        'Introductions are the whole strategy.',
-        'Happy clients hand her the next name.',
+        'Grand Rapids office. Zillow leads are her craft.',
+        'Online inquiries become real appointments.',
+        'Fast, kind, and she actually calls them back.',
       ],
-      strengths: ['REFERRALS +', 'TWO NAMES A DAY'],
+      strengths: ['ZILLOW FLIP', 'ONLINE LEADS x2', 'PINGS BECOME APPTS'],
       ability: {
-        name: 'WHO DO YOU KNOW',
-        effect: 'referral',
-        desc: 'Ask the kind question. Two referrals call before supper. Once per day.',
+        name: 'ZILLOW FLIP',
+        effect: 'zillow',
+        desc: 'Turn the newest online leads into appointments. If the inbox is quiet, a fresh Zestimate lead calls. Once per day.',
+        lines: [
+          'She called before the listing alert finished loading.',
+          'Online lead, real voice, Saturday showing.',
+          'They said they were just looking. Emily booked the tour.',
+        ],
       },
-      referralBonus: 0.15,
-      unlock: { hint: 'EARN 3 REFERRALS IN ONE SEASON', met: (s) => (s.stats.referrals || 0) >= 3 },
+      unlock: { hint: 'FLIP 3 ONLINE LEADS INTO APPOINTMENTS', met: (s) => (s.stats.zillowFlips || 0) >= 3 },
     }),
     make({
       id: 'adam',
@@ -2084,41 +2227,52 @@ G.Data.FLAVOR = {
       role: 'office', secret: true,
       color: C.orange, accent: C.yellow,
       hair: '#3a3f52', shirt: C.gray, trim: C.orange,
-      catchphrase: 'The early call gets the listing.',
+      catchphrase: 'Fun fact. I already read the comps. And the buyer.',
       bio: [
-        'Grand Rapids office.',
-        'The first task of the day lands cleaner.',
-        'April closings are a point of pride in this game.',
+        'Grand Rapids office. He knows literally everything.',
+        'Lovable about it. Mostly.',
+        'Hidden motives, market facts, the right answer. He shares.',
       ],
-      strengths: ['FIRST TASK +', 'MORNING WARMTH'],
+      strengths: ['KNOW IT ALL', 'SEES THE BEST ANSWER', 'COMPS ON COMMAND'],
       ability: {
-        name: 'DAWN DIAL',
-        effect: 'dawn',
-        desc: 'A morning round of calls. Every new and warm lead heats up. Once per day.',
+        name: 'KNOW IT ALL',
+        effect: 'know',
+        desc: 'Adam opens the file in his head. You learn what the buyer wants, plus a market fact, and the lead moves. Once per day.',
+        lines: [
+          'He started with "actually" and somehow it was helpful.',
+          'The buyer wants a shop for the truck. Adam knew on page one.',
+          'Frontage, sunset side, legal dock. He did not even look it up.',
+        ],
       },
-      unlock: { hint: 'CLOSE A HOME IN APRIL', met: (s) => !!s.stats.aprilClose },
+      listingBonus: 0.12, negotiateBonus: 0.1,
+      unlock: { hint: 'WIN A HEAD-TO-HEAD LISTING BATTLE', met: (s) => (s.stats.battleWins || 0) >= 1 },
     }),
     make({
       id: 'stephanie',
       name: 'STEPHANIE MASCARENAS',
       short: 'STEPHANIE',
-      title: 'The Presenter',
+      title: 'Sells Anything',
       role: 'office', secret: true,
       color: C.sky, accent: C.white,
       hair: '#3a3f52', shirt: C.blue, trim: C.white,
-      catchphrase: 'Let the house do the talking.',
+      catchphrase: 'If it has a door, I can sell it. Watch.',
       bio: [
-        'Grand Rapids office.',
-        'Listing appointments are a show she is ready for.',
-        'Sellers say yes a little more often.',
+        'Grand Rapids office. She can sell any home.',
+        'Overpriced, odd, or stubborn. She still finds the buyer.',
+        'Confident, and the seller feels taken care of.',
       ],
-      strengths: ['LISTING PITCH +25%'],
+      strengths: ['SELL ANYTHING', 'LISTING PITCH +40%', 'TOUGH HOMES MOVE'],
       ability: {
-        name: 'THE WALKTHROUGH',
-        effect: 'advance',
-        desc: 'Walk the house like you mean it. Your best lead jumps a stage. Once per day.',
+        name: 'SELL ANYTHING',
+        effect: 'sellany',
+        desc: 'Guarantee movement on the toughest listing. A stuck or overpriced house gets an offer, or a seller says yes. Once per day.',
+        lines: [
+          'She looked at the odd house and said, "Yep. I know who."',
+          'The seller wanted double. Stephanie found the person anyway.',
+          'Tough listing. Easy confidence. The sign is coming.',
+        ],
       },
-      listingBonus: 0.25,
+      listingBonus: 0.4,
       unlock: { hint: 'TAKE 2 LISTINGS IN ONE SEASON', met: (s) => (s.stats.listings || 0) >= 2 },
     }),
     make({
@@ -2153,24 +2307,29 @@ G.Data.FLAVOR = {
       id: 'tania',
       name: 'TANIA SUONVIERI',
       short: 'TANIA',
-      title: 'The File Captain',
+      title: 'Iron Range Insider',
       role: 'office', secret: true,
-      color: C.cyan, accent: C.white,
-      hair: '#3a3f52', shirt: '#245860', trim: C.cyan,
-      catchphrase: 'Signed, dated, and ready for keys.',
+      color: '#c4553a', accent: C.yellow,
+      hair: '#3a3f52', shirt: '#6b2a22', trim: '#c4553a', look: 'range',
+      catchphrase: 'Hibbing, Virginia, Eveleth, Chisholm. I know which coffee is good.',
       bio: [
-        'Grand Rapids office.',
-        'Paperwork moves when she is on the file.',
-        'Pending deals reach the closing table sooner.',
+        'Grand Rapids office. Iron Range, born into the work.',
+        'Hibbing, Virginia, Eveleth, Chisholm. She has the back roads.',
+        'Range deals come in warmer, and they close like neighbors.',
       ],
-      strengths: ['FASTER PENDINGS', 'INSPECTIONS +'],
+      strengths: ['IRON RANGE INSIDER', 'RANGE DEALS PAY MORE', 'KNOWS THE TOWNS'],
       ability: {
-        name: 'FILE IT',
-        effect: 'file',
-        desc: 'Clear the snag in the file. An issue or a delay comes off a pending deal. Once per day.',
+        name: 'IRON RANGE INSIDER',
+        effect: 'range',
+        desc: 'A Range buyer calls from Hibbing, Virginia, Eveleth, or Chisholm. Warm, local, and ready to talk. Once per day.',
+        lines: [
+          'She said the name of the street before they finished the sentence.',
+          'Eveleth to Chisholm is not a commute. It is a conversation.',
+          'Virginia called. Tania already knew the basement.',
+        ],
       },
-      inspectBonus: 0.1,
-      unlock: { hint: 'CLEAR 2 INSPECTION ISSUES', met: (s, p) => (p.lifetime.inspectionsCleared || 0) >= 2 },
+      rangeValue: 1.12,
+      unlock: { hint: 'CLOSE A DEAL IN HIBBING, VIRGINIA, EVELETH, OR CHISHOLM', met: (s) => (s.stats.rangeSold || 0) >= 1 },
     }),
     make({
       id: 'gaige',
@@ -2180,18 +2339,24 @@ G.Data.FLAVOR = {
       role: 'office', secret: true,
       color: C.orange, accent: C.lime,
       hair: '#6b4226', shirt: C.orange, trim: C.lime,
-      catchphrase: 'New day, new doorbell.',
+      catchphrase: 'The hair arrived first. The earring caught the porch light.',
       bio: [
-        'Grand Rapids office.',
-        'Starts light and levels up with every few closings.',
-        'The grind is the perk. It shows.',
+        'Grand Rapids office. Broccoli on top, on purpose.',
+        'One earring. It sparkles when a deal is about to move.',
+        'Starts light. The crown grows every few closings.',
       ],
-      strengths: ['STARTS LIGHT', '+ENERGY EVERY 3 SALES'],
+      strengths: ['BROCCOLI BOOST', 'EARRING TELLS THE TRUTH', '+ENERGY EVERY 3 SALES'],
       ability: {
-        name: 'ONE MORE DOOR',
-        effect: 'advance',
-        desc: 'Knock one more time. Your best lead jumps a stage. Once per day.',
+        name: 'BROCCOLI BOOST',
+        effect: 'broccoli',
+        desc: 'The top gets ideas. Two days of extra zip, the earring sparks, and a lead steps forward. Once per day.',
+        lines: [
+          'He shook his head and the whole room noticed.',
+          'The earring did a little flash. That means go.',
+          'Broccoli boost. Silly name. Real appointments.',
+        ],
       },
+      look: 'broccoli',
       unlock: { hint: 'FINISH 2 SEASONS', met: (s, p) => (p.lifetime.seasons || 0) >= 2 },
     }),
     make({
@@ -2236,6 +2401,30 @@ G.Data.FLAVOR = {
     delete G.Data.MAP.locations.systemslab;
   }
 
+  G.Data.RANGE_TOWNS = ['HIBBING', 'VIRGINIA', 'EVELETH', 'CHISHOLM'];
+  if (G.Data.MAP && G.Data.MAP.towns) {
+    const extra = [
+      { id: 'hibbing', name: 'HIBBING', x: 292, y: 42 },
+      { id: 'chisholm', name: 'CHISHOLM', x: 348, y: 30 },
+      { id: 'virginia', name: 'VIRGINIA', x: 418, y: 34 },
+      { id: 'eveleth', name: 'EVELETH', x: 458, y: 52 },
+    ];
+    for (const t of extra) {
+      if (!G.Data.MAP.towns.some((x) => x.id === t.id)) G.Data.MAP.towns.push(t);
+    }
+  }
+
+  // Earring twinkle for Gaige. t is seconds.
+  G.sparkle = function (ctx, x, y, t, n) {
+    const count = n || 3;
+    for (let i = 0; i < count; i++) {
+      const ph = t * 7 + i * 1.8;
+      if (Math.sin(ph) < 0.15) continue;
+      ctx.fillStyle = i % 2 ? '#fff6c2' : '#ffd24a';
+      ctx.fillRect(Math.round(x + Math.cos(ph) * 5), Math.round(y + Math.sin(ph * 1.4) * 4), 2, 2);
+    }
+  };
+
   G.Data.RIVAL = {
     id: 'billboard',
     name: 'BILLBOARD',
@@ -2257,8 +2446,8 @@ G.Data.FLAVOR = {
     evaluate(s) {
       const profile = G.Profile.load();
       const newly = [];
-      for (const ch of office) {
-        if (!ch.unlock || G.Profile.unlocked(ch.id)) continue;
+      for (const ch of list) {
+        if (!ch.secret || !ch.unlock || G.Profile.unlocked(ch.id)) continue;
         let met = false;
         try { met = !!ch.unlock.met(s, profile); } catch (e) { met = false; }
         if (met && G.Profile.unlock(ch.id, ch.unlock.hint)) newly.push(ch);
@@ -2718,7 +2907,13 @@ G.State = {
   // ----------------------------------------------------------
   char() { return G.Data.CHARACTERS[this.s.charId] || G.Data.CHARACTERS.malcolm; },
   perk() { return this.char().perk || this.char().id || null; },
-  rivalChar() { return G.Data.RIVAL || { id: 'billboard', name: 'BILLBOARD', sprite: 'rivalBroker' }; },
+  rivalChar() {
+    // The season is Malcolm Wallaker vs Bridger Hopkins.
+    // Playing anyone else, you are still chasing Bridger. Playing Bridger, Malcolm is the one across the table.
+    const me = this.char();
+    if (me && me.id === 'bridger') return G.Data.CHARACTERS.malcolm;
+    return G.Data.CHARACTERS.bridger;
+  },
   daysInMonth() { return (this.s && this.s.daysPerMonth) || G.Data.SEASON.daysPerMonth; },
   has(up) { return !!this.s.upgrades[up]; },
   commercialOk() { return this.s.commercialUnlocked || this.has('commercialdiv'); },
@@ -2853,6 +3048,8 @@ G.State = {
             if (this.has('waterfrontOffice')) w *= 2;
           }
           if (t.outdoors && (ch.outdoorsWeight || 1) > 1) w *= ch.outdoorsWeight;
+          if ((t.id === 'facebook' || t.id === 'zestimate') && ch.id === 'emily') w *= 2.6;
+          if (t.relo && (ch.reloWeight || 1) > 1) w *= ch.reloWeight;
           if (t.luxury && this.has('luxdiv')) w *= 2;
           if (t.relo && this.has('privatejet')) w *= 2;
           if ((t.id === 'cabin' || t.id === 'cabininv' || t.id === 'vacation') && this.has('cabinexpert')) w *= 1.5;
@@ -2870,6 +3067,8 @@ G.State = {
 
     let warmth = G.clamp(type.warmth + G.randInt(-10, 10), 5, 95);
     if ((type.outdoors || type.lake) && this.char().id === 'kaila') warmth = G.clamp(warmth + 8, 5, 100);
+    if ((type.id === 'facebook' || type.id === 'zestimate') && this.char().id === 'emily') warmth = G.clamp(warmth + 12, 5, 100);
+    if (type.relo && this.char().id === 'deb') warmth = G.clamp(warmth + 12, 5, 100);
     if (type.lake && this.has('fishingboat')) warmth = G.clamp(warmth + 10, 5, 100);
     if (type.lake && this.has('lakecert')) warmth = G.clamp(warmth + 10, 5, 100);
     if (type.outdoors && this.has('atv')) warmth = G.clamp(warmth + 15, 5, 100);
@@ -2884,6 +3083,9 @@ G.State = {
       seller: !!type.seller,
       lake: !!type.lake,
       outdoors: !!(type.outdoors || type.lake),
+      online: type.id === 'facebook' || type.id === 'zestimate',
+      range: false,
+      town: null,
       luxury: !!type.luxury,
       commercial: !!type.commercial,
       value,
@@ -2901,8 +3103,31 @@ G.State = {
       attendedOpenHouse: opts.stage === 'attendee',
       followUpDeadline: opts.stage === 'attendee' ? this.bal().attendeeDeadline : null,
     };
+    const rangeChance = this.char().id === 'tania' ? 0.5 : 0.1;
+    if (!lead.commercial && G.chance(rangeChance)) this.tagRange(lead);
     s.leads.push(lead);
     s.stats.leadsReceived++;
+    return lead;
+  },
+
+  // Bridger's number: fair price, buyers show up, the listing is not a trophy.
+  priceRight(lead, lines) {
+    if (!lead) return;
+    lead.overpriced = false;
+    lead.pricedRight = true;
+    lead.listingMomentum = Math.max(lead.listingMomentum || 0, 52);
+    this.s.stats.perfectPrices = (this.s.stats.perfectPrices || 0) + 1;
+    if (lines) lines.push('PRICE IS RIGHT: ' + lead.name + ' listed at ' + G.money(lead.value) + '.');
+  },
+
+  tagRange(lead) {
+    const towns = G.Data.RANGE_TOWNS || ['HIBBING', 'VIRGINIA', 'EVELETH', 'CHISHOLM'];
+    lead.range = true;
+    lead.town = G.choice(towns);
+    if (lead.label.indexOf(lead.town) !== 0) lead.label = lead.town + ' ' + lead.label;
+    const bump = this.char().id === 'tania' ? (this.char().rangeValue || 1.12) : 1.04;
+    lead.value = Math.round(lead.value * bump);
+    if (this.char().id === 'tania') lead.warmth = G.clamp(lead.warmth + 14, 5, 100);
     return lead;
   },
 
@@ -3045,7 +3270,9 @@ G.State = {
       adj += ch.showBonus || 0;
     }
     if (id === 'inspect') adj += ch.inspectBonus || 0;
-    if ((this.s.dayMarks || 0) === 0 && ch.id === 'adam') adj += 0.12;
+    if (ch.id === 'malcolm') adj += Math.min(0.08, (this.s.teamRecruits || 0) * 0.02);
+    if (ch.id === 'adam' && (id === 'listing' || id === 'negotiate' || id === 'show')) adj += 0.08;
+    if ((this.s.broccoliDays || 0) > 0) adj += 0.08;
     adj += Math.min(0.1, (this.s.streak || 0) * 0.02);
     if (ch.id === 'scotty') adj += (this.s.stats.happiness - 50) / 900;
     if (id === 'listing' && this.has('matterport')) adj += 0.1;
@@ -3057,7 +3284,7 @@ G.State = {
     if (this.s.scaleMode > 0) adj += 0.05;   // Scale Mode: everything a touch smoother
     if (this.s.parkingLotTalk > 0) adj += 0.05; // legacy buff, no longer granted
     // county road detour: tomorrow's tours suffer
-    if (this.s.effects.detour > 0 && (id === 'show' || id === 'openhouse')) adj -= 0.15;
+    if (this.s.effects.detour > 0 && (id === 'show' || id === 'openhouse') && ch.id !== 'deb') adj -= 0.15;
     // market visibility: known agents draw better open house crowds
     if (id === 'openhouse') adj += (this.s.marketVisibility - 40) / 500;
     return adj;
@@ -3107,6 +3334,7 @@ G.State = {
       s.stats.lakeSold = (s.stats.lakeSold || 0) + 1;
     }
     if (l.lake || l.outdoors) s.stats.outdoorsSold = (s.stats.outdoorsSold || 0) + 1;
+    if (l.range) s.stats.rangeSold = (s.stats.rangeSold || 0) + 1;
     if (!l.commercial && s.month === 0) s.stats.aprilClose = true;
     if (!l.commercial && s.stats.homesSold === 1) {
       this.celebrate('firstHome', 'FIRST KEYS!', ['The first closing of the season.', 'Uff da, that feels good.']);
@@ -3153,7 +3381,11 @@ G.State = {
         for (const l of picked) {
           this.touch(l);
           l.warmth = G.clamp(l.warmth + Math.round(10 + 10 * score), 0, 100);
-          if (l.stage === 'new' && l.warmth >= bal.warmThreshold) {
+          if (ch.id === 'emily' && l.online && score >= 0.4 && (l.stage === 'new' || l.stage === 'hot')) {
+            this.advance(l, 'appt');
+            s.stats.zillowFlips = (s.stats.zillowFlips || 0) + 1;
+            lines.push(l.name + ' went from a Zillow ping to an appointment.');
+          } else if (l.stage === 'new' && l.warmth >= bal.warmThreshold) {
             this.advance(l, 'hot'); lines.push(l.name + ' warmed up! (' + l.label + ')');
           } else if (l.stage === 'hot' && l.warmth >= bal.apptThreshold) {
             this.advance(l, 'appt'); lines.push(l.name + ' booked an appointment!');
@@ -3391,6 +3623,7 @@ G.State = {
         const bonus = ch.listingBonus + (this.has('drone') ? 0.15 : 0);
         if (score + bonus >= 0.5) {
           this.advance(l, 'active');
+          if (ch.id === 'bridger') this.priceRight(l, lines);
           if (ch.valueBonus) l.value = Math.round(l.value * (1 + ch.valueBonus));
           if (this.has('drone')) l.value = Math.round(l.value * 1.1);
           if (this.has('staging')) l.value = Math.round(l.value * 1.05);
@@ -3698,6 +3931,33 @@ G.State = {
 
     lines.push(ch.ability.name + '!');
     switch (effect) {
+      case 'priceisright': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const listing = this.leadsInStage('active').filter(l => l.seller)
+          .sort((a, b) => ((b.overpriced ? 1 : 0) - (a.overpriced ? 1 : 0)) || ((a.listingMomentum || 50) - (b.listingMomentum || 50)))[0];
+        if (listing) {
+          this.priceRight(listing, lines);
+          lines.push(listing.name + ' is priced for the buyers who are actually out there.');
+          break;
+        }
+        lines.push('No listing to reprice yet. The next pricing call still runs through Bridger.');
+        break;
+      }
+      case 'recruit': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const desk = (G.Roster && G.Roster.office) || [];
+        const hire = desk.length ? G.choice(desk) : null;
+        s.teamRecruits = (s.teamRecruits || 0) + 1;
+        const zip = Math.min(4, s.teamRecruits);
+        for (const l of s.leads) l.warmth = G.clamp(l.warmth + 3 + zip, 0, 100);
+        if (hire) lines.push(hire.short + ' JOINS THE DESK. The whole team just got a lift.');
+        lines.push('TEAM SIZE ' + (1 + s.teamRecruits) + '. Every lead felt the extra hands.');
+        if (G.chance(0.55)) {
+          const extra = this.spawnLead();
+          if (extra) lines.push('+ LEAD: ' + extra.name + ' came in because the office showed up.');
+        }
+        break;
+      }
       case 'viral': {
         const gain = Math.round(G.randInt(280, 760) * this.followerGainMult());
         s.stats.followers += gain;
@@ -3783,6 +4043,7 @@ G.State = {
         break;
       }
       case 'clearIssue': {
+        if (ch.id === 'deb' && ch.ability.lines) lines.push(G.choice(ch.ability.lines));
         const issue = this.leadsInStage('pending').find(l => l.issue);
         if (issue) { issue.issue = false; lines.push(issue.name + ' inspection worry: talked down.'); }
         else lines.push(advanceBest() || 'Everyone is steady. That counts.');
@@ -3876,6 +4137,159 @@ G.State = {
         s.stats.happiness = G.clamp(s.stats.happiness + bump, 0, 100);
         for (const l of s.leads) l.warmth = G.clamp(l.warmth + 4, 0, 100);
         lines.push('+' + bump + ' HAPPINESS. The whole pipeline felt that.');
+        break;
+      }
+      case 'broccoli': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        s.broccoliDays = Math.max(s.broccoliDays || 0, 2);
+        lines.push(advanceBest() || 'The boost is planted. The earring is on duty.');
+        lines.push('BROCCOLI BOOST for 2 days. The earring keeps score.');
+        break;
+      }
+      case 'miracle': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const sick = this.leadsInStage('pending').find(l => l.issue || l.delay > 0);
+        if (sick) {
+          sick.issue = false;
+          sick.delay = 0;
+          s.stats.dealsRescued = (s.stats.dealsRescued || 0) + 1;
+          lines.push(sick.name + ' is back on track. The beard took the meeting.');
+          break;
+        }
+        const fading = s.leads.filter(l => {
+          const risk = this.leadRisk(l);
+          return risk === 'ABOUT TO GHOST' || risk === 'AT RISK';
+        })[0];
+        if (fading) {
+          this.touch(fading);
+          fading.warmth = G.clamp(fading.warmth + 25, 0, 100);
+          s.stats.dealsRescued = (s.stats.dealsRescued || 0) + 1;
+          lines.push(fading.name + ' picked up. Trust came back with the beard.');
+          break;
+        }
+        lines.push(advanceBest() || 'Every deal is healthy. The beard is resting, kindly.');
+        break;
+      }
+      case 'zillow': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const online = s.leads.filter(l => l.online && (l.stage === 'new' || l.stage === 'hot')).slice(0, 2);
+        if (!online.length) {
+          const l = this.spawnLead('zestimate');
+          if (l) {
+            l.online = true;
+            this.advance(l, 'appt');
+            s.stats.zillowFlips = (s.stats.zillowFlips || 0) + 1;
+            lines.push(l.name + ' came off Zillow and already has an appointment.');
+          } else lines.push('The inbox pinged. The pipeline is full.');
+          break;
+        }
+        for (const l of online) {
+          this.touch(l);
+          this.advance(l, 'appt');
+          s.stats.zillowFlips = (s.stats.zillowFlips || 0) + 1;
+          lines.push(l.name + ' flipped from online to an appointment.');
+        }
+        break;
+      }
+      case 'nurse': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const bump = Math.round(10 * (ch.happyMult || 1));
+        s.stats.happiness = G.clamp(s.stats.happiness + bump, 0, 100);
+        const hurting = s.leads.filter(l => this.leadRisk(l) !== 'SAFE');
+        for (const l of hurting) { this.touch(l); l.warmth = G.clamp(l.warmth + 16, 0, 100); }
+        lines.push('+' + bump + ' MORALE. ' + (hurting.length ? hurting.length + ' clients felt looked after.' : 'The office exhaled.'));
+        break;
+      }
+      case 'know': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        lines.push(G.choice([
+          'Market fact: sunset-side frontage still sells the lake.',
+          'Market fact: fishing opener week is when the north fills up.',
+          'Market fact: a legal dock is worth more than a new couch.',
+        ]));
+        const lead = this.bestLead(s.leads);
+        if (lead) {
+          const motive = lead.seller
+            ? 'They want a clean exit and to feel respected.'
+            : (lead.lake ? 'They want the dock more than the kitchen.' : 'They want to feel sure before they sign.');
+          lines.push(lead.name + ' (' + lead.warmth + ' warmth): ' + motive);
+          const next = { new: 'hot', hot: 'appt', appt: 'active', active: 'offer', offer: 'pending' }[lead.stage];
+          if (next) {
+            this.advance(lead, next);
+            lines.push('Moved to ' + G.Data.STAGE_LABELS[next] + '. Adam had already guessed.');
+          }
+        } else lines.push('No file to read yet. He is reciting lake facts anyway.');
+        break;
+      }
+      case 'sellany': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const sellers = this.leadsInStage('active').filter(l => l.seller);
+        const tough = sellers.slice().sort((a, b) => ((b.overpriced ? 1 : 0) - (a.overpriced ? 1 : 0)) || ((a.listingMomentum || 50) - (b.listingMomentum || 50)))[0];
+        if (tough) {
+          const wasTough = !!tough.overpriced || (tough.listingMomentum || 50) < 40;
+          tough.overpriced = false;
+          tough.listingMomentum = 85;
+          this.advance(tough, 'offer');
+          if (wasTough) s.stats.toughOffers = (s.stats.toughOffers || 0) + 1;
+          lines.push(tough.name + ' has an offer. Even the tough ones move.');
+          break;
+        }
+        const appt = this.leadsInStage('appt').find(l => l.seller);
+        if (appt) {
+          this.advance(appt, 'active');
+          lines.push('LISTING TAKEN: ' + appt.name + '. She can sell this one too.');
+          break;
+        }
+        lines.push(advanceBest() || 'No listing on the hook. She is already picturing the sign.');
+        break;
+      }
+      case 'range': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        const l = this.spawnLead(G.chance(0.5) ? 'signcall' : 'facebook');
+        if (l) {
+          this.tagRange(l);
+          l.warmth = Math.max(l.warmth, 72);
+          lines.push('+ ' + l.town + ': ' + l.name + ' is ready to talk.');
+        } else lines.push('A Range buyer called. The pipeline is full, so she named a diner and a time.');
+        for (const r of s.leads.filter(x => x.range)) r.warmth = G.clamp(r.warmth + 8, 0, 100);
+        break;
+      }
+      case 'ceo': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        for (const l of s.leads) l.warmth = G.clamp(l.warmth + 8, 0, 100);
+        const big = this.spawnLead(G.chance(0.5) ? 'luxury' : 'lakehome');
+        if (big) {
+          big.value = Math.round(big.value * 1.25);
+          big.warmth = Math.max(big.warmth, 70);
+          lines.push('+ BIGGER DEAL: ' + big.name + ' at ' + G.money(big.value) + '.');
+        } else lines.push('A bigger deal called. The pipeline is full, so he took the name himself.');
+        const stipend = 2500;
+        s.cash += stipend;
+        s.stats.commission += stipend;
+        this.addReputation(5);
+        lines.push('THE COMPANY BACKS YOU: +' + G.money(stipend) + '. The whole book warmed up.');
+        lines.push(advanceBest() || 'Nothing to push. The lift is still on the team.');
+        break;
+      }
+      case 'happen': {
+        if (ch.ability.lines) lines.push(G.choice(ch.ability.lines));
+        let cleared = 0;
+        for (const l of this.leadsInStage('pending')) {
+          if (l.issue || l.delay > 0) {
+            l.issue = false;
+            l.delay = 0;
+            cleared++;
+          }
+          if (l.daysInStage < 2) l.daysInStage = 2;
+        }
+        if (cleared) lines.push(cleared + ' blocker' + (cleared === 1 ? '' : 's') + ' cleared. Those files can close.');
+        const stalled = s.leads.filter(l => this.leadRisk(l) === 'ABOUT TO GHOST' || this.leadRisk(l) === 'AT RISK')[0];
+        if (stalled) {
+          this.touch(stalled);
+          stalled.warmth = G.clamp(stalled.warmth + 20, 0, 100);
+          lines.push(stalled.name + ' was stalled. Liz unstalled them.');
+        }
+        lines.push(advanceBest() || 'The desk is clear. She already moved on to the next thing.');
         break;
       }
       case 'advance': {
@@ -4051,7 +4465,9 @@ G.State = {
       if (l.listingMomentum == null) l.listingMomentum = 50;
       if (l.expectsOpenHouse === undefined) l.expectsOpenHouse = G.chance(0.4);
       l.listingMomentum = G.clamp(l.listingMomentum - 6 + (this.has('photographer') ? 3 : 0), 0, 100);
-      if (l.daysInStage >= 1 && !l.overpriced && G.chance(l.listingMomentum / 250 + (this.has('photographer') ? 0.08 : 0))) {
+      const stephanie = this.char().id === 'stephanie';
+      if (l.daysInStage >= 1 && (!l.overpriced || stephanie) && G.chance(l.listingMomentum / 250 + (this.has('photographer') ? 0.08 : 0) + (stephanie ? 0.08 : 0))) {
+        if (l.overpriced) { l.overpriced = false; s.stats.toughOffers = (s.stats.toughOffers || 0) + 1; }
         this.advance(l, 'offer');
         passiveLines.push('MOMENTUM: an offer came in on ' + l.name + '\'s listing!');
         continue;
@@ -4081,7 +4497,11 @@ G.State = {
     // 4. rival AI + trash talk scaled by rivalry
     const rivalLines = [];
     const rc = this.rivalChar();
-    const closeChance = bal.rivalCloseChances[Math.min(s.month, 2)] + (this.char().rivalPressure || 0);
+    let closeChance = bal.rivalCloseChances[Math.min(s.month, 2)] + (this.char().rivalPressure || 0);
+    // The real rivalry shows up. Malcolm and Bridger chase each other harder than a normal market.
+    if ((this.char().id === 'malcolm' && rc.id === 'bridger') || (this.char().id === 'bridger' && rc.id === 'malcolm')) {
+      closeChance += 0.10;
+    }
     let rivalCloses = G.chance(closeChance) ? 1 : 0;
     if (G.chance(bal.rivalDoubleChance)) rivalCloses++;
     for (let i = 0; i < rivalCloses; i++) {
@@ -4094,7 +4514,7 @@ G.State = {
     }
     s.rival.followers += G.randInt(20, 120);
     const tier = Math.min(2, Math.floor(s.rivalry / 2));
-    const talkPool = (G.Data.TRASH_TALK[rc.id] || G.Data.TRASH_TALK.billboard)[tier];
+    const talkPool = (G.Data.TRASH_TALK[rc.id] || G.Data.TRASH_TALK.bridger)[tier];
     if (G.chance(0.35 + tier * 0.15)) {
       rivalLines.push(G.choice(talkPool));
     } else if (!rivalCloses && G.chance(0.5)) {
@@ -4174,6 +4594,34 @@ G.State = {
       passiveLines.push('Daily goal: ' + marked + '/' + goal + ' solid tasks.');
     }
     s.dayMarks = 0;
+    // Head to head: Bridger takes the listing if Malcolm overpriced it.
+    // Playing Bridger, Malcolm overprices one out in the market and you price it instead.
+    if (this.char().id === 'malcolm') {
+      const ripe = this.leadsInStage('active').filter(l => l.seller && l.overpriced);
+      if (ripe.length && G.chance(0.7)) {
+        const lost = ripe[0];
+        this.removeLead(lost);
+        s.rival.homesSold++;
+        s.rivalry++;
+        passiveLines.push('BRIDGER priced ' + lost.name + ' right and took the listing. Malcolm had aimed too high.');
+      }
+    } else if (this.char().id === 'bridger' && G.chance(0.1)) {
+      const stolen = this.spawnLead(G.chance(0.5) ? 'expired' : 'fsbo', { stage: 'appt' });
+      if (stolen) {
+        stolen.seller = true;
+        this.priceRight(stolen, null);
+        passiveLines.push('MALCOLM overpriced a listing. BRIDGER took it at ' + G.money(stolen.value) + '.');
+      }
+    }
+    if (this.char().id === 'malcolm' && (s.teamRecruits || 0) > 0) {
+      const zip = Math.min(3, s.teamRecruits);
+      for (const l of s.leads) l.warmth = G.clamp(l.warmth + zip + 1, 0, 100);
+      passiveLines.push('THE DESK (' + s.teamRecruits + ' recruit' + (s.teamRecruits === 1 ? '' : 's') + ') worked the book overnight.');
+    }
+    if (s.broccoliDays > 0) {
+      s.broccoliDays--;
+      if (s.broccoliDays === 0) passiveLines.push('The broccoli boost settled. The earring is just shiny again.');
+    }
     if (G.Roster) G.Roster.evaluate(s);
 
     let energyPenalty = 0;
@@ -4515,6 +4963,7 @@ G.State = {
     s.rivalry++;
     const lines = [];
     if (won) {
+      s.stats.battleWins = (s.stats.battleWins || 0) + 1;
       const l = this.spawnLead(G.chance(0.5) ? 'luxury' : 'lakedev', { force: true });
       l.stage = 'active';
       l.listingMomentum = 50;
@@ -5149,14 +5598,16 @@ G.Engine.register('title', {
 
     // title
     const bounce = Math.sin(this.t * 2) * 2;
-    G.UI.text(ctx, 'NORTH SEASON', G.W / 2, 40 + bounce, { align: 'center', size: 22, color: G.C.yellow, shadow: true });
-    G.UI.text(ctx, 'PEMBERTON REAL ESTATE', G.W / 2, 68, { align: 'center', size: 11, color: G.C.white, shadow: true });
-    G.UI.text(ctx, 'GRAND RAPIDS  -  NORTHERN MINNESOTA', G.W / 2, 84, { align: 'center', size: 7, color: G.C.gray });
+    G.UI.text(ctx, 'MALCOLM', G.W / 2 - 78, 36 + bounce, { align: 'center', size: 18, color: G.C.lime, shadow: true });
+    G.UI.text(ctx, 'VS', G.W / 2, 42 + bounce, { align: 'center', size: 12, color: G.C.yellow, shadow: true });
+    G.UI.text(ctx, 'BRIDGER', G.W / 2 + 78, 36 + bounce, { align: 'center', size: 18, color: '#e7a07a', shadow: true });
+    G.UI.text(ctx, 'PEMBERTON  -  GRAND RAPIDS', G.W / 2, 64, { align: 'center', size: 9, color: G.C.white, shadow: true });
+    G.UI.text(ctx, 'THE SEASON IS THIS RIVALRY', G.W / 2, 78, { align: 'center', size: 7, color: G.C.gray });
 
     // characters flanking the menu
     const hop = Math.abs(Math.sin(this.t * 3)) * 3;
     const left = G.Sprites.agent_malcolm || G.Sprites.malcolm;
-    const right = G.Sprites.agent_parker || G.Sprites.malcolm;
+    const right = G.Sprites.agent_bridger || G.Sprites.bridger || G.Sprites.malcolm;
     G.drawSprite(ctx, left, 120, 190 - hop, 3);
     G.drawSprite(ctx, right, 318, 190 - (3 - hop), 3, true);
     G.drawSprite(ctx, G.Sprites.soldSign, 90, 216, 2);
@@ -5301,6 +5752,7 @@ G.Engine.register('select', {
       ctx.strokeRect(6.5, y + 0.5, 157, 14);
       if (un) {
         G.drawSprite(ctx, G.Sprites[ch.sprite] || G.Sprites.silhouette, 8, y - 1, 1);
+        if (ch.look === 'broccoli' && G.sparkle) G.sparkle(ctx, 20, y + 4, this.t, 2);
         G.UI.text(ctx, ch.short || ch.name, 28, y + 3, { size: 7, color: ch.color || G.C.white });
       } else {
         G.drawSprite(ctx, G.Sprites.silhouette, 8, y - 1, 1);
@@ -5328,6 +5780,7 @@ G.Engine.register('select', {
     const sprite = un ? (G.Sprites[ch.sprite] || G.Sprites.silhouette) : G.Sprites.silhouette;
     const hop = un ? Math.abs(Math.sin(this.t * 4)) * 2 : 0;
     G.drawSprite(ctx, sprite, x + 8, y + 20 - hop, 3);
+    if (un && ch.look === 'broccoli' && G.sparkle) G.sparkle(ctx, x + 46, y + 36 - hop, this.t, 4);
 
     let ty = y + 18;
     const tx = x + 62;
@@ -5367,7 +5820,7 @@ G.Engine.register('select', {
         ty += 10;
       }
       ty += 6;
-      G.UI.text(ctx, 'Win milestones as Malcolm, Parker, or Liz.', tx, ty, { size: 7, color: G.C.gray });
+      G.UI.text(ctx, 'Play as Malcolm. Rare desks open when you earn them.', tx, ty, { size: 7, color: G.C.gray });
       ty += 9;
       G.UI.text(ctx, 'Unlocks stay on this device.', tx, ty, { size: 7, color: G.C.gray });
     }
@@ -5790,7 +6243,8 @@ G.Engine.register('map', {
     } else {
       lines.push('Your rival was suspiciously quiet today.');
     }
-    lines.push('', 'SCORE: YOU ' + s.stats.homesSold + ' - RIVAL ' + s.rival.homesSold);
+    const rivalName = (G.State.rivalChar().short) || 'BRIDGER';
+    lines.push('', 'SCORE: YOU ' + s.stats.homesSold + ' - ' + rivalName + ' ' + s.rival.homesSold);
     lines.push('STREAK ' + (s.streak || 0) + '   BEST ' + (s.bestStreak || 0));
     if (r.celebrations && r.celebrations.length) G.Audio.fanfare();
 
@@ -6079,6 +6533,7 @@ G.Engine.register('map', {
 
     const ch = G.State.char();
     G.drawSprite(ctx, G.Sprites[ch.sprite], 4, 4, 2);
+    if (ch.look === 'broccoli' && G.sparkle) G.sparkle(ctx, 28, 16, this.t, 3);
     const nameCol = (ch.color === G.C.navy || ch.color === G.C.dusk) ? G.C.white : (ch.color || G.C.lime);
     G.UI.text(ctx, ch.short || ch.name, 38, 6, { size: 8, color: nameCol });
     G.UI.text(ctx, G.money(s.cash), 38, 17, { size: 8, color: G.C.yellow });
@@ -6151,7 +6606,8 @@ G.Engine.register('map', {
     G.UI.text(ctx, wd.label, x + w - 5, y + 3, { align: 'right', size: 7, color: G.C.cyan });
     G.UI.bar(ctx, x + 5, y + 12, 70, 4, done / Math.max(1, total), G.C.lime);
     G.UI.text(ctx, 'YOU ' + s.stats.homesSold, x + 80, y + 11, { size: 7, color: G.C.lime });
-    G.UI.text(ctx, 'RIVAL ' + s.rival.homesSold, x + 122, y + 11, { size: 7, color: G.C.red });
+    const rivalTag = (G.State.rivalChar().short || 'BRIDGER');
+    G.UI.text(ctx, rivalTag + ' ' + s.rival.homesSold, x + 118, y + 11, { size: 7, color: G.C.red });
     const goal = Math.min(2, s.dayMarks || 0);
     G.UI.text(ctx, 'STREAK ' + (s.streak || 0), x + 5, y + 18, { size: 7, color: (s.streak || 0) >= 3 ? G.C.yellow : G.C.gray });
     G.UI.text(ctx, 'GOAL ' + goal + '/2', x + 70, y + 18, { size: 7, color: goal >= 2 ? G.C.lime : G.C.white });
@@ -7926,7 +8382,7 @@ G.Engine.register('battle', {
     G.drawSprite(ctx, G.Sprites[this.rival.sprite], 380, 46, 3, true);
     G.drawSprite(ctx, G.Sprites.cabin, G.W / 2 - 21, 40, 3);
     G.UI.text(ctx, 'YOU', 71, 100, { align: 'center', size: 8, color: G.C.lime });
-    G.UI.text(ctx, this.rival.name, 401, 100, { align: 'center', size: 8, color: G.C.red });
+    G.UI.text(ctx, this.rival.short || this.rival.name, 401, 100, { align: 'center', size: 8, color: G.C.red });
     G.UI.text(ctx, 'THE SELLERS', G.W / 2, 70, { align: 'center', size: 7, color: G.C.yellow });
 
     if (this.phase === 'intro') {
@@ -7955,6 +8411,9 @@ G.Engine.register('battle', {
         ctx.strokeStyle = sel ? G.C.yellow : G.C.slate;
         ctx.strokeRect(60.5, y + 0.5, 359, 25);
         G.UI.text(ctx, (sel ? '> ' : '  ') + this.opts[i].t, 68, y + 9, { size: 8, color: sel ? G.C.white : G.C.gray });
+        if (G.State.char().id === 'adam' && this.opts[i].ok) {
+          G.UI.text(ctx, 'ADAM KNOWS', 400, y + 9, { align: 'right', size: 6, color: G.C.yellow });
+        }
       }
       G.UI.text(ctx, G.CT('UP/DOWN + ENTER (OR CLICK)', 'TAP AN ANSWER'), G.W / 2, G.H - 44, { align: 'center', size: 7, color: G.C.slate });
     }
@@ -8148,7 +8607,7 @@ G.Engine.register('seasonEnd', {
     else if (!this.tied) G.drawSprite(ctx, G.Sprites.trophy, themX + 42, 60, 2);
 
     G.UI.text(ctx, 'YOU: ' + s.stats.homesSold + ' HOMES', 170, 148, { align: 'center', size: 9, color: G.C.lime });
-    G.UI.text(ctx, rc.name + ': ' + s.rival.homesSold + ' HOMES', 310, 148, { align: 'center', size: 9, color: G.C.red });
+    G.UI.text(ctx, (rc.short || rc.name) + ': ' + s.rival.homesSold + ' HOMES', 310, 148, { align: 'center', size: 9, color: G.C.red });
 
     // stat strip (3 columns x 3 rows)
     const rows = [

@@ -308,7 +308,8 @@ G.Engine.register('map', {
     } else {
       lines.push('Your rival was suspiciously quiet today.');
     }
-    lines.push('', 'SCORE: YOU ' + s.stats.homesSold + ' - RIVAL ' + s.rival.homesSold);
+    const rivalName = (G.State.rivalChar().short) || 'BRIDGER';
+    lines.push('', 'SCORE: YOU ' + s.stats.homesSold + ' - ' + rivalName + ' ' + s.rival.homesSold);
     lines.push('STREAK ' + (s.streak || 0) + '   BEST ' + (s.bestStreak || 0));
     if (r.celebrations && r.celebrations.length) G.Audio.fanfare();
 
@@ -597,6 +598,7 @@ G.Engine.register('map', {
 
     const ch = G.State.char();
     G.drawSprite(ctx, G.Sprites[ch.sprite], 4, 4, 2);
+    if (ch.look === 'broccoli' && G.sparkle) G.sparkle(ctx, 28, 16, this.t, 3);
     const nameCol = (ch.color === G.C.navy || ch.color === G.C.dusk) ? G.C.white : (ch.color || G.C.lime);
     G.UI.text(ctx, ch.short || ch.name, 38, 6, { size: 8, color: nameCol });
     G.UI.text(ctx, G.money(s.cash), 38, 17, { size: 8, color: G.C.yellow });
@@ -669,7 +671,8 @@ G.Engine.register('map', {
     G.UI.text(ctx, wd.label, x + w - 5, y + 3, { align: 'right', size: 7, color: G.C.cyan });
     G.UI.bar(ctx, x + 5, y + 12, 70, 4, done / Math.max(1, total), G.C.lime);
     G.UI.text(ctx, 'YOU ' + s.stats.homesSold, x + 80, y + 11, { size: 7, color: G.C.lime });
-    G.UI.text(ctx, 'RIVAL ' + s.rival.homesSold, x + 122, y + 11, { size: 7, color: G.C.red });
+    const rivalTag = (G.State.rivalChar().short || 'BRIDGER');
+    G.UI.text(ctx, rivalTag + ' ' + s.rival.homesSold, x + 118, y + 11, { size: 7, color: G.C.red });
     const goal = Math.min(2, s.dayMarks || 0);
     G.UI.text(ctx, 'STREAK ' + (s.streak || 0), x + 5, y + 18, { size: 7, color: (s.streak || 0) >= 3 ? G.C.yellow : G.C.gray });
     G.UI.text(ctx, 'GOAL ' + goal + '/2', x + 70, y + 18, { size: 7, color: goal >= 2 ? G.C.lime : G.C.white });

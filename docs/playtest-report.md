@@ -101,7 +101,24 @@ seasons, and happiness). So the locks are reachable, not decorative.
 
 ## Two office personalities
 
-Kaila Wass plays as a Bigfork original: camo, a blaze-orange cap, woods and lake leads, and a truck that ignores blizzards. Her daily ability is Ice House Tour. Scotty Puglisi plays as a pastor's wife: hospitality, a hotdish, and a prayer chain that brings warm referrals. The chain is written as a kindness, not a joke. Jillian Bilden is drawn short on purpose and plays as a scrappy negotiator: plus 30 percent on hard talks, and Stand Your Ground sends the best offer to pending. Rebekkah Anderson goes by Bekkah. She talks side hustles all day, closings pay 18 percent more, and Twelve Businesses drops cash plus a lead. Jordan Hess is the buyer agent: easier showings, faster buyer signings, and two offers at once. They still start locked. Kaila unlocks by selling a lake, cabin, hunting, or farm place. Scotty unlocks with two referrals in a season. Jillian unlocks by winning two negotiations. Bekkah unlocks at $8,000 commission. Jordan unlocks by writing three offers.
+Kaila Wass plays as a Bigfork original: camo, a blaze-orange cap, woods and lake leads, and a truck that ignores blizzards. Her daily ability is Ice House Tour. Scotty Puglisi plays as a pastor's wife: hospitality, a hotdish, and a prayer chain that brings warm referrals. The chain is written as a kindness, not a joke. Jillian Bilden is drawn short on purpose and plays as a scrappy negotiator: plus 30 percent on hard talks, and Stand Your Ground sends the best offer to pending. Rebekkah Anderson goes by Bekkah. She talks side hustles all day, closings pay 18 percent more, and Twelve Businesses drops cash plus a lead. Jordan Hess is the buyer agent: easier showings, faster buyer signings, and two offers at once. They still start locked. Kaila unlocks by selling a lake, cabin, hunting, or farm place. Scotty unlocks with two referrals in a season. Jillian unlocks by winning two negotiations. Bekkah unlocks at $8,000 commission. Jordan unlocks by writing three offers. Parker Pemberton is the rare CEO: beat the final boss and win the season, then CEO Mode lifts the whole book and opens bigger deals. Liz Rein is the rare operator: win a season with 8 homes, then Makes It Happen clears blockers and pushes a stalled deal across the line. Tania Suonvieri is the Iron Range insider for Hibbing, Virginia, Eveleth, and Chisholm. Gaige Waldvogel has the broccoli top and a sparking earring. Matt Huebscher's beard rescues sick deals. Emily Lutz flips Zillow pings into appointments. Bethany Leadley restores trust. Adam Marks knows the answer. Deb Danley still steadies the file and now flies the out-of-town buyers in. Stephanie Mascarenas can sell the tough listing.
+
+## Malcolm vs Bridger
+
+The season scoreboard is that rivalry. Play Malcolm and the rival is Bridger. Play Bridger and the rival is Malcolm. Anyone else is still chasing Bridger.
+
+Malcolm's perk is Office Leader. Once a day he recruits a teammate. The desk warms the whole book and, about half the time, the new agent brings a lead. The boost stacks, and it caps, so a big office helps without running away.
+
+Bridger's perk is Price Is Right. Pricing calls land a fair number and the listing draws buyers. If Malcolm overprices, Bridger can take that listing. If you are Bridger, Malcolm overprices one out in the market now and then, and you price it instead. Recruiting is Malcolm's volume. Pricing is Bridger's answer.
+
+Head to head, Standard market, quick season, pipeline play, minigame skill 0.72, 100 seasons each way:
+
+| Matchup | Wins | Ties | Homes | Rival homes |
+| --- | --- | --- | --- | --- |
+| Malcolm (Office Leader) vs Bridger | 50% | 11% | 8.63 | 8.18 |
+| Bridger (Price Is Right) vs Malcolm | 51% | 14% | 8.17 | 7.70 |
+
+Neither perk ran off with the month.
 
 ## Still true
 

@@ -92,14 +92,16 @@ G.Engine.register('title', {
 
     // title
     const bounce = Math.sin(this.t * 2) * 2;
-    G.UI.text(ctx, 'NORTH SEASON', G.W / 2, 40 + bounce, { align: 'center', size: 22, color: G.C.yellow, shadow: true });
-    G.UI.text(ctx, 'PEMBERTON REAL ESTATE', G.W / 2, 68, { align: 'center', size: 11, color: G.C.white, shadow: true });
-    G.UI.text(ctx, 'GRAND RAPIDS  -  NORTHERN MINNESOTA', G.W / 2, 84, { align: 'center', size: 7, color: G.C.gray });
+    G.UI.text(ctx, 'MALCOLM', G.W / 2 - 78, 36 + bounce, { align: 'center', size: 18, color: G.C.lime, shadow: true });
+    G.UI.text(ctx, 'VS', G.W / 2, 42 + bounce, { align: 'center', size: 12, color: G.C.yellow, shadow: true });
+    G.UI.text(ctx, 'BRIDGER', G.W / 2 + 78, 36 + bounce, { align: 'center', size: 18, color: '#e7a07a', shadow: true });
+    G.UI.text(ctx, 'PEMBERTON  -  GRAND RAPIDS', G.W / 2, 64, { align: 'center', size: 9, color: G.C.white, shadow: true });
+    G.UI.text(ctx, 'THE SEASON IS THIS RIVALRY', G.W / 2, 78, { align: 'center', size: 7, color: G.C.gray });
 
     // characters flanking the menu
     const hop = Math.abs(Math.sin(this.t * 3)) * 3;
     const left = G.Sprites.agent_malcolm || G.Sprites.malcolm;
-    const right = G.Sprites.agent_parker || G.Sprites.malcolm;
+    const right = G.Sprites.agent_bridger || G.Sprites.bridger || G.Sprites.malcolm;
     G.drawSprite(ctx, left, 120, 190 - hop, 3);
     G.drawSprite(ctx, right, 318, 190 - (3 - hop), 3, true);
     G.drawSprite(ctx, G.Sprites.soldSign, 90, 216, 2);

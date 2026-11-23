@@ -288,10 +288,15 @@
   // Dynamic rivalry: trash talk tiers + head-to-head battles
   // ----------------------------------------------------------
   D.TRASH_TALK = {
-    billboard: [
-      ['BILLBOARD: "Nice little sale. I will put it on a bench."', 'BILLBOARD bought another highway sign. It is mostly a photo of his truck.'],
-      ['BILLBOARD: "My jingle is stuck in your head. You are welcome."', 'A BILLBOARD ad calls your listing "cozy," which is bold.'],
-      ['BILLBOARD: "We close a home every time the light turns green."', 'BILLBOARD sent a fruit basket. The note just says "NICE TRY."'],
+    bridger: [
+      ['BRIDGER: "Nice sale, Malcolm. I will allow it."', 'BRIDGER: "Head to head again. This is the fun part."'],
+      ['BRIDGER: "The lake can have two favorites. I am still in it."', 'BRIDGER: "See you at the next listing. Bring the good stuff."'],
+      ['BRIDGER: "You recruited backup. Cute. I am still across the table."', 'BRIDGER: "That one was clean. Annoying. But clean."'],
+    ],
+    malcolm: [
+      ['MALCOLM: "Bridger, that was sharp. I am still coming."', 'MALCOLM: "The desk is loud today. You can hear us, right?"'],
+      ['MALCOLM: "Head to head. Nobody else I would rather chase."', 'MALCOLM: "Good close. I wrote it down. Then I planned the next one."'],
+      ['MALCOLM: "Recruiting does not make me softer. It makes the office faster."', 'MALCOLM: "See you at the sign. Loser buys the coffee."'],
     ],
   };
 

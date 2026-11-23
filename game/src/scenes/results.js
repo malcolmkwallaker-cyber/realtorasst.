@@ -74,7 +74,7 @@ G.Engine.register('seasonEnd', {
     else if (!this.tied) G.drawSprite(ctx, G.Sprites.trophy, themX + 42, 60, 2);
 
     G.UI.text(ctx, 'YOU: ' + s.stats.homesSold + ' HOMES', 170, 148, { align: 'center', size: 9, color: G.C.lime });
-    G.UI.text(ctx, rc.name + ': ' + s.rival.homesSold + ' HOMES', 310, 148, { align: 'center', size: 9, color: G.C.red });
+    G.UI.text(ctx, (rc.short || rc.name) + ': ' + s.rival.homesSold + ' HOMES', 310, 148, { align: 'center', size: 9, color: G.C.red });
 
     // stat strip (3 columns x 3 rows)
     const rows = [

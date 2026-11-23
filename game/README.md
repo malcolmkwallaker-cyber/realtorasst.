@@ -42,7 +42,7 @@ npm run dist:win    # build an installer .exe
 
 ## How to play
 
-- **Goal:** sell more homes than the Billboard Broker over a 3-month season (April–June).
+- **Goal:** the season is Malcolm Wallaker vs Bridger Hopkins. Sell more homes than the one across the table. Playing anyone else, Bridger is still the rival. Playing Bridger, Malcolm is.
 - **Pick your agent** on the roster screen. Malcolm Wallaker (Office Leader) is the default.
   Parker Pemberton (owner) and Liz Rein are also ready to play. The rest of the
   Grand Rapids office starts locked. A silhouette shows the milestone that unlocks them.

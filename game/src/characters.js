@@ -2,7 +2,7 @@
 // characters.js - THE roster. Edit this file to change who is
 // playable, how they play, and how office agents unlock.
 //
-// Malcolm Wallaker, Parker Pemberton, and Liz Rein start unlocked.
+// Malcolm Wallaker starts unlocked. Parker (CEO) and Liz (operator) are rare.
 // Everyone else is a Grand Rapids office agent. They begin locked
 // and unlock through play. Progress is saved in localStorage.
 //
@@ -86,6 +86,94 @@
         '..............',
       ], { H: hair, S: skin, K: C.ink, W: C.white, B: shirt, F: trim || C.orange, D: C.dusk });
     }
+    if (look === 'broccoli') {
+      // Big curly top, one gold earring. The hair enters the room first.
+      return G.makeSprite([
+        'GGGGGGGGGGGGGG',
+        '.GGGgGGGgGGGg.',
+        'GGGgGGGgGGGgGG',
+        '.GGgGGGgGGGgG.',
+        '..GSSSSSSSG...',
+        '..GSSKSSKSG.E.',
+        '...GSSWWSS..E.',
+        '....SSSSSS....',
+        '...BBBBBBB....',
+        '..BBBBBBBBB...',
+        '..S.BBBBBB.S..',
+        '....BBBBBB....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+        '..............',
+      ], { G: '#3f8f3a', g: '#7dce55', S: skin, K: C.ink, W: C.white, E: '#ffd24a', B: shirt, D: C.dusk });
+    }
+    if (look === 'beard') {
+      // The beard is the whole portrait. It has seniority.
+      return G.makeSprite([
+        '....HHHHHH....',
+        '...HHHHHHHH...',
+        '...HSSSSSSH...',
+        '...HSKSSKSH...',
+        '....SSWWSS....',
+        '...RRRRRRRR...',
+        '..RRRRRRRRRR..',
+        '..RRRrRRRrRR..',
+        '..RRRRRRRRRR..',
+        '...RRRRRRRR...',
+        '..S.RRRRRR.S..',
+        '....RRRRRR....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+        '..............',
+      ], { H: hair, S: skin, K: C.ink, W: C.white, R: '#4a3424', r: '#7a5a3a', D: C.dusk, B: shirt });
+    }
+    if (look === 'flyer') {
+      // Steady as ever, plus the carry-on she will not gate-check.
+      return G.makeSprite([
+        '....HHHHHH....',
+        '...HHHHHHHH...',
+        '...HSSSSSSH...',
+        '...HSKSSKSH...',
+        '..THSSSSSSHT..',
+        '..T.SSWWSS.T..',
+        '..T.SSSSSS....',
+        '..T.BBBBBB.UU.',
+        '..TBBBBBBBBUU.',
+        '..BBBBOBBB.UU.',
+        '..S.BBOBBB....',
+        '....BBBBBB....',
+        '....BBBBBB....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+      ], { H: hair, S: skin, K: C.ink, W: C.white, B: shirt, O: trim || C.yellow, D: C.dusk, T: trim || shirt, U: '#d7c4a3' });
+    }
+    if (look === 'range') {
+      // Flannel and a cap. Hibbing to Eveleth, she knows the road.
+      return G.makeSprite([
+        '....CCCCCCCC..',
+        '...CCCCCCCCC..',
+        '...CSSSSSSC...',
+        '...CSKSSKSC...',
+        '....SSSSSS....',
+        '....SSWWSS....',
+        '....SSSSSS....',
+        '...FLFLFLFL...',
+        '..FLFLFLFLFL..',
+        '..SFLFLFLFL.S.',
+        '....FLFLFL....',
+        '....FLFLFL....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '....DD..DD....',
+        '...KK....KK...',
+        '..............',
+      ], { C: '#8d1d2c', S: skin, K: C.ink, W: C.white, F: '#6b2a22', L: '#c4553a', D: C.dusk });
+    }
     return G.makeSprite([
       '....HHHHHH....',
       '...HHHHHHHH...',
@@ -155,65 +243,91 @@
       role: 'leader',
       color: C.green, accent: C.sky,
       hair: '#6b4226', shirt: C.green, trim: C.sky,
-      catchphrase: 'Let us put this lake on the internet.',
+      catchphrase: 'The season is me and Bridger. The desk makes us better.',
       bio: [
-        'Office leader in Grand Rapids.',
-        'Leads with a camera, a follow-up, and a lake story.',
-        'The default agent. The season starts with him.',
+        'Office leader in Grand Rapids. The default agent.',
+        'His season is the head-to-head with Bridger Hopkins.',
+        'He recruits agents, and the whole team gets louder.',
       ],
-      strengths: ['VIDEO +25%', 'OPEN HOUSE +10%', 'LAKE LEADS x2'],
+      strengths: ['OFFICE LEADER', 'RECRUITS LIFT THE TEAM', 'HEAD TO HEAD WITH BRIDGER'],
       ability: {
-        name: 'VIRAL VIDEO',
-        effect: 'viral',
-        desc: 'Post a ridiculous, good-hearted listing video. Leads and followers show up. Once per day.',
+        name: 'OFFICE LEADER',
+        effect: 'recruit',
+        desc: 'Bring an agent onto the desk. The recruit boosts the whole team: warmer leads and a little extra zip. Once per day.',
+        lines: [
+          'New agent on the floor. Everybody just got backup.',
+          'Recruiting day. The book belongs to the whole office now.',
+          'One more teammate. Bridger can hear the desk from here.',
+        ],
       },
-      videoBonus: 0.25, openHouseBonus: 0.10, lakeLeadWeight: 2,
+      videoBonus: 0.05, openHouseBonus: 0.05, lakeLeadWeight: 1.2,
     }),
     make({
       id: 'parker',
       name: 'PARKER PEMBERTON',
       short: 'PARKER',
-      title: 'Owner, Pemberton Real Estate',
+      title: 'CEO, Pemberton Real Estate',
       role: 'owner',
-      badge: 'OWNER',
+      badge: 'CEO',
+      secret: true,
       color: C.yellow, accent: C.white,
       hair: '#3a3f52', shirt: C.navy, trim: C.yellow,
-      catchphrase: 'Make them feel looked after.',
+      catchphrase: 'CEO mode. The whole desk gets a lift.',
       bio: [
-        'Owner of Pemberton Real Estate.',
-        'Boss-tier: more energy and a stronger close.',
-        'The rival brokerage notices when the owner is in the field.',
+        'Owner and CEO of Pemberton Real Estate.',
+        'Rare. You earn the chair by winning the season and the final boss.',
+        'Bigger deals, more energy, and the market notices the boss is in.',
       ],
-      strengths: ['+1 ENERGY', 'COMMISSION +12%', 'RIVAL TRIES HARDER'],
+      strengths: ['CEO MODE', '+1 ENERGY', 'COMMISSION +25%', 'BIGGER DEALS'],
       ability: {
-        name: 'THE OWNER CALLS',
-        effect: 'owner',
-        desc: 'One call from the owner. Your best lead jumps a stage and a referral appears. Once per day.',
+        name: 'CEO MODE',
+        effect: 'ceo',
+        desc: 'Lift the whole book. Every lead warms up, a bigger deal appears, and the company puts cash behind it. Once per day.',
+        lines: [
+          'He did not raise his voice. The pipeline stood up straighter.',
+          'The whole desk eats when this one moves.',
+          'Bigger deal. Same kindness. That is the job.',
+        ],
       },
-      energyMod: 1, commissionMult: 1.12, negotiateBonus: 0.12, listingBonus: 0.08,
-      rivalPressure: 0.08, startCash: 8000, startReputation: 68,
+      energyMod: 1, commissionMult: 1.25, negotiateBonus: 0.15, listingBonus: 0.12,
+      luxuryValueBonus: 0.15, rivalPressure: 0.1, startCash: 15000, startReputation: 78,
+      unlock: {
+        hint: 'BEAT THE FINAL BOSS AND WIN THE SEASON',
+        met: (s) => !!s.stats.wonSeason && (s.stats.bossWins || 0) >= 3,
+      },
     }),
     make({
       id: 'liz',
       name: 'LIZ REIN',
       short: 'LIZ',
-      title: 'The Follow-Through',
-      role: 'starter',
+      title: 'Second in Command',
+      role: 'operator',
+      badge: 'OPS',
+      secret: true,
       color: C.sky, accent: C.white,
       hair: '#8a5a44', shirt: C.sky, trim: C.white,
-      catchphrase: 'A quick hello keeps a deal alive.',
+      catchphrase: 'Consider it done. I will make it happen.',
       bio: [
-        'Pemberton Real Estate.',
-        'Shows up for the follow-up. Leads cool slower around her.',
-        'Wins by staying in touch, not by shouting.',
+        'Pemberton Real Estate. Second chair. She runs the show.',
+        'Rare. Win a season with 8 homes and the desk is hers.',
+        'Blockers move. Stalled files finish. Deals cross the line.',
       ],
-      strengths: ['FOLLOW UP +2', 'LEADS COOL SLOWER', 'REFERRALS +'],
+      strengths: ['MAKES IT HAPPEN', 'CLEARS BLOCKERS', 'FOLLOW UP +2'],
       ability: {
-        name: 'CHECK-IN ROUND',
-        effect: 'warmAll',
-        desc: 'A kind lap through the people who are slipping. Warmth up, ghosting down. Once per day.',
+        name: 'MAKES IT HAPPEN',
+        effect: 'happen',
+        desc: 'Clear the blockers. Inspections, delays, and a stalled deal get pushed across the line. Once per day.',
+        lines: [
+          'She said "on it" and the file was already moving.',
+          'The stall ended because Liz decided it would.',
+          'No drama. The thing that was stuck is not stuck.',
+        ],
       },
-      followupBonus: 2, decayMult: 0.72, referralBonus: 0.1, videoBonus: -0.05,
+      followupBonus: 2, decayMult: 0.75, referralBonus: 0.08,
+      unlock: {
+        hint: 'WIN A SEASON WITH 8 HOMES SOLD',
+        met: (s) => !!s.stats.wonSeason && (s.stats.homesSold || 0) >= 8,
+      },
     }),
   ];
 
@@ -282,19 +396,24 @@
       role: 'office', secret: true,
       color: C.lime, accent: C.white,
       hair: '#c0a060', shirt: C.teal, trim: C.lime,
-      catchphrase: 'Slow is smooth. Smooth gets to closing.',
+      catchphrase: 'Slow is smooth. I have also made this drive from the airport.',
       bio: [
-        'Grand Rapids office.',
+        'Grand Rapids office. Steady, and a travel hand.',
         'Keeps jittery deals from bolting.',
-        'Leads ghost less often on her watch.',
+        'Out-of-town buyers land softly. She already knows the gate.',
       ],
-      strengths: ['GHOSTING DOWN', 'LEADS COOL SLOWER'],
+      strengths: ['GHOSTING DOWN', 'LEADS COOL SLOWER', 'FREQUENT FLYER'],
       ability: {
         name: 'STEADY NOW',
         effect: 'clearIssue',
-        desc: 'Talk a snag down. An inspection issue clears, or a lead steps forward. Once per day.',
+        desc: 'Talk a snag down, even if the buyer is still on a layover. An issue clears, or a lead steps forward. Once per day.',
+        lines: [
+          'She talked them through it between connections.',
+          'The out-of-town buyer landed. Deb already had the car.',
+          'Miles on the card. Patience in the file. Both count.',
+        ],
       },
-      decayMult: 0.8, ghostMult: 0.65,
+      decayMult: 0.8, ghostMult: 0.65, reloWeight: 2.2, look: 'flyer',
       unlock: { hint: 'WIN A SEASON', met: (s) => !!s.stats.wonSeason },
     }),
     make({
@@ -329,24 +448,29 @@
       id: 'bridger',
       name: 'BRIDGER HOPKINS',
       short: 'BRIDGER',
-      title: 'The Kind Closer',
+      title: 'Price Is Right',
       role: 'office', secret: true,
       color: '#e7a07a', accent: C.yellow,
       hair: '#8a3a2a', shirt: C.navy, trim: '#e7a07a',
-      catchphrase: 'A clean offer is a kind offer.',
+      catchphrase: 'Price it right and the sign does the rest.',
       bio: [
-        'Grand Rapids office.',
-        'Good at the moment a maybe becomes a yes.',
-        'Negotiates like a neighbor, not a hammer.',
+        'The other half of the season. Malcolm across the table.',
+        'Every pricing call runs through him. He lands the number.',
+        'If Malcolm overprices, Bridger is already in the driveway.',
       ],
-      strengths: ['NEGOTIATE +20%', 'LISTING PITCH +10%'],
+      strengths: ['PRICE IS RIGHT', 'LISTINGS MOVE', 'STEALS AN OVERPRICED LISTING'],
       ability: {
-        name: 'CLEAN OFFER',
-        effect: 'advance',
-        desc: 'Put a tidy offer on the table. Your best lead jumps a stage. Once per day.',
+        name: 'PRICE IS RIGHT',
+        effect: 'priceisright',
+        desc: 'Set the perfect list price. A listing sheds a bad number and draws an offer. Once per day.',
+        lines: [
+          'He said the number once. The seller nodded.',
+          'Not high. Not cute. The price the market will actually pay.',
+          'Malcolm can recruit the desk. Bridger will price the house.',
+        ],
       },
-      negotiateBonus: 0.2, listingBonus: 0.1,
-      unlock: { hint: 'GET 3 DEALS TO PENDING IN ONE SEASON', met: (s) => (s.stats.pendings || 0) >= 3 },
+      listingBonus: 0.08, negotiateBonus: 0,
+      unlock: { hint: 'LAND THE RIGHT PRICE ON 2 LISTINGS', met: (s) => (s.stats.perfectPrices || 0) >= 2 },
     }),
     make({
       id: 'matt',
@@ -356,20 +480,25 @@
       role: 'office', secret: true,
       color: C.yellow, accent: C.white,
       hair: '#3a3f52', shirt: C.slate, trim: C.yellow,
-      catchphrase: 'The right price finds the right buyer.',
+      catchphrase: 'The beard has seen worse deals than this. We are fine.',
       bio: [
-        'Grand Rapids office.',
-        'Pricing is the game, and the game is fair.',
-        'Listings he touches tend to be worth a little more.',
+        'Grand Rapids office. The beard is the legend.',
+        'Folks joke it could fix a Monday. It does fix deals.',
+        'A comeback with a smile under all that seniority.',
       ],
-      strengths: ['LISTING VALUE +8%', 'LUXURY +10%'],
+      strengths: ['MIRACLE BEARD', 'RESCUES SICK DEALS', 'COMEBACK CLOSER'],
       ability: {
-        name: 'PRICE IT RIGHT',
-        effect: 'price',
-        desc: 'Revisit the price with care. A listing gains value and momentum. Once per day.',
+        name: 'MIRACLE BEARD',
+        effect: 'miracle',
+        desc: 'The beard goes to work. A stuck inspection, a delay, or a cooling lead gets another chance. Once per day.',
+        lines: [
+          'They joke the beard could fix a whole Monday.',
+          'It did not say a word. The deal sat up anyway.',
+          'Comeback energy, politely, from behind the beard.',
+        ],
       },
-      valueBonus: 0.08, luxuryValueBonus: 0.1, listingBonus: 0.08,
-      unlock: { hint: 'EARN $12,000 COMMISSION IN ONE SEASON', met: (s) => s.stats.commission >= 12000 },
+      look: 'beard',
+      unlock: { hint: 'RESCUE 2 DEALS IN ONE SEASON', met: (s) => (s.stats.dealsRescued || 0) >= 2 },
     }),
     make({
       id: 'bethany',
@@ -379,20 +508,25 @@
       role: 'office', secret: true,
       color: C.lime, accent: C.sky,
       hair: '#c0a060', shirt: C.lime, trim: C.sky,
-      catchphrase: 'We will know it when we walk in.',
+      catchphrase: 'You are not a bother. Tell me what you need.',
       bio: [
-        'Grand Rapids office.',
-        'Showings are her favorite room in the job.',
-        'Buyers find "the one" a little faster.',
+        'Grand Rapids office. A nurse\'s heart in a listing folder.',
+        'She notices when someone is slipping, and she stays.',
+        'Trust comes back. Morale comes back with it.',
       ],
-      strengths: ['SHOWINGS +12%', 'TOUR ADVANCE'],
+      strengths: ['NURSE\'S HEART', 'TRUST COMES BACK', 'MORALE UP'],
       ability: {
-        name: 'THE RIGHT HOUSE',
-        effect: 'advance',
-        desc: 'Walk a buyer into the right kitchen. Your best lead jumps a stage. Once per day.',
+        name: 'NURSE\'S HEART',
+        effect: 'nurse',
+        desc: 'A careful check-in. At-risk clients feel looked after, and the office morale lifts. Once per day.',
+        lines: [
+          'She asked how they were doing before she asked about the house.',
+          'Nobody got a lecture. They got a person who stayed.',
+          'Trust is a vital sign. Hers just improved.',
+        ],
       },
-      showBonus: 0.12,
-      unlock: { hint: 'SIGN 3 BUYER CLIENTS IN ONE SEASON', met: (s) => (s.stats.buyers || 0) >= 3 },
+      happyMult: 1.45, decayMult: 0.82,
+      unlock: { hint: 'REACH 85 CLIENT HAPPINESS', met: (s) => s.stats.happiness >= 85 },
     }),
     make({
       id: 'emily',
@@ -402,20 +536,24 @@
       role: 'office', secret: true,
       color: '#e7a0c8', accent: C.white,
       hair: '#6b4226', shirt: '#c2478f', trim: C.white,
-      catchphrase: 'Good work gets talked about.',
+      catchphrase: 'That Zillow ping is a person. I answer like one.',
       bio: [
-        'Grand Rapids office.',
-        'Introductions are the whole strategy.',
-        'Happy clients hand her the next name.',
+        'Grand Rapids office. Zillow leads are her craft.',
+        'Online inquiries become real appointments.',
+        'Fast, kind, and she actually calls them back.',
       ],
-      strengths: ['REFERRALS +', 'TWO NAMES A DAY'],
+      strengths: ['ZILLOW FLIP', 'ONLINE LEADS x2', 'PINGS BECOME APPTS'],
       ability: {
-        name: 'WHO DO YOU KNOW',
-        effect: 'referral',
-        desc: 'Ask the kind question. Two referrals call before supper. Once per day.',
+        name: 'ZILLOW FLIP',
+        effect: 'zillow',
+        desc: 'Turn the newest online leads into appointments. If the inbox is quiet, a fresh Zestimate lead calls. Once per day.',
+        lines: [
+          'She called before the listing alert finished loading.',
+          'Online lead, real voice, Saturday showing.',
+          'They said they were just looking. Emily booked the tour.',
+        ],
       },
-      referralBonus: 0.15,
-      unlock: { hint: 'EARN 3 REFERRALS IN ONE SEASON', met: (s) => (s.stats.referrals || 0) >= 3 },
+      unlock: { hint: 'FLIP 3 ONLINE LEADS INTO APPOINTMENTS', met: (s) => (s.stats.zillowFlips || 0) >= 3 },
     }),
     make({
       id: 'adam',
@@ -425,41 +563,52 @@
       role: 'office', secret: true,
       color: C.orange, accent: C.yellow,
       hair: '#3a3f52', shirt: C.gray, trim: C.orange,
-      catchphrase: 'The early call gets the listing.',
+      catchphrase: 'Fun fact. I already read the comps. And the buyer.',
       bio: [
-        'Grand Rapids office.',
-        'The first task of the day lands cleaner.',
-        'April closings are a point of pride in this game.',
+        'Grand Rapids office. He knows literally everything.',
+        'Lovable about it. Mostly.',
+        'Hidden motives, market facts, the right answer. He shares.',
       ],
-      strengths: ['FIRST TASK +', 'MORNING WARMTH'],
+      strengths: ['KNOW IT ALL', 'SEES THE BEST ANSWER', 'COMPS ON COMMAND'],
       ability: {
-        name: 'DAWN DIAL',
-        effect: 'dawn',
-        desc: 'A morning round of calls. Every new and warm lead heats up. Once per day.',
+        name: 'KNOW IT ALL',
+        effect: 'know',
+        desc: 'Adam opens the file in his head. You learn what the buyer wants, plus a market fact, and the lead moves. Once per day.',
+        lines: [
+          'He started with "actually" and somehow it was helpful.',
+          'The buyer wants a shop for the truck. Adam knew on page one.',
+          'Frontage, sunset side, legal dock. He did not even look it up.',
+        ],
       },
-      unlock: { hint: 'CLOSE A HOME IN APRIL', met: (s) => !!s.stats.aprilClose },
+      listingBonus: 0.12, negotiateBonus: 0.1,
+      unlock: { hint: 'WIN A HEAD-TO-HEAD LISTING BATTLE', met: (s) => (s.stats.battleWins || 0) >= 1 },
     }),
     make({
       id: 'stephanie',
       name: 'STEPHANIE MASCARENAS',
       short: 'STEPHANIE',
-      title: 'The Presenter',
+      title: 'Sells Anything',
       role: 'office', secret: true,
       color: C.sky, accent: C.white,
       hair: '#3a3f52', shirt: C.blue, trim: C.white,
-      catchphrase: 'Let the house do the talking.',
+      catchphrase: 'If it has a door, I can sell it. Watch.',
       bio: [
-        'Grand Rapids office.',
-        'Listing appointments are a show she is ready for.',
-        'Sellers say yes a little more often.',
+        'Grand Rapids office. She can sell any home.',
+        'Overpriced, odd, or stubborn. She still finds the buyer.',
+        'Confident, and the seller feels taken care of.',
       ],
-      strengths: ['LISTING PITCH +25%'],
+      strengths: ['SELL ANYTHING', 'LISTING PITCH +40%', 'TOUGH HOMES MOVE'],
       ability: {
-        name: 'THE WALKTHROUGH',
-        effect: 'advance',
-        desc: 'Walk the house like you mean it. Your best lead jumps a stage. Once per day.',
+        name: 'SELL ANYTHING',
+        effect: 'sellany',
+        desc: 'Guarantee movement on the toughest listing. A stuck or overpriced house gets an offer, or a seller says yes. Once per day.',
+        lines: [
+          'She looked at the odd house and said, "Yep. I know who."',
+          'The seller wanted double. Stephanie found the person anyway.',
+          'Tough listing. Easy confidence. The sign is coming.',
+        ],
       },
-      listingBonus: 0.25,
+      listingBonus: 0.4,
       unlock: { hint: 'TAKE 2 LISTINGS IN ONE SEASON', met: (s) => (s.stats.listings || 0) >= 2 },
     }),
     make({
@@ -494,24 +643,29 @@
       id: 'tania',
       name: 'TANIA SUONVIERI',
       short: 'TANIA',
-      title: 'The File Captain',
+      title: 'Iron Range Insider',
       role: 'office', secret: true,
-      color: C.cyan, accent: C.white,
-      hair: '#3a3f52', shirt: '#245860', trim: C.cyan,
-      catchphrase: 'Signed, dated, and ready for keys.',
+      color: '#c4553a', accent: C.yellow,
+      hair: '#3a3f52', shirt: '#6b2a22', trim: '#c4553a', look: 'range',
+      catchphrase: 'Hibbing, Virginia, Eveleth, Chisholm. I know which coffee is good.',
       bio: [
-        'Grand Rapids office.',
-        'Paperwork moves when she is on the file.',
-        'Pending deals reach the closing table sooner.',
+        'Grand Rapids office. Iron Range, born into the work.',
+        'Hibbing, Virginia, Eveleth, Chisholm. She has the back roads.',
+        'Range deals come in warmer, and they close like neighbors.',
       ],
-      strengths: ['FASTER PENDINGS', 'INSPECTIONS +'],
+      strengths: ['IRON RANGE INSIDER', 'RANGE DEALS PAY MORE', 'KNOWS THE TOWNS'],
       ability: {
-        name: 'FILE IT',
-        effect: 'file',
-        desc: 'Clear the snag in the file. An issue or a delay comes off a pending deal. Once per day.',
+        name: 'IRON RANGE INSIDER',
+        effect: 'range',
+        desc: 'A Range buyer calls from Hibbing, Virginia, Eveleth, or Chisholm. Warm, local, and ready to talk. Once per day.',
+        lines: [
+          'She said the name of the street before they finished the sentence.',
+          'Eveleth to Chisholm is not a commute. It is a conversation.',
+          'Virginia called. Tania already knew the basement.',
+        ],
       },
-      inspectBonus: 0.1,
-      unlock: { hint: 'CLEAR 2 INSPECTION ISSUES', met: (s, p) => (p.lifetime.inspectionsCleared || 0) >= 2 },
+      rangeValue: 1.12,
+      unlock: { hint: 'CLOSE A DEAL IN HIBBING, VIRGINIA, EVELETH, OR CHISHOLM', met: (s) => (s.stats.rangeSold || 0) >= 1 },
     }),
     make({
       id: 'gaige',
@@ -521,18 +675,24 @@
       role: 'office', secret: true,
       color: C.orange, accent: C.lime,
       hair: '#6b4226', shirt: C.orange, trim: C.lime,
-      catchphrase: 'New day, new doorbell.',
+      catchphrase: 'The hair arrived first. The earring caught the porch light.',
       bio: [
-        'Grand Rapids office.',
-        'Starts light and levels up with every few closings.',
-        'The grind is the perk. It shows.',
+        'Grand Rapids office. Broccoli on top, on purpose.',
+        'One earring. It sparkles when a deal is about to move.',
+        'Starts light. The crown grows every few closings.',
       ],
-      strengths: ['STARTS LIGHT', '+ENERGY EVERY 3 SALES'],
+      strengths: ['BROCCOLI BOOST', 'EARRING TELLS THE TRUTH', '+ENERGY EVERY 3 SALES'],
       ability: {
-        name: 'ONE MORE DOOR',
-        effect: 'advance',
-        desc: 'Knock one more time. Your best lead jumps a stage. Once per day.',
+        name: 'BROCCOLI BOOST',
+        effect: 'broccoli',
+        desc: 'The top gets ideas. Two days of extra zip, the earring sparks, and a lead steps forward. Once per day.',
+        lines: [
+          'He shook his head and the whole room noticed.',
+          'The earring did a little flash. That means go.',
+          'Broccoli boost. Silly name. Real appointments.',
+        ],
       },
+      look: 'broccoli',
       unlock: { hint: 'FINISH 2 SEASONS', met: (s, p) => (p.lifetime.seasons || 0) >= 2 },
     }),
     make({
@@ -577,6 +737,30 @@
     delete G.Data.MAP.locations.systemslab;
   }
 
+  G.Data.RANGE_TOWNS = ['HIBBING', 'VIRGINIA', 'EVELETH', 'CHISHOLM'];
+  if (G.Data.MAP && G.Data.MAP.towns) {
+    const extra = [
+      { id: 'hibbing', name: 'HIBBING', x: 292, y: 42 },
+      { id: 'chisholm', name: 'CHISHOLM', x: 348, y: 30 },
+      { id: 'virginia', name: 'VIRGINIA', x: 418, y: 34 },
+      { id: 'eveleth', name: 'EVELETH', x: 458, y: 52 },
+    ];
+    for (const t of extra) {
+      if (!G.Data.MAP.towns.some((x) => x.id === t.id)) G.Data.MAP.towns.push(t);
+    }
+  }
+
+  // Earring twinkle for Gaige. t is seconds.
+  G.sparkle = function (ctx, x, y, t, n) {
+    const count = n || 3;
+    for (let i = 0; i < count; i++) {
+      const ph = t * 7 + i * 1.8;
+      if (Math.sin(ph) < 0.15) continue;
+      ctx.fillStyle = i % 2 ? '#fff6c2' : '#ffd24a';
+      ctx.fillRect(Math.round(x + Math.cos(ph) * 5), Math.round(y + Math.sin(ph * 1.4) * 4), 2, 2);
+    }
+  };
+
   G.Data.RIVAL = {
     id: 'billboard',
     name: 'BILLBOARD',
@@ -598,8 +782,8 @@
     evaluate(s) {
       const profile = G.Profile.load();
       const newly = [];
-      for (const ch of office) {
-        if (!ch.unlock || G.Profile.unlocked(ch.id)) continue;
+      for (const ch of list) {
+        if (!ch.secret || !ch.unlock || G.Profile.unlocked(ch.id)) continue;
         let met = false;
         try { met = !!ch.unlock.met(s, profile); } catch (e) { met = false; }
         if (met && G.Profile.unlock(ch.id, ch.unlock.hint)) newly.push(ch);
