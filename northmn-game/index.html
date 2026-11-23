@@ -4,86 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1a1c2c">
-<title>North Desk RPG — Pemberton Real Estate</title>
+<title>The North Desk Trail</title>
 <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
-<div id="app">Loading the desk…</div>
-<div id="play" hidden>
-  <canvas id="view" width="480" height="270"></canvas>
-  <div id="hud">
-    <div>
-      <div id="who">—</div>
-      <div id="where"></div>
-    </div>
-    <div class="bars">
-      <span>EN</span>
-      <div class="bar" id="hp"><i></i></div>
-      <span>FO</span>
-      <div class="bar focus" id="mp"><i></i></div>
-    </div>
-    <div>
-      <div id="cash"></div>
-      <button class="btn alt" id="hud-phone" type="button">Text</button>
-      <button class="btn alt" id="hud-menu" type="button">Menu</button>
-      <button class="btn alt" id="mute" type="button">Sound on</button>
-    </div>
-  </div>
-  <div id="heat" hidden></div>
-  <div id="notice"></div>
-  <div id="phone" hidden></div>
-  <div id="dialogue" hidden>
-    <div class="who" id="dlg-who"></div>
-    <p class="lede" id="dlg-text"></p>
-    <button class="btn" id="dlg-next" type="button">Next</button>
-  </div>
-  <div id="tour" hidden>
-    <button class="btn" id="tour-go" type="button">Handle their question</button>
-  </div>
-  <div id="battle" hidden>
-    <h2 id="foe">Deal</h2>
-    <div class="bars">
-      <span>DEAL <b id="deal-n"></b></span>
-      <div class="bar deal" id="deal"><i></i></div>
-    </div>
-    <div id="log"></div>
-    <div class="cmds" id="cmds"></div>
-  </div>
-  <div id="menu" hidden></div>
-  <div id="atlas-wrap" hidden>
-    <canvas id="atlas" width="800" height="575"></canvas>
-    <button class="btn alt" id="atlas-close" type="button">Close map</button>
-  </div>
-  <div id="pad">
-    <div class="dpad">
-      <span></span>
-      <button type="button" data-dir="up">▲</button>
-      <span></span>
-      <button type="button" data-dir="left">◀</button>
-      <span></span>
-      <button type="button" data-dir="right">▶</button>
-      <span></span>
-      <button type="button" data-dir="down">▼</button>
-      <span></span>
-    </div>
-    <div class="ab">
-      <button type="button" id="btn-a">E</button>
-      <button type="button" id="btn-phone">Text</button>
-      <button type="button" id="btn-horn">Horn</button>
-      <button type="button" id="btn-pull">Pull over</button>
-      <button type="button" id="btn-b">Map</button>
-    </div>
-  </div>
-</div>
+<div id="stage"><canvas id="view" width="480" height="270"></canvas></div>
+<div id="app">Loading the trail…</div>
 <script src="src/palette.js"></script>
 <script src="src/roster.js"></script>
 <script src="src/sprites.js"></script>
-<script src="src/audio.js"></script>
-<script src="src/save.js"></script>
-<script src="src/world.js"></script>
-<script src="src/npcs.js"></script>
-<script src="src/battle.js"></script>
-<script src="src/game.js"></script>
+<script src="src/trail.js"></script>
+<script src="src/play.js"></script>
 <script src="src/main.js"></script>
 </body>
 </html>

@@ -1,27 +1,11 @@
-# North Desk
+# The North Desk Trail
 
-A top-down driving RPG for Pemberton Real Estate on the Grand Rapids, Iron Range, and Duluth corridor. No build. Open `index.html`.
+Oregon Trail, in a Pemberton SUV. Grand Rapids to the Aerial Lift Bridge. No build. Open `index.html`.
 
-## Drive
+Pick a lead and three coworkers. Spend the Grand Rapids general-store budget on gas, Caribou coffee, yard signs, spare tires, lockboxes, and winter kits. Set the pace and the rations, then roll.
 
-WASD or arrows. W is gas, S or Space is brake. A and D steer. E hops out or into the car, and walks you through a door. H is the horn. P opens a text. M is the regional map.
+Scout for leads is a yard-sign hunt. The icy highway is the blizzard run: steer around drifts, deer, holes, and troopers, and only grab a glowing buyer text if you like the lights. River and blizzard landmarks ask you to wait, plow, or detour.
 
-On a phone, the pad is gas, brake, and steering. Text, Horn, Pull over, and Map sit beside it.
+If the tank or the crew gives out, you get a tombstone. Canal Park writes the score into the hall of fame on this browser.
 
-Park in a driveway, get out, and walk the house: living room, kitchen, bedroom, and a lake deck or garage. Then negotiate. Pitch, Skills, Items, and Backup are the four commands. Backup calls the coworker who rode shotgun.
-
-## Texting and troopers
-
-Texts pop up on the highways. Pull over to answer, or answer while moving. Patrol cars watch US-2, US-169, and US-53. A phone at speed, or a showing-speed run, turns on the lights and a wanted star.
-
-Outrun them until the star cools, or pull over. The ticket is $150 and a one-liner. It is not a game over.
-
-## Towns
-
-Grand Rapids side: Cohasset, Grand Rapids, Coleraine, Bovey, plus the Mississippi and Pokegama Lake.
-
-Iron Range: Nashwauk, Keewatin, Hibbing and the Hull-Rust pit, Chisholm, Buhl, Mountain Iron, Virginia, Eveleth, Gilbert, Biwabik, Aurora, Hoyt Lakes.
-
-Duluth side: Hermantown, Proctor, Duluth, Canal Park, the Aerial Lift Bridge, Park Point, and Lake Superior.
-
-People, bios, and looks stay in `src/roster.js`.
+People and portraits live in `src/roster.js`.

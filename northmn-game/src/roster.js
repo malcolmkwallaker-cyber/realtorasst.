@@ -2,8 +2,7 @@
 // NORTH DESK ROSTER — edit this file to swap a person's words.
 //
 // Bios, catchphrases, perk names, stories, and pixel colors live
-// here. Keep `id` and `perkId` as they are so the season math in
-// perks.js still lines up.
+// here. Keep `id` and `perkId` stable so trail events still find them.
 //
 // Hair colors and styles below are the looks Malcolm called out
 // for the cards: Adam balding with brown sides, Bridger red,
