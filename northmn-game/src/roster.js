@@ -3,6 +3,28 @@
 (() => {
   const ND = globalThis.ND;
   // These are the existing North Desk roles and appearance notes. All scene dialogue is fictional.
+  const perks = {
+    malcolm: ['Office rhythm','Review a new file in five minutes.',{intake:5}],
+    adam: ['Hillside specialist','Earn extra client trust for Duluth walkthrough notes.',{markets:['duluth'],marketTrust:5}],
+    bethany: ['Steady hand','Start each accepted file with 12 extra trust.',{leadTrust:12}],
+    bridger: ['Comparable sales','Bring buyer counteroffers up to $1,200 closer to your number.',{counter:1200}],
+    deb: ['Road book','Allow less in-game travel time on an assisted GPS drive.',{driveTime:.85}],
+    emily: ['Quick response','Accept a new online or referral file in three minutes.',{intake:3}],
+    gaige: ['After hours','Book showings until 7 PM.',{afterHours:60}],
+    jillian: ['Credit negotiation','Secure up to $400 more on requested repair credits.',{repair:400}],
+    joel: ['Lender’s line','Schedule closing one day after title review.',{closeDays:1}],
+    jordan: ['Builder’s eye','Earn extra trust when accurately noting basement and roof concerns.',{structuralTrust:5}],
+    kaila: ['Rural connections','Earn extra trust for well and septic notes at the cabin.',{markets:['cabin'],marketTrust:6}],
+    liz: ['Closing checklist','Complete title review in 14 minutes.',{titleTime:14}],
+    matt: ['Contractor network','Review the inspection report and estimates in 15 minutes.',{inspectionTime:15}],
+    parker: ['Fleet account','Pay less for SUV fuel delivery.',{fuelFactor:.75}],
+    bekkah: ['Marketing plan','Bring in the first listing offer sooner.',{publishTime:.58}],
+    scotty: ['Plan B','Keep a showing slot for 35 extra minutes if you run late.',{grace:35}],
+    stephanie: ['Seller’s advocate','Attract stronger opening offers when you publish a listing.',{buyerBump:1250}],
+    tania: ['Range local','Earn extra client trust for walkthroughs in Hibbing and Hoyt Lakes.',{markets:['range','hoyt'],marketTrust:5}],
+    tanya: ['Listing packet','Write each walkthrough note in three minutes.',{noteTime:3}],
+  };
+
   const team = [
     ['malcolm', 'Malcolm Wallaker', 'Office leader', '#665343', '#446654', 'short', 'rapids',
       'Pull up a chair. The first thing I ask a new agent is which client is waiting to hear back.'],
@@ -44,8 +66,66 @@
       'Come on in, honey. I’ve got the disclosures ready and a fresh pot of coffee. Tell me what would make your day a little easier.'],
   ].map(([id, name, title, hair, shirt, style, base, line]) => ({
     id, name, title, hair, shirt, style, base, line, short: id === 'bekkah' ? 'Bekkah' : name.split(' ')[0],
+    perk:{name:perks[id][0],description:perks[id][1],...perks[id][2]},
   }));
+
+  const townBanter = {
+    rapids: [
+      'I saw half the office at the coffee shop before nine. We could have held the huddle right there.',
+      'If the buyer gets turned around on Pokegama, send them the cross street. The number alone won’t do.',
+      'Someone brought bars for the office. Grab one before the afternoon showings.',
+    ],
+    range: [
+      'The wind was coming straight across the Range this morning. I left an extra scraper in the car.',
+      'Hibbing is a different market a few blocks at a time. Keep the neighborhood in your notes.',
+      'If a showing runs long, give the next client a heads-up before you head out on 169.',
+    ],
+    duluth: [
+      'It was clear up the hill and fog by the lake. Leave a little room in the showing schedule.',
+      'The hill looks short on the map. Let the clients see how they’d actually park.',
+      'The Lift Bridge traffic can make the whole afternoon run ten minutes late.',
+    ],
+  };
+
+  function conversation(person,career,site) {
+    const file = career.file;
+    const r = career.record;
+    const name = file.client;
+    const address = site.road.segment.name || site.town;
+    const topics = {
+      liz:{
+        lead: 'I’ve put '+name+'’s file by the monitor. Check the signed agreement before we book anything.',
+        schedule: 'Put the showing time and '+address+' on the same line. Then anybody in the office can cover if you get held up.',
+        booked: 'Leave yourself ten minutes before '+ND.time(r.showAt)+'. Check the lockbox instructions before you leave the desk.',
+        tour: 'If you see something '+name+' will ask about later, put it in the notes today while it’s fresh.',
+        offer: 'Read the price, dates, and contingencies aloud. If you have to guess at a detail, come find me.',
+        inspection: 'Get the credit amount in writing and keep it with the inspection notes for '+name+'.',
+        title: 'Bring me '+name+'’s contract and signed addendum. I’ll check the names against the title report.',
+        sign: 'The closing table is set for '+name+'. We’re just waiting on the final signatures.',
+        closed: 'I filed the closing for '+name+'. Send your thank-you before turning to the next lead.',
+      },
+      scotty:{
+        lead: 'When you call '+name+', ask what would make a showing worth leaving work for.',
+        schedule: 'Here’s a quick Plan B. Pick one time for '+name+' and keep a second slot in your pocket.',
+        booked: 'I’d text the cross street and which door to use. Saves a lap around '+site.town+'.',
+        tour: 'Take a photo of anything you’d have trouble describing later. '+name+' will appreciate seeing what you saw.',
+        offer: 'Try reading the number back to '+name+' before you hit send. One minute now can save an hour.',
+        counter: 'Walk '+name+' through the change in plain language. Ask what they’d be comfortable signing.',
+        inspection: 'Everything is figure-out-able. Write down who calls the contractor, and by when.',
+        title: 'I’ll help double-check the file before the office closes. We can split it into three small jobs.',
+        sign: 'Put the key pickup in '+name+'’s calendar. That’s the part everybody remembers.',
+        closed: 'You got '+name+' all the way to the keys. Go grab a bar from the break room.',
+      },
+    };
+    const regional = townBanter[person.base] || townBanter[person.town === 'Grand Rapids'?'rapids':'range'];
+    const stages = ['lead','schedule','booked','tour','offer','counter','inspection','title','sign','closed'];
+    const index = (career.day.index+career.closed+stages.indexOf(r.stage))%regional.length;
+    const line = topics[person.id]?.[r.stage] || (person.id === file.staff && r.stage === 'lead' ?
+      name+'’s inquiry is on your phone. Take a look before you head out.' : person.line);
+    return [line,regional[index]];
+  }
 
   ND.roster = team;
   ND.agents = Object.fromEntries(team.map((person) => [person.id, person]));
+  ND.conversation = conversation;
 })();

@@ -28,6 +28,7 @@
 
     show(title, kind, html) {
       this.game.keys.clear();
+      this.game.sound.quiet();
       if (document.pointerLockElement) document.exitPointerLock();
       if (!this.panel) this.prevFocus = document.activeElement;
       this.panel = kind;
@@ -107,12 +108,12 @@
 
     choose() {
       const game = this.game;
-      this.show('The North Desk team','cast','<p>Choose who you’ll play. The rest of the team is in the world and in your phone.</p>'+
-        '<div class="rows">'+ND.roster.map((person) => this.row(person.id,person.name,person.title,
-          person.id===game.choice?'Selected':'')).join('')+'</div>');
+      this.show('Choose your agent','cast','<p>Each North Desk agent brings a different perk to the workday.</p>'+
+        '<div class="rows">'+ND.roster.map((person) => this.row(person.id,person.name,
+          person.title+' · '+person.perk.name+'. '+person.perk.description,
+          person.id===(game.career?.state.agent||game.choice)?'Selected':'')).join('')+'</div>');
       this.rows((id) => {
-        game.choice = id;
-        byId('choose-agent').querySelector('strong').textContent = ND.agents[id].name;
+        game.chooseAgent(id);
         this.close();
       });
     }
@@ -142,7 +143,8 @@
       let actions = [];
       switch (tab) {
         case 'inbox':
-          html = '<div class="rows">'+ND.files.map((f) => {
+          html = '<div class="day-brief"><strong>'+escape(career.event.title)+'</strong><p>'+escape(career.event.detail)+'</p></div>'+
+            '<div class="rows">'+ND.files.map((f) => {
             const site = g.world.features[f.id];
             return this.row(f.id,site.name,f.contact+' · '+site.town,status[career.state.files[f.id].stage]);
           }).join('')+'</div>';
@@ -159,13 +161,16 @@
           break;
         case 'ledger': {
           const state = career.state;
+          const opening = state.ledger.find((line)=>line.kind==='opening');
           const record = state.ledger.slice().reverse().map((line) => '<div class="row"><span class="row-text"><strong>'+
             escape(line.label)+'</strong><small>'+time(line.day,true)+'</small></span><span>'+
             (line.amount < 0 ? '−'+money(-line.amount) : '+'+money(line.amount))+'</span></div>').join('');
           html = '<h3>'+money(state.cash)+'</h3><p>'+career.closed+' of '+ND.files.length+' closings · '+
             state.mileage.toFixed(1)+' mi driven · '+Math.round(state.tank)+'% fuel</p>'+
+            '<p class="detail">The Pemberton office started your ledger with a '+money(opening.amount)+' expense float for work on the road.</p>'+
             (record ? '<div class="rows">'+record+'</div>' : '<p class="detail">Earn your first fee by closing a transaction.</p>');
           if (state.tank < 99) actions.push(button('Arrange fuel delivery',() => this.refuel()));
+          if (state.recaps.length) actions.push(button('Latest day recap',() => this.dailyReport(state.recaps.at(-1),false)));
           html += this.actions(actions);
           break;
         }
@@ -216,7 +221,10 @@
         actions.push(navigate('office','Route to office'));
       }
       if (r.stage === 'schedule') {
-        extra = seller ? '<p>Avery is available for a listing walkthrough from 9 AM to 6 PM.</p>' : '<p>The seller is taking appointments from 9 AM to 6 PM.</p>';
+        const end=time(career.showingEnd);
+        extra = '<p>'+ (seller ? 'Avery is available for a listing walkthrough' : 'The seller is taking appointments') +
+          ' from 9 AM to '+end+'.</p>';
+        if (career.event.id==='hesitant') extra+='<p class="detail">'+escape(career.event.detail)+'</p>';
         actions.push(button(seller ? 'Book first listing visit' : 'Book earliest showing',() => g.book(false),true),button('Book tomorrow at 9 AM',() => g.book(true)));
       }
       if (r.stage === 'booked') {
@@ -241,6 +249,7 @@
           '<label>Seller paid costs<select name="credit"><option value="0">$0</option><option value="1500">$1,500</option>'+
           '<option value="3000">$3,000</option></select></label>'+
           '<p class="form-error" role="status" hidden></p><div class="actions"><button class="primary" type="submit">Submit offer</button></div></form>';
+        if (career.event.id==='bidding') extra='<p class="detail">'+escape(career.event.detail)+'</p>'+extra;
       }
       if (r.stage === 'counter' && seller) {
         const net = r.incoming-r.buyerCosts;
@@ -274,7 +283,9 @@
         actions.push(navigate('office','Route to office'));
       }
       if (r.stage === 'sign') {
-        extra = '<p>Title and lender review are complete. Closing is at the North Desk '+time(r.closeAt,true)+'.</p>';
+        const { commission,bonus } = career.payout();
+        extra = '<p>Title and lender review are complete. Closing is at the North Desk '+time(r.closeAt,true)+'.</p>'+
+          '<p class="detail">Projected payout '+money(commission+bonus)+(bonus?' including a '+money(bonus)+' client-trust bonus.':'.')+'</p>';
         actions.push(navigate('office','Route to closing'));
       }
       if (r.stage === 'closed') extra = '<p>'+money(r.price)+' closed · '+money(r.credit)+' seller credit.</p>';
@@ -282,7 +293,8 @@
         actions.push(button('Call '+career.role(f.advisor),() => this.person(f.advisor,true,true)));
       }
       const details = [[ 'List price', money(f.list) ],['Comparable sales',money(f.low)+'–'+money(f.high)],
-        [seller?'Seller minimum':'Buyer approval',money(seller?f.reserve:f.limit)],['Stage',status[r.stage]]];
+        [seller?'Seller minimum':'Buyer approval',money(seller?f.reserve:f.limit)],['Stage',status[r.stage]],
+        [seller?'Seller trust':'Buyer trust',r.trust+' / 100']];
       const html = '<div class="message"><span class="contact">'+escape(f.contact)+'</span><h3>'+escape(site.name)+
         '</h3><p>'+escape(site.town+' · '+site.road.segment.name+' · '+f.beds)+'</p>'+photo+
         '<p>'+escape(f.intake)+'</p></div>'+
@@ -318,20 +330,20 @@
       if (real === 'tanya' && !relevant) actions.push(button('Join Tanya’s laser tag',() => this.tagInvite(),true));
       if (relevant && !career.record.reviewed) {
         actions.push(button('Log file review',() => {
-          career.record.reviewed = true;
-          career.addTime(7);
-          g.changed('File review logged.');
+          career.review();
+          g.changed('File review logged · client trust gained.');
           if (onPhone) this.phone('deal');
           else this.close();
         },true));
       }
       actions.push(button(onPhone ? 'Back to phone' : 'Back to work',() => onPhone ? this.phone(relevant ? 'deal' : 'team') : this.close()));
-      this.dialog(person.name,[person.title, relevant ? f.guidance : person.line],actions);
+      const lines = ND.conversation(person,career,g.world.features[f.id]);
+      this.dialog(person.name,[person.title,...(relevant?[f.guidance,lines[1]]:lines)],actions);
     }
 
     refuel() {
       const g = this.game;
-      const cost = Math.ceil((100-g.career.state.tank)*.48);
+      const cost = g.career.fuelCost;
       this.dialog('SUV fuel', ['A local service can refuel the parked SUV for '+money(cost)+'. Allow eight minutes for the stop.'],[
         button('Pay '+money(cost),() => {
           const spent = g.career.refill();
@@ -355,7 +367,7 @@
           ' verified the lender’s approval up to '+money(f.limit)+'.';
         this.dialog(seller ? 'New listing file' : 'New buyer file',[intro,f.intake],[button('Accept file',() => {
           career.accept();
-          g.changed('File accepted. Schedule the showing on your phone.');
+          g.changed('File accepted · Schedule the showing on your phone.','accept');
           this.phone('deal');
         },true),button('Back to work',() => this.close())]);
       } else if (r.stage === 'title') {
@@ -394,7 +406,7 @@
         ]);
         return;
       }
-      if (c.state.minute > r.showAt + 50) {
+      if (c.state.minute > r.showAt+c.showingGrace) {
         this.dialog('Showing window passed',['Contact the seller for the next available time.'],[
           button('Request a new time',() => { r.stage = 'schedule'; g.changed(); this.phone('deal'); },true),
         ]);
@@ -412,12 +424,19 @@
 
     observation(note) {
       const g = this.game;
-      this.dialog(note[1],[note[2]],[
-        button('Log observation',() => {
-          g.career.observe(note[0]);
-          g.changed(g.career.record.stage === 'offer' ? 'Walkthrough filed. Open the deal on your phone.' : 'Observation logged.');
-          this.close();
-        },true),button('Keep looking',() => this.close()),
+      const log = (flag) => {
+        const result = g.career.observe(note[0],flag);
+        if (!result) return;
+        const feedback = result.matched ? 'Well documented' :
+          note[3] ? 'Worth a closer look during inspection' : 'The client marked this as routine';
+        const next = g.career.record.stage === 'offer' ? ' · Open the deal on your phone.' : '';
+        g.changed(feedback+' · +'+result.gained+' trust'+next);
+        this.close();
+      };
+      this.dialog(note[1],[note[2],'Does this need a follow-up before the client moves forward?'],[
+        button('Flag for follow-up',() => log(true)),
+        button('Log as routine',() => log(false)),
+        button('Keep looking',() => this.close()),
       ]);
     }
 
@@ -425,17 +444,24 @@
       const g = this.game;
       const r = g.career.record;
       const f = g.career.file;
-      this.dialog('Inspection with '+f.client,[f.report, 'Inspection appointment '+time(r.inspectAt,true)+'.'],[
-        button((f.side === 'seller' ? 'Authorize ' : 'Request ')+money(f.repair)+' credit',() => {
-          g.career.inspection(true);
-          g.changed('Seller agreed to the credit. Bring the addendum to the office.');
-          this.close();
-        },true),button('Proceed at contract terms',() => {
+      const credit=g.career.repairCredit;
+      const actions=[
+        button('Proceed at contract terms',() => {
           g.career.inspection(false);
           g.changed('Inspection complete. Bring the file to the office.');
           this.close();
-        }),
-      ]);
+        },!credit),
+      ];
+      if (credit) {
+        actions.unshift(button((f.side==='seller'?'Authorize ':'Request ')+money(credit)+' credit',() => {
+          g.career.inspection(true);
+          g.changed('Credit documented. Bring the addendum to the office.');
+          this.close();
+        },true));
+      }
+      const copies=[f.report,'Inspection appointment '+time(r.inspectAt,true)+'.'];
+      if (f.side==='seller' && credit<f.repair) copies.push('The seller’s minimum leaves '+money(credit)+' for a repair credit.');
+      this.dialog('Inspection with '+f.client,copies,actions);
     }
 
     tagInvite() {
@@ -457,6 +483,34 @@
         ]);
     }
 
+    graphics() {
+      const g = this.game;
+      const low = g.renderer.low;
+      this.dialog('Graphics',[
+        'Low uses a smaller render size, fewer scenery details, and a 30 FPS cap. High draws more detail and a longer view.',
+      ],[
+        button(low?'Low · Active':'Low',() => { g.setGraphics('low'); this.graphics(); },low),
+        button(low?'High':'High · Active',() => { g.setGraphics('high'); this.graphics(); },!low),
+        button('Done',() => this.close()),
+      ]);
+    }
+
+    dailyReport(report,next) {
+      const g = this.game;
+      const weather = g.career.recapEvent(report);
+      const marks = [['Files accepted',report.files],['Showings',report.showings],['Offers',report.offers],
+        ['Closings',report.closings],['Miles driven',report.miles.toFixed(1)],['Net earnings',money(report.net)],
+        ['Trust gained','+'+report.trust],['Road delays',report.roadNotes]];
+      const actions = [next ? button('Start next workday',() => {
+        this.close();
+        this.notice(g.career.event.title+' · '+g.career.event.detail);
+      },true) : button('Back to ledger',() => this.phone('ledger'),true)];
+      this.show('Day '+(report.index+1)+' recap','recap','<p>'+escape(weather.title)+' · '+escape(weather.detail)+'</p>'+
+        '<dl class="details">'+marks.map(([label,value])=>'<div><dt>'+escape(label)+'</dt><dd>'+escape(value)+'</dd></div>').join('')+
+        '</dl>'+(next?'<p class="detail">Tomorrow · '+escape(g.career.event.title)+'</p>':'')+this.actions(actions));
+      this.listen(actions);
+    }
+
     pause() {
       const g = this.game;
       const actions = [
@@ -465,6 +519,14 @@
         button(g.sound.enabled ? 'Mute sound' : 'Turn on sound',() => { g.sound.toggle(); this.pause(); }),
         button('Return to parked SUV',() => { this.close(); g.returnToCar(); }),
         button('Tanya’s laser tag',() => this.tagInvite()),
+        button('Graphics · '+(g.renderer.low?'Low':'High'),() => this.graphics()),
+        button('Choose agent',() => this.choose()),
+        button('End workday',() => {
+          g.car.speed=0;
+          const report=g.career.endDay();
+          g.changed();
+          this.dailyReport(report,true);
+        }),
         button('New career',() => this.newCareer()),
       ];
       if (g.driving) actions.splice(3,1);

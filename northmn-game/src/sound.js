@@ -82,6 +82,31 @@
       tone.stop(now+.16);
     }
 
+    quiet() {
+      if (!this.context) return;
+      const now = this.context.currentTime;
+      this.engine.gain.setTargetAtTime(0,now,.12);
+      this.rustle.gain.setTargetAtTime(.004,now,.20);
+    }
+
+    progress(kind) {
+      const ctx = this.context;
+      if (!this.enabled || !ctx || ctx.state !== 'running') return;
+      const notes = kind==='booking' ? [523,659,784] : [392,587];
+      for (const [index,freq] of notes.entries()) {
+        const start = ctx.currentTime + index*.067;
+        const tone = ctx.createOscillator();
+        const gain = ctx.createGain();
+        tone.frequency.value=freq;
+        gain.gain.setValueAtTime(.001,start);
+        gain.gain.exponentialRampToValueAtTime(.13,start+.018);
+        gain.gain.exponentialRampToValueAtTime(.001,start+.20);
+        tone.connect(gain).connect(this.master);
+        tone.start(start);
+        tone.stop(start+.22);
+      }
+    }
+
     update({ moving, driving, rain, stride, speed, indoors, paved }) {
       const ctx = this.context;
       if (!this.enabled || !ctx || ctx.state !== 'running') return;

@@ -4,6 +4,29 @@
   const ND = globalThis.ND;
   const SAVE = 'north-desk-fieldwork-v1';
   const DAY = 1440;
+  const OPENING_MINUTE = 8*60+8;
+  const OPENING_FLOAT = 1650;
+  const events = [
+    { id:'steady', title:'Clear roads', detail:'Normal showing windows and light traffic in the morning.' },
+    { id:'snow', title:'Morning flurries', detail:'Snow crossings and shaded pavement stay slick into late morning.' },
+    { id:'rain', title:'Afternoon rain', detail:'Rain moves across the Northland after lunch.' },
+    { id:'fog', title:'Lake fog', detail:'Visibility drops near Lake Superior in the morning.' },
+    { id:'bidding', title:'Another buyer is in', detail:'A competing offer gives sellers more room to hold their price.' },
+    { id:'hesitant', title:'Seller asks for more time', detail:'Build in an extra 35 minutes when scheduling a new visit.' },
+    { id:'contractor', title:'Contractor calls back', detail:'Same-day estimates shorten inspection follow-up.' },
+  ];
+
+  function makeDay(index,seed) {
+    let hash = (seed^Math.imul(index,0x9e3779b9)) >>> 0;
+    hash = Math.imul(hash^(hash>>>16),0x7feb352d) >>> 0;
+    const random=(hash^(hash>>>15))>>>0;
+    const event = index===0 ? 0 : index===1 ? 1+random%(events.length-1) : random%events.length;
+    return { index,event,files:0,showings:0,offers:0,closings:0,miles:0,trust:0,roadNotes:0 };
+  }
+
+  function openingEntry() {
+    return { label:'Pemberton office expense float',amount:OPENING_FLOAT,day:OPENING_MINUTE,kind:'opening' };
+  }
 
   const files = [
     {
@@ -14,7 +37,7 @@
       notes: [
         ['living', 'Living room & front windows', 'The front window opens freely. The lower sash has light staining from condensation.'],
         ['kitchen', 'Kitchen & plumbing', 'The cabinets are dry below the sink. The water heater date is in the seller’s disclosure.'],
-        ['rear', 'Foundation & grading', 'There’s an old water mark below the rear window. The grade runs toward the house here.'],
+        ['rear', 'Basement entry & grading', 'At the basement stairwell, there’s a water mark under the rear window. The outside grade runs toward that wall.', true],
       ],
       report: 'The inspector found a disconnected downspout and soil sloped toward the foundation. The buyer wants a written drainage plan.',
       guidance: 'Recent closes cluster near $246,000. Keep the inspection contingency and leave room to negotiate the drainage separately.',
@@ -26,7 +49,7 @@
       intake: 'Nora and Ben want year-round access without committing to a full renovation. They need a clear answer on the shared lane, private well, and septic system.',
       notes: [
         ['living', 'Porch & access', 'The gravel lane serves two lots. The seller provided a recorded maintenance agreement.'],
-        ['kitchen', 'Well & water supply', 'The pressure tank is labeled. The last water test in the disclosure is two years old.'],
+        ['kitchen', 'Well & water supply', 'The pressure tank is labeled. The last water test in the disclosure is two years old.', true],
         ['rear', 'Septic & shore setback', 'The seller’s sketch locates the drain field uphill, away from the shoreline.'],
       ],
       report: 'The well sample came back clear. A contractor found that the septic connection needs a new section before winter.',
@@ -39,8 +62,9 @@
       intake: 'Rowan can do cosmetic work and has a firm financing ceiling. They need to know what to plan for before they commit to a fixer.',
       notes: [
         ['living', 'Plaster & old windows', 'One window sash sticks. The plaster cracks above it are narrow, with no visible movement at the frame.'],
-        ['kitchen', 'Outlets & service', 'The seller’s disclosure identifies an older panel. Get the electrician to look before writing the repair request.'],
-        ['rear', 'Back room & floor', 'A section of finish flooring is soft near the rear threshold. Check what’s carrying the load below it.'],
+        ['kitchen', 'Outlets & service', 'The seller’s disclosure identifies an older panel and a few ungrounded outlets.', true],
+        ['rear', 'Back room & floor', 'A section of finish flooring is soft near the rear threshold.', true],
+        ['roof', 'Roof & flashing', 'From the front walk, you can see missing shingles and a lifted edge on the chimney flashing.', true],
       ],
       report: 'The electrical service needs work. The electrician supplied a quote and flagged a few ungrounded outlets.',
       guidance: 'Give the buyer separate numbers for work they can do and work they need to hire out. Their financing ceiling is firm.',
@@ -53,7 +77,7 @@
       notes: [
         ['living', 'Daylight & layout', 'Two front windows light the main room. The second bedroom opens off the hall.'],
         ['kitchen', 'Heating controls', 'The thermostat responds. The seller included a furnace service sticker and the last two winter bills.'],
-        ['rear', 'Weather sealing', 'Cold air is visible on the inspector’s thermal photo of the back door frame.'],
+        ['rear', 'Weather sealing', 'Cold air is visible on the inspector’s thermal photo of the back door frame.', true],
       ],
       report: 'The furnace passed. A damaged exterior door and weather seal are the open items.',
       guidance: 'The renovated comps go higher than this house. Price it to bring buyers through and include the furnace service record in the disclosure packet.',
@@ -66,7 +90,7 @@
       notes: [
         ['living', 'View & window condition', 'The view opens downhill. A fogged pane in the side window looks like a failed seal.'],
         ['kitchen', 'Mechanical disclosure', 'The boiler was serviced last fall. The seller disclosed no changes to the boiler since purchase.'],
-        ['rear', 'Retaining wall & driveway', 'The wall leans slightly at one corner. The parcel sketch shows the driveway crossing the property line.'],
+        ['rear', 'Retaining wall & driveway', 'The wall leans slightly at one corner. The parcel sketch shows the driveway crossing the property line.', true],
       ],
       report: 'A mason priced a small retaining wall repair. Title found a recorded shared-drive easement that needs to be delivered to the buyer.',
       guidance: 'Review the recorded driveway easement and keep the retaining wall in the inspection scope.',
@@ -85,7 +109,7 @@
   const money = (value) => usd.format(value);
   const time = (minute, date = false) => {
     if (!Number.isFinite(minute)) return '';
-    const local = new Date(Date.UTC(2026,7,24,0,Math.floor(minute)));
+    const local = new Date(Date.UTC(2026,10,23,0,Math.floor(minute)));
     const clock = clockFormat.format(local);
     if (!date) return clock;
     const weekday = weekdayFormat.format(local);
@@ -94,8 +118,8 @@
 
   function fresh(agent) {
     return {
-      version:1, agent, minute:8*60+8, cash:1650, tank:88, mileage:0, active:'ramble', ledger:[],
-      files:Object.fromEntries(files.map((f) => [f.id, { stage:'lead', notes:[], attempt:0, reviewed:false }])),
+      version:1, agent, minute:OPENING_MINUTE, cash:OPENING_FLOAT, tank:88, mileage:0, active:'ramble', ledger:[openingEntry()],
+      files:Object.fromEntries(files.map((f) => [f.id, { stage:'lead', notes:[], attempt:0, reviewed:false, trust:50 }])),
     };
   }
 
@@ -125,6 +149,16 @@
   class Career {
     constructor(agent, saved) {
       this.state = saved || fresh(agent);
+      const s = this.state;
+      if (!Number.isInteger(s.seed)) s.seed = Math.floor(Math.random()*4294967296);
+      if (!s.ledger.some((line)=>line.kind==='opening')) s.ledger.unshift(openingEntry());
+      const index = Math.floor(s.minute/DAY);
+      s.day = { ...makeDay(index,s.seed),...(s.day?.index===index?s.day:null) };
+      s.recaps ||= [];
+      for (const file of files) {
+        const record = s.files[file.id];
+        if (!Number.isFinite(record.trust)) record.trust=50+Math.min(35,record.notes.length*9);
+      }
     }
 
     get file() {
@@ -133,6 +167,38 @@
 
     get record() {
       return this.state.files[this.state.active];
+    }
+
+    get perk() {
+      return ND.agents[this.state.agent].perk;
+    }
+
+    get day() {
+      return this.state.day;
+    }
+
+    get event() {
+      return events[this.day.event] || events[0];
+    }
+
+    get fuelCost() {
+      return Math.ceil((100-this.state.tank)*.48*(this.perk.fuelFactor??1));
+    }
+
+    get repairCredit() {
+      const requested=this.file.repair+(this.perk.repair??0);
+      if (this.file.side==='seller') {
+        return Math.max(0,Math.min(requested,this.record.price-this.record.credit-this.file.reserve));
+      }
+      return requested;
+    }
+
+    get showingGrace() {
+      return 50+(this.perk.grace??0);
+    }
+
+    get showingEnd() {
+      return 18*60+(this.perk.afterHours??0);
     }
 
     get closed() {
@@ -149,35 +215,94 @@
     }
 
     addTime(minutes) {
-      this.state.minute += Math.max(0, minutes);
+      if (Number.isFinite(minutes) && minutes>0) this.advanceTo(this.state.minute+minutes);
+    }
+
+    advanceTo(minute, wrap = false) {
+      if (!Number.isFinite(minute) || minute<=this.state.minute) return;
+      const day = this.day;
+      this.state.minute=minute;
+      const index=Math.floor(minute/DAY);
+      if (index===day.index) return;
+      const net = this.state.ledger.filter((line)=>line.kind!=='opening' && Math.floor(line.day/DAY)===day.index)
+        .reduce((sum,line)=>sum+line.amount,0);
+      if (wrap || net || day.files || day.showings || day.offers || day.closings || day.miles>.01 || day.trust || day.roadNotes) {
+        this.state.recaps.push({...day,net});
+        if (this.state.recaps.length>21) this.state.recaps.shift();
+      }
+      this.state.day=makeDay(index,this.state.seed);
+    }
+
+    endDay() {
+      this.advanceTo((this.day.index+1)*DAY+8*60,true);
+      return this.state.recaps.at(-1);
+    }
+
+    recapEvent(report) {
+      return events[report.event] || events[0];
+    }
+
+    weather(nearSuperior) {
+      const hour = this.state.minute%DAY/60;
+      const event = this.event.id;
+      if (event==='snow' && hour<12) return { label:'Snow flurries', intensity:hour<10.5?.67:.39, snow:true };
+      if (event==='rain' && hour>=12) return { label:'Rain',intensity:.71 };
+      if (nearSuperior && hour<(event==='fog'?13:10)) return { label:'Lake mist',intensity:event==='fog'?.58:.31 };
+      return { label:'Clear',intensity:0 };
+    }
+
+    trust(points) {
+      const before=this.record.trust;
+      this.record.trust=ND.clamp(before+points,0,100);
+      this.day.trust+=this.record.trust-before;
+    }
+
+    review() {
+      if (this.record.reviewed) return;
+      this.record.reviewed=true;
+      this.trust(4);
+      this.addTime(7);
     }
 
     accept() {
       if (this.record.stage !== 'lead') return;
       this.record.stage = 'schedule';
-      this.addTime(9);
+      this.day.files++;
+      this.trust(this.perk.leadTrust??0);
+      this.addTime(this.perk.intake??9);
     }
 
     book(travelMinutes, tomorrow = false) {
       const now = this.state.minute;
       const open = Math.floor(now / DAY) * DAY + 9 * 60;
-      const next = Math.max(open, Math.ceil((now + travelMinutes + 12) / 15) * 15);
-      this.record.showAt = tomorrow || next >= open + 9 * 60 ? open + DAY : next;
+      const delay = this.event.id==='hesitant' ? 35 : 0;
+      const travel = travelMinutes + 12 + delay;
+      const next = Math.max(open, Math.ceil((now+travel)/15)*15);
+      this.record.showAt = tomorrow || next >= open+this.showingEnd-9*60 ? open+DAY : next;
       this.record.stage = 'booked';
       this.addTime(3);
     }
 
     openShowing() {
-      this.state.minute = Math.max(this.state.minute, this.record.showAt);
+      this.advanceTo(this.record.showAt);
+      this.day.showings++;
+      if (this.state.minute<=this.record.showAt+8) this.trust(7);
       this.record.stage = 'tour';
       this.record.unlocked = true;
     }
 
-    observe(item) {
-      if (this.record.stage !== 'tour' || this.record.notes.includes(item)) return;
+    observe(item, flag) {
+      const note = this.file.notes.find((entry)=>entry[0]===item);
+      if (!note || this.record.stage !== 'tour' || this.record.notes.includes(item)) return null;
+      const matched = Boolean(note[3])===flag;
+      const regional = this.perk.markets?.includes(this.file.id) ? this.perk.marketTrust : 0;
+      const structural = ['rear','roof'].includes(item) ? (this.perk.structuralTrust??0) : 0;
+      const gained = matched ? (note[3]?14:9)+regional+structural : 2;
+      this.trust(gained);
       this.record.notes.push(item);
       if (this.record.notes.length === this.file.notes.length) this.record.stage = 'offer';
-      this.addTime(5);
+      this.addTime(this.perk.noteTime??5);
+      return { matched, gained };
     }
 
     publish(price) {
@@ -188,8 +313,10 @@
       }
       r.ask = price;
       r.attempt++;
-      this.addTime(DAY + (price > f.high ? DAY : 31));
-      r.incoming = Math.min(f.limit,Math.round((price - (price > f.high ? 4750 : 2000))/250)*250);
+      this.day.offers++;
+      const competition=this.event.id==='bidding' ? 1250 : 0;
+      this.addTime((DAY+(price>f.high?DAY:31))*(this.perk.publishTime??1));
+      r.incoming = Math.min(f.limit,Math.round((price-(price>f.high?4750:2000)+competition+(this.perk.buyerBump??0))/250)*250);
       r.buyerCosts = 1500;
       r.stage = 'counter';
       return true;
@@ -204,22 +331,30 @@
 
     counterPrice() {
       const r = this.record;
-      return Math.min(this.file.list, this.file.reserve + (r.reviewed ? 1000 : 2500));
+      return Math.min(this.file.limit,this.file.list,this.reserve()+
+        Math.max(0,(r.reviewed?1000:2500)-(this.perk.counter??0)));
+    }
+
+    reserve() {
+      return this.file.reserve+(this.event.id==='bidding'?1250:0);
     }
 
     offer(price, credit) {
       const f = this.file;
       const r = this.record;
-      if (!Number.isFinite(price) || price < f.low - 40000 || price > f.limit ||
+      if (r.stage!=='offer' || f.side==='seller' || !Number.isFinite(price) || price < f.low - 40000 || price > f.limit ||
         ![0,1500,3000].includes(credit)) return { result:'invalid' };
       r.attempt++;
+      this.day.offers++;
+      const reserve=this.reserve();
+      const counter=this.counterPrice();
       this.addTime(18);
-      if (price - credit >= f.reserve) {
+      if (price - credit >= reserve) {
         this.contract(price,credit);
         return { result:'accepted' };
       }
       r.stage = 'counter';
-      r.counter = this.counterPrice();
+      r.counter = counter;
       return { result:'counter' };
     }
 
@@ -233,28 +368,38 @@
 
     inspection(request) {
       const r = this.record;
-      this.state.minute = Math.max(this.state.minute,r.inspectAt);
-      this.addTime(28);
-      r.credit += request ? this.file.repair : 0;
+      this.advanceTo(r.inspectAt);
+      this.addTime(Math.max(7,(this.perk.inspectionTime??28)-(this.event.id==='contractor'?9:0)));
+      r.credit += request ? this.repairCredit : 0;
       r.inspection = request ? 'Seller credit confirmed in writing' : 'Buyer accepted condition after review';
+      this.trust(request?5:3);
       r.stage = 'title';
     }
 
     title() {
       this.record.stage = 'sign';
-      this.record.closeAt = Math.floor(this.state.minute / DAY) * DAY + 2 * DAY + 13 * 60;
-      this.addTime(31);
+      this.record.closeAt = (this.day.index+(this.perk.closeDays??2))*DAY+13*60;
+      this.addTime(this.perk.titleTime??31);
+    }
+
+    payout() {
+      const gross = this.record.price*this.file.fee;
+      const trust = this.record.trust;
+      return { commission:Math.round(gross*.70),
+        bonus:Math.round(gross*(trust>=94?.075:trust>=82?.045:0)) };
     }
 
     close() {
       if (this.record.stage !== 'sign') return null;
       const r = this.record;
-      this.state.minute = Math.max(this.state.minute,r.closeAt);
+      this.advanceTo(r.closeAt);
       this.addTime(45);
-      // Each fictional engagement has its own fee. The player's brokerage split is 70%.
-      const earned = Math.round(r.price * this.file.fee * 0.70);
+      const { commission,bonus } = this.payout();
+      const earned = commission+bonus;
       this.state.cash += earned;
-      this.state.ledger.push({ label:this.file.client + ' closing', amount:earned, day:this.state.minute });
+      this.state.ledger.push({ label:this.file.client+' closing',amount:commission,day:this.state.minute });
+      if (bonus) this.state.ledger.push({ label:this.file.client+' trust bonus',amount:bonus,day:this.state.minute });
+      this.day.closings++;
       r.stage = 'closed';
       return earned;
     }
@@ -262,12 +407,17 @@
     drive(meters, assisted = false) {
       const miles = meters * ND.MILES;
       this.state.mileage += miles;
+      this.day.miles += miles;
       this.state.tank = Math.max(0,this.state.tank - miles * .36);
-      if (assisted) this.addTime(Math.max(3,miles * 1.37));
+      if (assisted) this.addTime(this.driveMinutes(miles));
+    }
+
+    driveMinutes(miles) {
+      return Math.max(3,miles*1.37*(this.perk.driveTime??1));
     }
 
     refill() {
-      const cost = Math.ceil((100 - this.state.tank) * .48);
+      const cost = this.fuelCost;
       if (cost <= 0 || cost > this.state.cash) return 0;
       this.state.cash -= cost;
       this.state.tank = 100;
@@ -282,7 +432,7 @@
       const site = world.features[f.id];
       const desk = world.features.office;
       const [title, detail, point] = {
-        lead: ['Review the inquiry', this.role(f.staff) + ' left a file at the North Desk.', desk.entry],
+        lead: ['Review the inquiry', this.role(f.staff) + ' left a file at Liz’s desk.', desk.entry],
         schedule: [f.side === 'seller' ? 'Book the listing visit' : 'Book the showing', site.name + ' · Open your phone to schedule.', site.entry],
         booked: ['Meet at the property', site.name + ' · ' + time(r.showAt, true), site.entry],
         tour: ['Walk through the property', r.notes.length + '/' + f.notes.length + ' observations logged.', site.entry],

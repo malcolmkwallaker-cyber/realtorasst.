@@ -50,6 +50,16 @@
     return x >= x0 && x < x0 + size && z >= z0 && z < z0 + size;
   }
 
+  function visibleFrom(camera,x,z,radius) {
+    const dx = x-camera.eye[0];
+    const dz = z-camera.eye[2];
+    const depth = dx*camera.forward[0]+dz*camera.forward[2];
+    const side = dx*camera.right[0]+dz*camera.right[2];
+    const halfWidth = camera.aspect/camera.zoom;
+    return depth >= -radius &&
+      Math.abs(side) <= Math.max(0,depth)*halfWidth+radius*(1+halfWidth);
+  }
+
   function clip(ax, az, bx, bz, minX, minZ, maxX, maxZ) {
     const dx = bx - ax;
     const dz = bz - az;
@@ -116,11 +126,15 @@
       }));
       this.people = this.makePeople();
       this.townStops = Object.fromEntries(geo.towns.map((town) => [town.name, this.makeStop(town)]));
-      this.fixedMesh = this.makeFeatures();
+      this.fixedMeshes = this.makeFeatures();
       this.actorMeshes = new Map();
       this.suv = renderer.upload(Models.suv(color('#536c5d')));
       this.trafficModels = ['#838989','#794b3f','#b9b2a0','#3b4958','#6e705a'].map((paint) =>
         renderer.upload(Models.suv(color(paint), true)));
+      this.truckMesh=renderer.upload(Models.loggingTruck());
+      this.deerMesh=renderer.upload(Models.deer());
+      this.deer=null;
+      this.wildlifeTimer=6.5;
       this.traffic = [];
       this.trafficSeed = rng(591);
       this.recent = null;
@@ -142,7 +156,13 @@
       if (geo.wet(lot.x, lot.z) || geo.nearest(lot.x, lot.z, 9)) lot = trySide(-site.side);
       let approach = toWorld(lot, 0, -lot.d / 2 - 1.6);
       lot.y = geo.height(approach.x, approach.z) + (site.type === 'office' ? .57 : .045);
-      lot.entry = { ...approach, y: lot.y, yaw: lot.yaw + Math.PI, label: lot.name, id: lot.id };
+      lot.entry = { ...approach, y: lot.y, yaw: lot.yaw + Math.PI, label: lot.name, id: lot.id,markerHeight:1.65 };
+      lot.threshold = toWorld(lot,0,-lot.d/2+.42);
+      if (lot.type === 'office') {
+        lot.lobby = toWorld(lot,0,-lot.d/2+2.45);
+        lot.deskApproach = toWorld(lot,3.69,-2.88);
+        lot.desk = { ...toWorld(lot,3.41,-2.17),y:lot.y,label:'Liz’s desk',markerHeight:1.56 };
+      }
       let park = toWorld(lot, site.w * .5 + 2.7, -site.d / 2 - 4.4);
       if (geo.nearest(park.x, park.z, 8)?.distance < 3.4 || geo.wet(park.x,park.z)) {
         park = toWorld(lot, -site.w * .5 - 2.7, -site.d / 2 - 3.7);
@@ -165,14 +185,20 @@
 
     makePeople() {
       const desk = [[-3.7,-1.08],[2.7,-3.24],[-5.9,2.3],[-5.8,-2.6],[1.2,3.67],
-        [-3.77,4.09],[4.8,2.48],[5.0,-2.72],[-1.52,-1.01],[5.9,-.54]];
+        [-3.77,4.09],[4.19,-.75],[5.0,-2.72],[-1.52,-1.01],[5.9,-.54]];
+      const walking = {
+        liz:[[5.74,-.75],[5.74,-3.16],[5.74,-.75],[4.19,-.75]],
+        scotty:[[-1.53,.34],[-.78,.26],[-.92,-1.72],[-1.52,-1.01]],
+      };
       let i = 0;
       return ND.roster.map((agent) => {
         const lot = this.features[agent.base];
         if (agent.base === 'rapids') {
           const [x,z] = desk[i++];
-          return { ...agent, ...toWorld(this.features.office, x, z), y:this.features.office.y,
-            yaw:this.features.office.yaw + (z > 0 ? 0 : -.30), town:'Grand Rapids' };
+          const office=this.features.office;
+          return { ...agent, ...toWorld(office,x,z),y:office.y,
+            yaw:office.yaw+(z>0?0:-.30),town:'Grand Rapids',
+            path:walking[agent.id]?.map(([x,z])=>toWorld(office,x,z)),leg:0,dwell:agent.id==='liz'?7:3.5,steps:0 };
         }
         if (lot) {
           const place = toWorld(lot, agent.id === 'matt' ? 4.2 : -2.65, -lot.d / 2 - 3.2);
@@ -186,8 +212,9 @@
     }
 
     makeFeatures() {
-      const mesh = new Mesh();
+      const meshes = [];
       for (const lot of Object.values(this.features)) {
+        const mesh = new Mesh();
         mesh.at(lot.x, lot.y, lot.z, lot.yaw, () => Models.featured(mesh, lot));
         const nearDoor = lot.type === 'office' ? 1.62 : 1.04;
         const wallSize = (lot.w - nearDoor) / 2;
@@ -199,7 +226,8 @@
             partition, .17);
         }
         this.obstacle(lot, 0, lot.d / 2 - .1, lot.w, .21);
-        this.obstacle(lot, nearDoor / 2 - .026, -lot.d / 2 + nearDoor * .46, .055, nearDoor * .92);
+        if (lot.type === 'office') this.obstacle(lot,1.57,-lot.d/2-.08,1.49,.13);
+        else this.obstacle(lot, nearDoor / 2 - .026, -lot.d / 2 + nearDoor * .46, .055, nearDoor * .92);
         if (lot.type === 'office') {
           this.obstacle(lot, 3.72, -1.93, 2.50, .93);
           this.obstacle(lot, -.1, 3.2, 3.34, 1.22);
@@ -211,9 +239,12 @@
         }
         const asphalt = lot.type === 'cabin' ? M.gravel : M.asphalt;
         this.driveway(mesh, lot, asphalt);
+        meshes.push({x:lot.x,z:lot.z,radius:25,mesh:this.renderer.upload(mesh)});
       }
-      this.bridge(mesh);
-      return this.renderer.upload(mesh);
+      const bridge = new Mesh();
+      this.bridge(bridge);
+      if (this.bridgeDeck) meshes.push({...this.bridgeDeck,radius:60,mesh:this.renderer.upload(bridge)});
+      return meshes;
     }
 
     driveway(mesh, lot, material) {
@@ -309,19 +340,36 @@
         const road = this.geo.nearest(x,z,13);
         if (!road || road.distance + radius > road.segment.width / 2 + .55) return false;
       }
+      if (this.collides(x,z,radius)) return false;
+      if (driving) {
+        if (Object.values(this.features).some((lot) => contains(lot,x,z,.5))) return false;
+        if (this.roadBlocker(x,z)) return false;
+      }
+      return true;
+    }
+
+    collides(x,z,radius) {
       for (const { site } of this.doors) {
         if (this.unlocked.has(site.id) || Math.hypot(site.x-x,site.z-z) > site.d) continue;
         const [px,pz] = local(site,x,z);
-        if (Math.abs(px) < .54+radius && Math.abs(pz+site.d/2) < .11+radius) return false;
+        if (Math.abs(px) < .54+radius && Math.abs(pz+site.d/2) < .11+radius) return true;
       }
-      if (this.obstacles.at(x,z).some((box) => contains(box,x,z,radius))) return false;
-      const tile = this.tiles.get(Math.floor(x / CHUNK) + ',' + Math.floor(z / CHUNK));
-      if (tile?.boxes.some((box) => contains(box,x,z,radius))) return false;
-      if (driving) {
-        if (Object.values(this.features).some((lot) => contains(lot,x,z,.5))) return false;
-        if (this.traffic.some((car) => Math.hypot(x-car.x,z-car.z) < 2.25)) return false;
+      if (this.obstacles.at(x,z).some((box) => contains(box,x,z,radius))) return true;
+      const margin = radius+10;
+      for (let i=Math.floor((x-margin)/CHUNK);i<=Math.floor((x+margin)/CHUNK);i++) {
+        for (let j=Math.floor((z-margin)/CHUNK);j<=Math.floor((z+margin)/CHUNK);j++) {
+          const tile = this.tiles.get(ND.key(i,j));
+          if (tile?.boxes.some((box) => contains(box,x,z,radius))) return true;
+        }
       }
-      return true;
+      return false;
+    }
+
+    cameraDistance(x,z,dx,dz,distance) {
+      for (let at=.15; at<=distance; at+=.15) {
+        if (this.collides(x+dx*at,z+dz*at,.19)) return Math.max(0,at-.18);
+      }
+      return distance;
     }
 
     terrain(mesh, x0, z0, size, steps, background) {
@@ -441,7 +489,8 @@
       const mesh = new Mesh();
       const boxes = [];
       const random = rng(ix * 84479 + iz * 58169 + 17);
-      this.terrain(mesh,x0,z0,CHUNK,16,false);
+      const low = this.renderer.low;
+      this.terrain(mesh,x0,z0,CHUNK,low?12:16,false);
       const segments = this.geo.roads.area(x0-11,z0-11,x0+CHUNK+11,z0+CHUNK+11);
       this.drawRoads(mesh,segments,x0,z0,urban);
       if (urban) {
@@ -454,7 +503,7 @@
             if (!road || road.segment.type === 3 || road.distance < road.segment.width/2+8) continue;
             const yaw = Math.atan2(road.x-x, z-road.z);
             let shape;
-            mesh.at(x,this.geo.height(x,z),z,yaw,() => { shape = Models.house(mesh,random,dense); });
+            mesh.at(x,this.geo.height(x,z),z,yaw,() => { shape = Models.house(mesh,random,dense,low); });
             boxes.push({ x,z,yaw,...shape });
           }
         }
@@ -470,8 +519,8 @@
           const h = (urban ? 4.7 : 5.6) + random()*(urban ? 9 : 12);
           const y = this.geo.height(x,z);
           const birch = random() < (urban ? .36 : .17);
-          mesh.at(x,y,z,random()*6.28,() => (birch ? Models.birch : Models.pine)(mesh,h,random));
-          if (urban || dist < 4500) {
+          mesh.at(x,y,z,random()*6.28,() => (birch ? Models.birch : Models.pine)(mesh,h,random,low));
+          if (!low && (urban || dist < 4500)) {
             softShadow(mesh,x-h*.22,z+h*.28,h*.16,h*.13,(a,b) => this.geo.height(a,b)+.031);
           }
           boxes.push({ x,z,yaw:0,w:Math.max(.34,h*.055),d:Math.max(.34,h*.055) });
@@ -504,6 +553,17 @@
         for (let j = -1; j <= 1; j++) this.buildBackdrop(bx+i,bz+j);
       }
       this.traffic = [];
+      this.deer=null;
+      this.wildlifeTimer=6.5;
+    }
+
+    refreshQuality(x,z) {
+      const {traffic,deer,wildlifeTimer}=this;
+      for (const tile of this.tiles.values()) this.renderer.release(tile.mesh);
+      this.tiles.clear();
+      this.recent = null;
+      this.warm(x,z);
+      Object.assign(this,{traffic,deer,wildlifeTimer});
     }
 
     stream(x,z) {
@@ -513,16 +573,17 @@
       const tileId = at.x0 + ',' + at.z0;
       if (tileId !== this.recent) {
         this.recent = tileId;
+        const reach = this.renderer.low ? 1 : 3;
         const near = [];
-        for (let i = -3; i <= 3; i++) {
-          for (let j = -3; j <= 3; j++) {
+        for (let i = -reach; i <= reach; i++) {
+          for (let j = -reach; j <= reach; j++) {
             if (Math.hypot(i,j) > 3.65) continue;
             if (!this.tiles.has(ND.key(at.x0+i,at.z0+j))) near.push([at.x0+i,at.z0+j,i*i+j*j]);
           }
         }
         this.pending = near.sort((a,b) => a[2]-b[2]);
         for (const [id,tile] of this.tiles) {
-          if (Math.abs(tile.ix-at.x0) <= 4 && Math.abs(tile.iz-at.z0) <= 4) continue;
+          if (Math.abs(tile.ix-at.x0) <= reach+1 && Math.abs(tile.iz-at.z0) <= reach+1) continue;
           this.renderer.release(tile.mesh);
           this.tiles.delete(id);
         }
@@ -538,6 +599,7 @@
         this.buildTile(i,j);
       } else {
         for (const [i,j] of [[0,0],[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,1],[-1,1],[1,-1],[-2,0],[2,0],[0,-2],[0,2]]) {
+          if (this.renderer.low && (Math.abs(i)>1 || Math.abs(j)>1)) break;
           if (this.backdrops.has(ND.key(cx+i,cz+j))) continue;
           this.buildBackdrop(cx+i,cz+j);
           break;
@@ -545,24 +607,57 @@
       }
     }
 
-    actor(id) {
-      if (!this.actorMeshes.has(id)) this.actorMeshes.set(id, this.renderer.upload(Models.person(ND.agents[id])));
-      return this.actorMeshes.get(id);
+    actor(id,pose = 0) {
+      const key=id+':'+pose;
+      if (!this.actorMeshes.has(key)) this.actorMeshes.set(key,this.renderer.upload(Models.person(ND.agents[id],pose)));
+      return this.actorMeshes.get(key);
+    }
+
+    updatePeople(player,dt) {
+      for (const person of this.people) {
+        person.walking=false;
+        const separation=Math.hypot(player.x-person.x,player.z-person.z);
+        if (!person.path || player.agent===person.id || separation<2.65 || separation>38) continue;
+        person.dwell-=dt;
+        if (person.dwell>0) continue;
+        const point=person.path[person.leg];
+        const dx=point.x-person.x;
+        const dz=point.z-person.z;
+        const distance=Math.hypot(dx,dz);
+        if (distance<.075) {
+          person.leg=(person.leg+1)%person.path.length;
+          person.dwell=5+person.leg*1.4;
+          continue;
+        }
+        const pace=Math.min(1,dt*.84/distance);
+        if (this.collides(person.x+dx*pace,person.z+dz*pace,.23)) {
+          person.leg=(person.leg+1)%person.path.length;
+          person.dwell=3;
+          continue;
+        }
+        person.x+=dx*pace;
+        person.z+=dz*pace;
+        person.yaw=Math.atan2(dx,-dz);
+        person.steps+=dt*5.6;
+        person.walking=true;
+      }
     }
 
     updateTraffic(player, dt) {
       const s = this.trafficSeed;
       const m = (a,b) => Math.hypot(a.x-b.x,a.z-b.z);
       this.traffic = this.traffic.filter((car) => m(car,player)< 355);
-      if (this.traffic.length < 7 && s() < dt * 3.5) {
+      if (this.traffic.length < (this.renderer.low?5:7) && s() < dt * 3.5) {
         const roads = [...this.geo.roads.area(player.x-310,player.z-310,player.x+310,player.z+310)]
           .filter((road) => road.type <= 2 && road.length > 15);
         const road = roads[Math.floor(s()*roads.length)];
         if (road && m(player,road.a) > 37 && m(player,road.a) < 300 && !this.traffic.some((car) => m(car,road.a) < 15)) {
           const flip = s() < .5;
           const [from,to] = flip ? [road.b,road.a] : [road.a,road.b];
+          const truck=road.type<2 && s()<.30;
           this.traffic.push({ x:from.x,z:from.z,from,to,t:0,type:road.type,
-            model:Math.floor(s()*this.trafficModels.length),yaw:road.heading+(flip?Math.PI:0),speed:0 });
+            model:Math.floor(s()*this.trafficModels.length),yaw:road.heading+(flip?Math.PI:0),speed:0,
+            truck,kind:truck?'logging truck':'traffic',w:truck?2.6:1.9,d:truck?10.8:4.06 });
         }
       }
       for (const car of this.traffic) {
@@ -576,7 +671,7 @@
           return fwd > 0 && fwd < 12 && Math.abs(dx*hz-dz*hx) < 2.3;
         };
         const gap = !ahead(player) && !this.traffic.some((other) => car !== other && ahead(other));
-        const target = gap ? [19,14,9.5][car.type] : 0;
+        const target = gap ? (car.truck?[14,10.5,7]:[19,14,9.5])[car.type] : 0;
         car.speed += (target-car.speed)*Math.min(1,dt*(gap ? 1.5 : 4.5));
         car.t += car.speed*dt;
         const along = Math.min(length,car.t);
@@ -598,23 +693,80 @@
       }
     }
 
+    updateWildlife(car,dt,driving) {
+      const deer=this.deer;
+      if (deer) {
+        deer.age+=dt;
+        const progress=clamp((deer.age-1.05)/4.8,0,1);
+        deer.x=deer.startX+deer.dx*progress;
+        deer.z=deer.startZ+deer.dz*progress;
+        if (deer.age>6.2) this.deer=null;
+        return;
+      }
+      if (!driving || car.speed<4.8) return;
+      this.wildlifeTimer-=dt;
+      if (this.wildlifeTimer>0) return;
+      const [dx,,dz]=angle(car.yaw);
+      const reach=Math.max(43,car.speed*2.8);
+      const road=this.geo.nearest(car.x+dx*reach,car.z+dz*reach,24,(s)=>s.type<2);
+      this.wildlifeTimer=road ? 18+this.trafficSeed()*12 : 3;
+      if (!road) return;
+      const side=this.trafficSeed()<.5?-1:1;
+      const width=road.segment.width/2+3.0;
+      const nx=Math.cos(road.heading)*side*width;
+      const nz=Math.sin(road.heading)*side*width;
+      const startX=road.x+nx;
+      const startZ=road.z+nz;
+      this.deer={x:startX,z:startZ,startX,startZ,dx:-2*nx,dz:-2*nz,
+        yaw:Math.atan2(-nx,nz),age:0,kind:'deer crossing'};
+    }
+
+    roadBlocker(x,z) {
+      if (this.deer && Math.hypot(x-this.deer.x,z-this.deer.z)<1.40) return this.deer;
+      return this.traffic.find((car)=>contains(car,x,z,.86));
+    }
+
+    roadWarning(car) {
+      const [dx,,dz]=angle(car.yaw);
+      const ahead=(point)=>{
+        const x=point.x-car.x,z=point.z-car.z;
+        return x*dx+z*dz>0 && Math.hypot(x,z)<Math.max(52,car.speed*4) && Math.abs(x*dz-z*dx)<12;
+      };
+      if (this.deer && ahead(this.deer)) return 'Deer crossing ahead';
+      if (this.traffic.some((other)=>other.truck && ahead(other))) return 'Logging truck ahead';
+      return '';
+    }
+
     draw(camera, player, car, seconds, showPlayer, carView) {
       const render = this.renderer;
-      for (const tile of this.backdrops.values()) render.draw(tile.mesh);
-      for (const tile of this.tiles.values()) render.draw(tile.mesh);
-      for (const tile of this.backdrops.values()) render.draw(tile.water);
-      render.draw(this.fixedMesh);
+      const tileVisible = (tile,size) => visibleFrom(camera,(tile.ix+.5)*size,(tile.iz+.5)*size,size*.72);
+      const backdrops = [...this.backdrops.values()].filter((tile) => tileVisible(tile,BACKDROP));
+      for (const tile of backdrops) render.draw(tile.mesh);
+      for (const tile of this.tiles.values()) if (tileVisible(tile,CHUNK)) render.draw(tile.mesh);
+      for (const tile of backdrops) render.draw(tile.water);
+      for (const lot of this.fixedMeshes) {
+        if (Math.hypot(lot.x-camera.eye[0],lot.z-camera.eye[2]) < 830 &&
+            visibleFrom(camera,lot.x,lot.z,lot.radius)) render.draw(lot.mesh);
+      }
       for (const { site,mesh } of this.doors) {
         if (!this.unlocked.has(site.id) && Math.hypot(site.x-player.x,site.z-player.z) < 240) render.draw(mesh);
       }
       for (const person of this.people) {
-        if (person.id === player.agent || Math.hypot(person.x-player.x,person.z-player.z) > 105) continue;
+        if (person.id === player.agent || Math.hypot(person.x-player.x,person.z-player.z) > 105 ||
+            !visibleFrom(camera,person.x,person.z,1.6)) continue;
         const d = Math.hypot(person.x-player.x,person.z-player.z);
-        const facing = d < 4.5 ? Math.atan2(player.x-person.x,person.z-player.z) : person.yaw;
-        render.draw(this.actor(person.id),person.x,person.y+Math.sin(seconds*1.9+person.x)*.007,person.z,facing);
+        const facing = !person.walking && d<4.5 ? Math.atan2(player.x-person.x,person.z-player.z) : person.yaw;
+        const pose=person.walking ? [0,1,0,-1][Math.floor(person.steps)%4] : 0;
+        render.draw(this.actor(person.id,pose),person.x,person.y+Math.sin(seconds*1.9+person.x)*.007,person.z,facing);
       }
       for (const other of this.traffic) {
-        render.draw(this.trafficModels[other.model],other.x,this.height(other.x,other.z)+.13,other.z,other.yaw);
+        if (!visibleFrom(camera,other.x,other.z,other.truck?7:3)) continue;
+        render.draw(other.truck?this.truckMesh:this.trafficModels[other.model],
+          other.x,this.height(other.x,other.z)+.13,other.z,other.yaw);
+      }
+      if (this.deer && visibleFrom(camera,this.deer.x,this.deer.z,1.2)) {
+        const d=this.deer;
+        render.draw(this.deerMesh,d.x,this.height(d.x,d.z)+Math.sin(d.age*14)*.036,d.z,d.yaw);
       }
       if (!carView && Math.hypot(car.x-player.x,car.z-player.z) < 340) {
         render.draw(this.suv,car.x,this.height(car.x,car.z)+.13,car.z,car.yaw);

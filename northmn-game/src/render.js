@@ -5,6 +5,18 @@
   const F32 = Float32Array;
   const TAU = 2 * Math.PI;
   const white = [1, 1, 1];
+  const graphicsKey = 'north-desk-graphics';
+
+  function preferredGraphics(gl) {
+    try {
+      const saved = localStorage.getItem(graphicsKey);
+      if (saved === 'low' || saved === 'high') return saved;
+    } catch {}
+    const debug = gl.getExtension('WEBGL_debug_renderer_info');
+    const renderer = debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : '';
+    return /swiftshader|llvmpipe|softpipe|software|warp/i.test(renderer) ||
+      matchMedia('(pointer: coarse)').matches ? 'low' : 'high';
+  }
 
   const SURFACE = Object.freeze({
     asphalt: 0, grass: 1, concrete: 2, siding: 3, shingles: 4, brick: 5,
@@ -165,7 +177,7 @@
       vec3 d = p - uEye;
       float depth = dot(d, uForward);
       gl_Position = vec4(dot(d, uRight) * uLens.x, dot(d, uUp) * uLens.y,
-        depth * 1.00007 - 0.28, depth);
+        depth * 1.000045 - 0.18, depth);
       vPosition = p;
       vNormal = n;
       vColor = aColor;
@@ -177,6 +189,7 @@
   const atmosphere = `
     uniform vec3 uSun, uHaze, uZenith;
     uniform float uDay, uRain, uTime;
+    uniform bool uLow;
     float hash(vec2 p) {
       p = fract(p * vec2(.1031,.11369));
       p += dot(p, p.yx + 19.19);
@@ -228,9 +241,9 @@
       light += vec3(.69,.58,.43) * (shadow * uDay * (1. - uRain * .65));
       vec3 lit = paint * light;
       if (vMaterial == 0) lit *= (1. - uRain * .28);
-      if (vMaterial == 1) lit *= .83 + .29 * noise(vPosition.xz * .048);
+      if (vMaterial == 1 && !uLow) lit *= .83 + .29 * noise(vPosition.xz * .048);
       if (vMaterial == 9) {
-        float glint = pow(max(0., dot(reflect(dir,n),uSun)), 140.);
+        float glint = uLow ? 0. : pow(max(0., dot(reflect(dir,n),uSun)), 140.);
         lit = mix(lit, skyColor(reflect(dir,n)), .23) + glint * .74 * uDay;
       }
       if (vMaterial == -2) {
@@ -265,7 +278,8 @@
       vec3 sky = skyColor(ray);
       float h = max(.028, ray.y);
       vec2 p = ray.xz / (h+.12) * 2.6 + vec2(uTime*.013, uTime*.006);
-      float c = noise(p)*.57 + noise(p*2.09)*.25 + noise(p*4.13)*.13 + noise(p*8.41)*.05;
+      float c = uLow ? noise(p)*.66 + .16 :
+        noise(p)*.57 + noise(p*2.09)*.25 + noise(p*4.13)*.13 + noise(p*8.41)*.05;
       float density = smoothstep(.49-uRain*.31, .77-uRain*.23, c)
         * smoothstep(.017,.13,ray.y);
       vec3 cloud = mix(vec3(.33,.39,.48), vec3(.93,.91,.83), uDay);
@@ -280,16 +294,28 @@
     constructor(canvas) {
       this.canvas = canvas;
       this.gl = canvas.getContext('webgl2', {
-        alpha: false, antialias: true, powerPreference: 'high-performance',
+        alpha: false, antialias: false, powerPreference: 'high-performance',
       });
       if (!this.gl) throw new Error('WebGL 2 is required to render North Desk.');
       const gl = this.gl;
+      this.quality = preferredGraphics(gl);
       this.land = this.program(vertex, fragment);
       this.sky = this.program(skyVertex, skyFragment);
       this.skyVao = gl.createVertexArray();
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       this.createSign();
+    }
+
+    get low() {
+      return this.quality === 'low';
+    }
+
+    setQuality(mode) {
+      if ((mode !== 'high' && mode !== 'low') || this.quality === mode) return false;
+      this.quality = mode;
+      try { localStorage.setItem(graphicsKey,mode); } catch {}
+      return true;
     }
 
     program(vs, fs) {
@@ -386,7 +412,8 @@
 
     resize() {
       const canvas = this.canvas;
-      const scale = Math.min(devicePixelRatio || 1, 1.5, 1920 / (canvas.clientWidth || 1));
+      const scale = this.low ? Math.min(.72, 800/(canvas.clientWidth||1), 500/(canvas.clientHeight||1)) :
+        Math.min(devicePixelRatio || 1, 1.5, 1920 / (canvas.clientWidth || 1));
       const width = Math.max(1, Math.round(canvas.clientWidth * scale));
       const height = Math.max(1, Math.round(canvas.clientHeight * scale));
       if (canvas.width !== width || canvas.height !== height) {
@@ -412,6 +439,7 @@
       gl.uniform1f(u.uDay, atmosphere.day);
       gl.uniform1f(u.uRain, atmosphere.rain);
       gl.uniform1f(u.uTime, time);
+      gl.uniform1i(u.uLow, this.low ? 1 : 0);
     }
 
     begin(camera, seconds, minutes, rain) {
@@ -429,6 +457,8 @@
       };
       color.haze = blend(color.haze, [.54,.62,.67], rain * .64);
       color.zenith = blend(color.zenith, [.38,.47,.55], rain * .66);
+      if (this.low) gl.disable(gl.BLEND);
+      else gl.enable(gl.BLEND);
       gl.clear(gl.DEPTH_BUFFER_BIT);
       gl.disable(gl.DEPTH_TEST);
       gl.bindVertexArray(this.skyVao);
@@ -441,6 +471,7 @@
     }
 
     draw(mesh, x = 0, y = 0, z = 0, yaw = 0) {
+      if (!mesh.count) return;
       const gl = this.gl;
       gl.uniform3f(this.land.uniforms.uOffset, x, y, z);
       gl.uniform2f(this.land.uniforms.uYaw, Math.cos(yaw), Math.sin(yaw));

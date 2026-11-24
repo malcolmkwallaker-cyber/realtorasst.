@@ -6,6 +6,7 @@
   const controls = new Set(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight',
     'ShiftLeft','ShiftRight','Space','KeyE','KeyC','KeyM','KeyP','Escape']);
   const tagMovement = new Set(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight']);
+  const turnRate = 3.05;
   const distance = (a,b) => Math.hypot(a.x-b.x,a.z-b.z);
   const direction = (a,b) => Math.atan2(b.x-a.x,a.z-b.z);
   const mix = (a,b,t) => a+(b-a)*t;
@@ -30,9 +31,14 @@
       this.hudAt = 0;
       this.autoSaveAt = 0;
       this.rain = 0;
+      this.weather = {label:'Clear',intensity:0};
       this.seconds = 0;
       this.transit = false;
       this.tag = null;
+      this.crossing = false;
+      this.frameDirty = true;
+      this.nextDraw = 0;
+      this.lastDraw = 0;
       this.setupScene(this.choice);
       this.attach();
       this.canvas.addEventListener('webglcontextlost',(event) => {
@@ -48,8 +54,8 @@
 
     setupScene(agent) {
       const lot = this.world.features.office;
-      const spawn = ND.toWorld(lot,-1.95,-lot.d/2-4.60);
-      this.player = { ...spawn,yaw:direction(spawn,lot),pitch:-.025,agent,bob:0,stride:0 };
+      const spawn = ND.toWorld(lot,0,-lot.d/2-4.55);
+      this.player = { ...spawn,yaw:direction(spawn,lot.lobby),pitch:.006,agent,bob:0,stride:0 };
       this.car = { ...lot.parking,speed:0 };
       this.cameraY = null;
       this.routeAt = { x:this.player.x,z:this.player.z };
@@ -63,6 +69,8 @@
       byId('resume-game').hidden = !this.saved;
       byId('choose-agent').hidden = false;
       byId('choose-agent').querySelector('strong').textContent = ND.agents[this.choice].name;
+      byId('title-graphics').hidden = false;
+      this.graphicsLabel();
     }
 
     start(resume) {
@@ -75,6 +83,7 @@
       this.walkCamera = this.driveCamera = 0;
       this.cameraY = null;
       this.gps = null;
+      this.frameDirty = true;
       this.ui.close(false);
       if (saved && this.validPoint(saved.player) && this.validPoint(saved.car)) {
         Object.assign(this.player,{ x:saved.player.x,z:saved.player.z,
@@ -89,19 +98,37 @@
         this.world.warm(this.player.x,this.player.z);
       }
       this.syncDoors();
+      if (saved && !this.driving && this.world.collides(this.player.x,this.player.z,.30)) {
+        this.clearFooting();
+      }
       if (saved?.destination) this.setGPS(saved.destination);
       byId('title-screen').hidden = true;
       byId('hud').hidden = false;
       this.canvas.focus({preventScroll:true});
       this.save();
       this.updateHUD(true);
-      if (!resume) this.ui.notice('WASD to move · E to interact · P for phone');
+      if (!resume) this.ui.notice('WASD move · Mouse or arrows look · E interact · P phone · M map');
     }
 
     validPoint(point) {
       const [x0,z0,x1,z1] = this.geo.bounds;
       return point && [point.x,point.z,point.yaw].every(Number.isFinite) &&
         point.x >= x0 && point.x <= x1 && point.z >= z0 && point.z <= z1;
+    }
+
+    clearFooting() {
+      const p=this.player;
+      for (const radius of [.22,.45,.76,1.18,1.78]) {
+        for (let i=0;i<8;i++) {
+          const yaw=i*Math.PI/4;
+          const x=p.x+Math.sin(yaw)*radius;
+          const z=p.z-Math.cos(yaw)*radius;
+          if (this.world.allowed(x,z,.30,false)) {
+            Object.assign(p,{x,z});
+            return;
+          }
+        }
+      }
     }
 
     save() {
@@ -123,11 +150,34 @@
       }
     }
 
-    changed(message) {
+    changed(message,cue) {
       if (message) this.ui.notice(message);
+      if (cue) this.sound.progress(cue);
       this.syncDoors();
       this.save();
       this.updateHUD(true);
+    }
+
+    chooseAgent(id) {
+      this.choice=id;
+      byId('choose-agent').querySelector('strong').textContent=ND.agents[id].name;
+      if (!this.started) return;
+      this.player.agent=id;
+      this.career.state.agent=id;
+      this.frameDirty=true;
+      this.changed('Now playing as '+ND.agents[id].name+'.');
+    }
+
+    graphicsLabel() {
+      byId('title-graphics').querySelector('strong').textContent = this.renderer.low ? 'Low' : 'High';
+    }
+
+    setGraphics(mode) {
+      if (this.renderer.setQuality(mode)) {
+        this.world.refreshQuality(this.player.x,this.player.z);
+        this.frameDirty = true;
+      }
+      this.graphicsLabel();
     }
 
     startTag() {
@@ -137,6 +187,7 @@
       this.keys.clear();
       this.sound.update({ moving:false,driving:false,rain:0,stride:this.player.stride,speed:0,indoors:true,paved:true });
       this.tag = new ND.LaserTag(this.renderer,this.sound);
+      this.frameDirty = true;
       byId('toast').hidden = true;
       byId('rain').hidden = true;
       byId('hud').hidden = true;
@@ -150,6 +201,7 @@
       const { tagged, rivals } = this.tag;
       this.tag.dispose();
       this.tag = null;
+      this.frameDirty = true;
       this.keys.clear();
       if (document.pointerLockElement === this.canvas) document.exitPointerLock();
       byId('tag-hud').hidden = true;
@@ -165,6 +217,8 @@
       byId('start-game').onclick = () => this.ui.newCareer();
       byId('resume-game').onclick = () => this.start(true);
       byId('choose-agent').onclick = () => this.ui.choose();
+      byId('title-graphics').onclick = () => this.ui.graphics();
+      window.addEventListener('resize',() => { this.frameDirty = true; });
       byId('open-map').onclick = () => this.ui.map();
       byId('open-phone').onclick = () => this.ui.phone();
       byId('open-menu').onclick = () => this.ui.pause();
@@ -184,7 +238,7 @@
       window.addEventListener('keydown',(event) => {
         this.ui.trap(event);
         if (event.code === 'Escape') {
-          if (event.repeat || this.transit) return;
+          if (event.repeat || this.transit || this.crossing) return;
           if (this.ui.panel) this.ui.close();
           else if (this.tag) this.endTag(false);
           else if (this.started) this.ui.pause();
@@ -201,9 +255,9 @@
           }
           return;
         }
-        if (!this.started || this.transit || event.altKey || event.metaKey || event.ctrlKey ||
+        if (!this.started || this.transit || this.crossing || event.altKey || event.metaKey || event.ctrlKey ||
           !controls.has(event.code) || /INPUT|SELECT|TEXTAREA/.test(event.target.tagName)) return;
-        if (event.code === 'Space' && event.target.tagName === 'BUTTON' && event.target !== canvas) return;
+        if (event.code === 'Space' && event.target.tagName === 'BUTTON' && !this.driving) return;
         if (this.ui.panel) {
           if ((event.code === 'KeyP' && this.ui.panel === 'phone') || (event.code === 'KeyM' && this.ui.panel === 'map')) {
             event.preventDefault();
@@ -257,7 +311,7 @@
     }
 
     playing() {
-      return this.started && !this.ui.panel && !this.transit && !this.tag && !document.hidden;
+      return this.started && !this.ui.panel && !this.transit && !this.crossing && !this.tag && !document.hidden;
     }
 
     canLook() {
@@ -292,7 +346,7 @@
       const turn = key('ArrowRight')-key('ArrowLeft');
       const forward = Number(key('KeyW')||key('ArrowUp'))-Number(key('KeyS')||key('ArrowDown'));
       const right = key('KeyD')-key('KeyA');
-      p.yaw += turn * dt * 1.9;
+      p.yaw += turn * dt * turnRate;
       const d = Math.hypot(right,forward) || 1;
       const run = key('ShiftLeft') || key('ShiftRight');
       const step = (run?5.8:3.65)*dt/d;
@@ -302,8 +356,8 @@
       const dz = (-cos*forward+sin*right)*step;
       const oldX = p.x;
       const oldZ = p.z;
-      if (dx && this.world.allowed(p.x+dx,p.z,.24,false)) p.x += dx;
-      if (dz && this.world.allowed(p.x,p.z+dz,.24,false)) p.z += dz;
+      if (dx && this.world.allowed(p.x+dx,p.z,.30,false)) p.x += dx;
+      if (dz && this.world.allowed(p.x,p.z+dz,.30,false)) p.z += dz;
       p.stride += Math.hypot(p.x-oldX,p.z-oldZ) * (run ? 4.8 : 5.5);
       p.bob = mix(p.bob,forward||right ? Math.sin(p.stride)*.026 : 0,Math.min(1,dt*13));
     }
@@ -319,12 +373,13 @@
       const limit = paved ? [34,27,18,9][road.segment.type] : 9.1;
       const usable = this.career.state.tank > 0;
       const brake = key('Space') || !usable;
-      const acceleration = (push * (car.speed*push < -.4 ? 12 : 6.8)) * (1-this.rain*.21);
-      car.speed += brake ? -Math.sign(car.speed)*Math.min(Math.abs(car.speed),dt*17) :
+      const grip = 1-(this.weather.snow?.48:this.weather.label==='Rain'?.25:0)*this.rain;
+      const acceleration = push*(car.speed*push<-.4?12:6.8)*grip;
+      car.speed += brake ? -Math.sign(car.speed)*Math.min(Math.abs(car.speed),dt*17*grip) :
         push ? acceleration*dt : -car.speed*Math.min(1,dt*.9);
       car.speed = clamp(car.speed,-7.4,Math.max(limit,car.speed-dt*6));
       car.yaw += steering * Math.sign(car.speed) * Math.min(1,Math.abs(car.speed)/2) * dt *
-        (1.60-Math.min(.93,Math.abs(car.speed)*.027));
+        (1.60-Math.min(.93,Math.abs(car.speed)*.027))*grip;
       const [hx,,hz] = angle(car.yaw);
       const dx = hx * car.speed * dt;
       const dz = hz * car.speed * dt;
@@ -338,6 +393,12 @@
           this.career.drive(move);
         } else {
           car.speed = 0;
+          const obstacle=this.world.roadBlocker(x+hx*nose,z+hz*nose) || this.world.roadBlocker(x,z);
+          if (obstacle && !obstacle.stopped) {
+            obstacle.stopped=true;
+            this.career.day.roadNotes++;
+            this.ui.notice(obstacle.kind==='deer crossing'?'Stopped for a deer crossing.':'Stopped for '+obstacle.kind+' ahead.');
+          }
         }
       }
       if (!usable && push && this.seconds > (this.warnedFuel || 0)) {
@@ -359,6 +420,7 @@
       this.carLook = 0;
       Object.assign(this.player,{x:this.car.x,z:this.car.z,yaw:this.car.yaw,pitch:-.05,bob:0});
       this.cameraY = null;
+      this.canvas.focus({preventScroll:true});
       this.save();
       this.updateHUD(true);
     }
@@ -410,11 +472,33 @@
 
     enterBuilding(lot) {
       if (this.driving) return;
-      const inside = ND.toWorld(lot,-.31,-lot.d/2+(lot.type === 'office' ? 2.31 : 1.73));
-      const focus = lot.type === 'office' ? ND.toWorld(lot,3.62,-3.29) : ND.toWorld(lot,-2.7,-1.9);
-      Object.assign(this.player,{...inside,yaw:direction(inside,focus),pitch:0,bob:0});
-      this.cameraY = null;
-      this.changed();
+      const inside = lot.lobby || ND.toWorld(lot,0,-lot.d/2+2.12);
+      const focus = lot.type === 'office' ? lot.desk : ND.toWorld(lot,-1.6,.18);
+      this.transitionDoor(inside,direction(inside,focus));
+    }
+
+    async transitionDoor(position,yaw) {
+      if (this.crossing) return;
+      this.crossing = true;
+      this.keys.clear();
+      const fade = byId('door-fade');
+      const motion = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+      try {
+        if (motion) {
+          fade.hidden = false;
+          await fade.animate({opacity:[0,1]},{duration:105,fill:'forwards'}).finished;
+        }
+        Object.assign(this.player,{...position,yaw,pitch:0,bob:0});
+        this.cameraY = null;
+        this.canvas.focus({preventScroll:true});
+        this.frameDirty = true;
+        this.changed();
+        if (motion) await fade.animate({opacity:[1,0]},{duration:155,fill:'forwards'}).finished;
+      } finally {
+        fade.hidden = true;
+        for (const animation of fade.getAnimations()) animation.cancel();
+        this.crossing = false;
+      }
     }
 
     walkPoints(lot) {
@@ -422,6 +506,7 @@
         living: ND.toWorld(lot,-lot.w*.27,-lot.d*.28),
         kitchen: ND.toWorld(lot,lot.w*.26,-2.1),
         rear: ND.toWorld(lot,-.30,lot.d*.34),
+        roof: ND.toWorld(lot,-1.28,-lot.d/2-3.78),
       };
     }
 
@@ -444,10 +529,15 @@
         if (d <= radius) picks.push({label,play,score:d+priority});
       };
       if (inOffice) {
-        const title = { lead:'Review the buyer file',title:'Review title and financing',sign:'Sign at the closing table' }[stage];
+        const title = { lead:c.file.side==='seller'?'Review the listing file':'Review the buyer file',
+          title:'Review title and financing',sign:'Sign at the closing table' }[stage];
         if (title) {
-          add(ND.toWorld(o,3.68,-3.05),4.4,title,() => this.ui.desk(),-2.2);
+          add(o.deskApproach,4.4,title,() => this.ui.desk(),-2.2);
         }
+        add(o.threshold,1.75,'Exit North Desk',() => {
+          const outside = ND.toWorld(o,0,-o.d/2-3.44);
+          this.transitionDoor(outside,o.yaw);
+        });
       } else {
         add(o.entry,4.7,'Enter North Desk',() => this.enterBuilding(o),-.6);
       }
@@ -455,11 +545,17 @@
         add(s.entry,4.8,'Check property lockbox',() => this.ui.lockbox(),-2.3);
       }
       if (stage === 'tour') {
-        if (!inListing) add(s.entry,5,'Enter '+s.name,() => this.enterBuilding(s),-2);
-        else {
-          const points = this.walkPoints(s);
-          for (const note of c.file.notes) {
-            if (!r.notes.includes(note[0])) add(points[note[0]],2.9,'Inspect '+note[1].toLowerCase(),() => this.ui.observation(note),-2.6);
+        const points = this.walkPoints(s);
+        const remaining=c.file.notes.filter((note)=>!r.notes.includes(note[0]));
+        if (!inListing && remaining.some((note)=>note[0]!=='roof')) {
+          add(s.entry,5,'Enter '+s.name,() => this.enterBuilding(s),-2);
+        }
+        if (inListing) {
+          add(s.threshold,1.5,'Step outside',() => this.transitionDoor(ND.toWorld(s,0,-s.d/2-2.62),s.yaw));
+        }
+        for (const note of remaining) {
+          if (inListing===(note[0]!=='roof')) {
+            add(points[note[0]],note[0]==='roof'?3.25:2.9,'Inspect '+note[1].toLowerCase(),() => this.ui.observation(note),-2.6);
           }
         }
       }
@@ -486,15 +582,21 @@
       const [x,z] = ND.local(office,p.x,p.z);
       const stage = this.career.record.stage;
       if (['lead','title','sign'].includes(stage) && Math.abs(x)<office.w/2 && Math.abs(z)<office.d/2) {
-        return { ...goal,point:{...ND.toWorld(office,3.68,-3.06),y:office.y,label:goal.title} };
+        return { ...goal,point:office.desk };
+      }
+      if (Math.abs(x)<office.w/2 && Math.abs(z)<office.d/2 && stage === 'booked') {
+        return { ...goal,point:{...office.threshold,y:office.y,label:'Office exit',markerHeight:1.98} };
       }
       if (stage === 'tour') {
         const [sx,sz] = ND.local(site,p.x,p.z);
-        if (Math.abs(sx)<site.w/2 && Math.abs(sz)<site.d/2) {
-          const points = this.walkPoints(site);
-          const [note] = this.career.file.notes.filter((n)=>!this.career.record.notes.includes(n[0]))
-            .sort((a,b)=>distance(p,points[a[0]])-distance(p,points[b[0]]));
-          if (note) return {...goal,point:{...points[note[0]],y:site.y,label:note[1]}};
+        const indoors=Math.abs(sx)<site.w/2 && Math.abs(sz)<site.d/2;
+        const points=this.walkPoints(site);
+        const remaining=this.career.file.notes.filter((note)=>!this.career.record.notes.includes(note[0]));
+        const [note]=remaining.filter((n)=>indoors===(n[0]!=='roof'))
+          .sort((a,b)=>distance(p,points[a[0]])-distance(p,points[b[0]]));
+        if (note) return {...goal,point:{...points[note[0]],y:site.y,label:note[1],markerHeight:1.58}};
+        if (indoors && remaining.some((n)=>n[0]==='roof')) {
+          return {...goal,point:{...site.threshold,y:site.y,label:'Exit for the roof view',markerHeight:1.78}};
         }
       }
       return goal;
@@ -504,9 +606,9 @@
       const id = this.career.file.id;
       const site = this.world.features[id];
       const road = this.geo.route(this.car,site.parking);
-      this.career.book((road?.meters || 0)*ND.MILES*1.37,tomorrow);
+      this.career.book(this.career.driveMinutes((road?.meters||0)*ND.MILES),tomorrow);
       this.setGPS(id);
-      this.changed('Showing booked for '+time(this.career.record.showAt,true)+'.');
+      this.changed('Showing booked for '+time(this.career.record.showAt,true)+'.','booking');
       this.ui.phone('deal');
     }
 
@@ -548,7 +650,7 @@
       this.ui.close(false);
       this.keys.clear();
       byId('transit-destination').textContent = target.label;
-      byId('transit-miles').textContent = miles.toFixed(1)+' mi · '+Math.max(3,Math.round(miles*1.37))+' min';
+      byId('transit-miles').textContent = miles.toFixed(1)+' mi · '+Math.round(this.career.driveMinutes(miles))+' min';
       byId('transit').hidden = false;
       setTimeout(() => {
         this.career.drive(route.meters,true);
@@ -600,7 +702,7 @@
       const pitch = p.pitch;
       const [fx,,fz] = angle(yaw);
       if (this.driving && this.driveCamera === 0) {
-        const back = 7.65 + Math.min(2.4,Math.abs(this.car.speed)*.083);
+        const back = this.world.cameraDistance(p.x,p.z,-fx,-fz,7.65+Math.min(2.4,Math.abs(this.car.speed)*.083));
         const x = p.x-fx*back;
         const z = p.z-fz*back;
         const y = Math.max(this.world.height(x,z)+1.6,ground+3.62);
@@ -609,17 +711,23 @@
       if (this.driving) {
         return ND.frame([p.x+fx*.54,ground+1.76,p.z+fz*.54],yaw,pitch-.073,aspect,Math.PI/3.09);
       }
-      if (this.walkCamera && this.world.allowed(p.x-fx*4.35,p.z-fz*4.35,.21,false)) {
-        const x = p.x-fx*4.35;
-        const z = p.z-fz*4.35;
-        return ND.frame([x,Math.max(ground+2.73,this.world.height(x,z)+1.7),z],
-          yaw,pitch*.66-.21,aspect,Math.PI/3.31);
+      if (this.walkCamera) {
+        const back = this.world.cameraDistance(p.x,p.z,-fx,-fz,4.35);
+        if (back>1.25) {
+          const x = p.x-fx*back;
+          const z = p.z-fz*back;
+          const eye = this.world.inside(x,z) ? 2.22 : 2.73;
+          return ND.frame([x,Math.max(ground+eye,this.world.height(x,z)+1.7),z],
+            yaw,pitch*.66-.21,aspect,Math.PI/3.31);
+        }
       }
       return ND.frame([p.x,ground+1.66+p.bob,p.z],yaw,pitch,aspect,Math.PI/3.04);
     }
 
     updateHUD(quick = false) {
       if (!this.started || this.transit) return;
+      if (!quick && this.seconds < this.hudAt) return;
+      this.hudAt = this.seconds+.16;
       const c = this.career;
       const p = this.player;
       const active = this.nearby();
@@ -632,58 +740,84 @@
       byId('speedometer').hidden = !this.driving;
       byId('speed').textContent = String(Math.round(Math.abs(this.car.speed)*2.23694));
       byId('fuel').textContent = 'Fuel '+Math.round(c.state.tank)+'%';
-      if (!quick && this.seconds < this.hudAt) return;
-      this.hudAt = this.seconds+.23;
+      byId('fuel').classList.toggle('low-fuel',c.state.tank<18);
       const town = this.geo.townFor(p.x,p.z);
       byId('hud-town').textContent = town.name;
       byId('hud-street').textContent = this.labelForRoad;
-      const weather = this.rain > .52 ? 'Rain' : this.rain > .26 ? 'Lake mist' : 'Clear';
-      byId('hud-clock').textContent = time(c.state.minute,true)+' · '+weather;
+      byId('hud-clock').textContent = time(c.state.minute,true)+' · '+this.weather.label;
       byId('hud-agent').textContent = ND.agents[c.state.agent].name;
       byId('hud-cash').textContent = money(c.state.cash);
       const deg = (Math.round(p.yaw*180/Math.PI)%360+360)%360;
       const heading = ['N','NE','E','SE','S','SW','W','NW'][Math.round(deg/45)%8];
       const route = this.gps;
+      const nav=byId('navigation');
+      nav.hidden=!this.driving || !route;
+      if (!nav.hidden) {
+        const next=ND.guidance(route.route,this.car,route.target);
+        byId('nav-arrow').textContent=next.arrow;
+        byId('nav-step').textContent=next.instruction;
+      }
+      const warning=byId('road-warning');
+      const alert=this.driving && (this.world.roadWarning(this.car) || (this.weather.snow?'Snow on the road':''));
+      warning.hidden=!alert;
+      if (alert && warning.textContent!==alert) warning.textContent=alert;
       byId('heading').textContent = heading+' '+String(deg).padStart(3,'0')+'°'+
         (route ? '  ◆ '+(distance(p,route.target)*ND.MILES).toFixed(1)+' MI' : '');
-      this.maps.draw(byId('minimap'),this.mapView({ x:p.x,z:p.z,zoom:this.driving?4.2:2.45,mini:true }));
+      if (quick || this.seconds>=(this.minimapAt||0)) {
+        this.minimapAt = this.seconds+(this.renderer.low?.40:.24);
+        this.maps.draw(byId('minimap'),this.mapView({ x:p.x,z:p.z,zoom:this.driving?4.2:2.45,mini:true }));
+      }
     }
 
     pin(camera) {
       const el = byId('world-pin');
       if (!this.started || this.ui.panel || this.transit) { el.hidden = true; return; }
       const goal = this.goal();
-      const target = this.gps && distance(this.player,this.gps.target)>40 ? this.gps.target : goal.point;
+      const target = this.driving && this.gps && distance(this.player,this.gps.target)>40 ? this.gps.target : goal.point;
       if (!target) { el.hidden = true; return; }
       const d = distance(this.player,target);
-      const xy = ND.project(camera,[target.x,(target.y??this.world.height(target.x,target.z))+2.35,target.z]);
+      const xy = ND.project(camera,[target.x,(target.y??this.world.height(target.x,target.z))+(target.markerHeight??2.35),target.z]);
       if (!xy || d > 900 || xy[0] < .05 || xy[0] > .95 || xy[1] < .09 || xy[1] > .81) {
         el.hidden = true;
         return;
       }
       el.hidden = false;
+      el.classList.toggle('desk-pin',target===this.world.features.office.desk);
       el.style.left = 100*xy[0]+'%';
       el.style.top = 100*xy[1]+'%';
       el.textContent = (target.label || goal.title)+(d>8?' · '+(d<1609?Math.round(d)+' m':(d*ND.MILES).toFixed(1)+' mi'):'');
     }
 
-    rainOverlay() {
+    weatherOverlay() {
       const canvas = byId('rain');
-      if (this.rain < .35) {
+      const snow=this.weather.snow;
+      if (this.rain < .28 || (!snow && this.weather.label!=='Rain') || (!this.driving && this.world.inside(this.player.x,this.player.z))) {
         canvas.hidden = true;
         return;
       }
       canvas.hidden = false;
-      const ratio = Math.min(devicePixelRatio||1,1.45);
+      const ratio = this.renderer.low ? .64 : Math.min(devicePixelRatio||1,1.45);
       const w = Math.round(canvas.clientWidth*ratio);
       const h = Math.round(canvas.clientHeight*ratio);
       if (canvas.width !== w || canvas.height !== h) { canvas.width=w; canvas.height=h; }
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0,0,w,h);
+      if (snow) {
+        ctx.fillStyle='rgba(231,243,246,.61)';
+        const count = this.renderer.low?39:91;
+        for (let i=0;i<count;i++) {
+          const y=(i*2689+this.seconds*(75+i%7*13))%h;
+          const x=(i*2179+this.seconds*(24+i%9*4)+Math.sin(this.seconds*1.2+i)*12+w)%w;
+          ctx.beginPath();
+          ctx.arc(x,y,Math.max(.55,(1+i%4*.43)*ratio),0,Math.PI*2);
+          ctx.fill();
+        }
+        return;
+      }
       ctx.strokeStyle='rgba(220,234,237,'+(this.rain*.19)+')';
       ctx.lineWidth=.8*ratio;
       ctx.beginPath();
-      for (let i=0;i<112;i++) {
+      for (let i=0;i<(this.renderer.low?56:112);i++) {
         const x = (i*6797+this.seconds*55) % w;
         const y = (i*8951+this.seconds*(350+i%7*33)) % h;
         ctx.moveTo(x,y);
@@ -693,23 +827,36 @@
     }
 
     loop(timestamp) {
-      const dt = Math.min(.05,Math.max(.001,(timestamp-(this.last || timestamp))/1000));
+      const dt = Math.min(.15,Math.max(.001,(timestamp-(this.last || timestamp))/1000));
       this.last=timestamp;
       if (document.hidden) { requestAnimationFrame((t) => this.loop(t)); return; }
       this.seconds+=dt;
+      const draw = this.frameDirty || (!this.ui.panel && timestamp>=this.nextDraw);
+      const frameDt = Math.min(.15,(timestamp-(this.lastDraw||timestamp))/1000);
+      if (draw && !this.transit) {
+        const rate = this.renderer.low ? (this.started?30:16) : (this.started?60:30);
+        this.frameDirty = false;
+        this.lastDraw = timestamp;
+        this.nextDraw = timestamp+(1000/rate-1.5);
+      }
       if (this.tag) {
         if (!this.ui.panel) this.tag.tick(dt,this.keys);
-        this.tag.draw();
+        if (draw) this.tag.draw();
         if (this.tag.finished && !this.ui.panel) this.endTag(true);
         requestAnimationFrame((t) => this.loop(t));
         return;
       }
       const active = this.playing();
       if (active) {
-        if (this.driving) this.moveCar(dt);
-        else this.moveFoot(dt);
+        const steps = Math.ceil(dt/.038);
+        for (let i=0;i<steps;i++) {
+          if (this.driving) this.moveCar(dt/steps);
+          else this.moveFoot(dt/steps);
+        }
         this.career.addTime(dt*(this.driving ? .21 : .37));
         this.world.updateTraffic(this.player,dt);
+        this.world.updatePeople(this.player,dt);
+        this.world.updateWildlife(this.car,dt,this.driving);
         if (this.gps && distance(this.player,this.routeAt)>130) {
           const route = this.geo.route(this.player,this.gps.target);
           if (route) this.gps.route=route;
@@ -720,25 +867,23 @@
           this.save();
         }
       }
-      if (this.started) {
+      if (this.started && draw) {
         const p = this.player;
         this.sound.update({moving:active,driving:this.driving,rain:this.rain,stride:p.stride,speed:this.car.speed,
           indoors:this.world.inside(p.x,p.z),paved:!!this.geo.nearest(p.x,p.z,4.4)});
       }
-      if (!this.transit) {
+      if (!this.transit && draw) {
         const p = this.player;
         this.world.stream(p.x,p.z);
         const minutes = this.started ? this.career.state.minute : 549;
         const nearSuperior = p.x>97000 && p.z>42500;
-        const hour = minutes%1440/60;
-        const day = Math.floor(minutes/1440);
-        const wet = day%4===2 ? .74 : nearSuperior ? (hour<11?.43:.24) : day%4===3?.34:0;
-        this.rain = mix(this.rain,wet,Math.min(1,dt*.46));
-        const camera = this.camera(dt);
+        if (this.started) this.weather=this.career.weather(nearSuperior);
+        this.rain = mix(this.rain,this.weather.intensity,Math.min(1,frameDt*.85));
+        const camera = this.camera(frameDt);
         this.renderer.begin(camera,this.seconds,minutes,this.rain);
         const shown = this.started && !this.driving && this.walkCamera && distance(p,{x:camera.eye[0],z:camera.eye[2]})>1;
         this.world.draw(camera,p,this.car,this.seconds,shown,this.driving && this.driveCamera===1);
-        this.rainOverlay();
+        this.weatherOverlay();
         if (this.started && !this.ui.panel) this.updateHUD();
         this.pin(camera);
       }

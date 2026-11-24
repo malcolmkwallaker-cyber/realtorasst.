@@ -4,6 +4,8 @@ North Desk is a 3D real estate career game set in Northern Minnesota. Start at t
 
 Open `index.html` in a browser with WebGL 2. The game loads its assets locally and saves your career in the browser. No install or build is required.
 
+**Choose agent** on the title screen or in Pause shows all 19 agents and their perks. Graphics offers **Low** and **High**. The game defaults to Low on detected software renderers and touch devices. Low caps world rendering at 30 FPS and uses simpler scenery.
+
 ## Controls
 
 | Input | Action |
@@ -20,6 +22,10 @@ Open `index.html` in a browser with WebGL 2. The game loads its assets locally a
 | Esc | Pause or close a window |
 
 Touch screens show movement, turning, camera, and interaction controls. Choose any town or property on the regional map to set a route. **Drive with GPS** advances your clock, mileage, and fuel for longer trips. You can also drive the roads yourself.
+
+When driving yourself, follow the GPS arrow and watch your speed, fuel, and notices for deer, logging trucks, and slick pavement. During a showing, walk to the inspection markers and decide which observations need follow-up. Accurate notes build client trust and can earn a closing bonus.
+
+The Pemberton office seeds your ledger with a fictional $1,650 expense float. Check **Phone → Inbox** for the day's conditions and **Pause → End workday** for a recap with files, showings, offers, closings, mileage, earnings, and trust. The phone ledger also keeps the latest completed day.
 
 Speak to Tanya Sage in the office or select **Tanya’s laser tag** from the pause menu to play her 45-second arcade match against five fictional opponents. Click, press **F**, or tap **Fire** to tag an opponent. Your real estate career pauses during the match.
 
