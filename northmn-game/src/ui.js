@@ -44,6 +44,7 @@
 
     close(focus = true) {
       if (!this.panel) return;
+      this.game.sound.stopVoice();
       this.panel = '';
       this.overlay.hidden = true;
       byId('hud').inert = false;
@@ -88,10 +89,14 @@
       });
     }
 
-    dialog(title, copies, actions = []) {
+    dialog(title, copies, actions = [], speaker) {
+      if (speaker && this.game.sound.enabled) {
+        actions = [...actions,button('Replay voice',() => this.game.sound.speak(speaker))];
+      }
       this.show(title,'dialog','<div class="dialog-copy">' + copies.map((copy) => '<p>'+escape(copy)+'</p>').join('') +
         '</div>' + this.actions(actions));
       this.listen(actions);
+      if (speaker) this.game.sound.speak(speaker);
     }
 
     row(key, title, subtitle, tag = '') {
@@ -115,6 +120,7 @@
       this.rows((id) => {
         game.chooseAgent(id);
         this.close();
+        game.sound.speak(id);
       });
     }
 
@@ -333,6 +339,12 @@
       const f = career.file;
       const real = id === career.state.agent ? (id === 'malcolm' ? 'liz' : 'malcolm') : id;
       const person = ND.agents[real];
+      if (real==='bridger' && onPhone) {
+        this.dialog(person.name,['Bridger is unavailable...'],[
+          button('Back to phone',() => this.phone(advise?'deal':'team'),true),
+        ]);
+        return;
+      }
       const relevant = advise || id === f.advisor;
       const actions = [];
       if (real === 'tanya' && !relevant) actions.push(button('Join Tanya’s laser tag',() => this.tagInvite(),true));
@@ -346,7 +358,24 @@
       }
       actions.push(button(onPhone ? 'Back to phone' : 'Back to work',() => onPhone ? this.phone(relevant ? 'deal' : 'team') : this.close()));
       const lines = ND.conversation(person,career,g.world.features[f.id]);
-      this.dialog(person.name,[person.title,...(relevant?[f.guidance,lines[1]]:lines)],actions);
+      if (relevant) lines.push(f.guidance);
+      this.dialog(person.name,[person.title,...lines],actions,real);
+    }
+
+    waitForBridger() {
+      const g = this.game;
+      const visit = g.career.bridgerVisit;
+      if (!visit.late) return this.person('bridger',false);
+      this.dialog('Bridger is running late',[
+        'He was due at '+time(visit.scheduled,true)+'. His new ETA is '+time(visit.arrival,true)+'.',
+      ],[
+        button('Wait for Bridger',() => {
+          g.career.advanceTo(visit.arrival);
+          g.changed('Bridger finally arrived.');
+          this.person('bridger',false);
+        },true),
+        button('Back to work',() => this.close()),
+      ]);
     }
 
     brotherCash(onPhone = false) {
@@ -387,7 +416,7 @@
           'He looks at the empty envelope and puts it back on the desk.');
       }
       actions.push(button(onPhone?'Back to phone':'Back to work',() => onPhone ? this.phone('team') : this.close()));
-      this.dialog(brother.name,copies,actions);
+      this.dialog(brother.name,copies,actions,brother.id);
     }
 
     refuel() {
@@ -415,6 +444,7 @@
       const career = g.career;
       const f = career.file;
       const r = career.record;
+      const speaker = career.state.agent==='liz' ? 'malcolm' : 'liz';
       if (r.stage === 'lead') {
         const deskAgent = career.role('liz');
         const seller = f.side === 'seller';
@@ -423,7 +453,7 @@
           ' verified the lender’s approval up to '+money(f.limit)+'.';
         this.dialog(seller ? 'New listing file' : 'New buyer file',[intro,f.intake],[
           button('Accept file',() => this.acceptFile(),true),button('Back to work',() => this.close()),
-        ]);
+        ],speaker);
       } else if (r.stage === 'title') {
         this.dialog('Title and lender review', [
           career.role('liz')+' matched the inspection addendum to the contract. '+career.role('joel')+
@@ -433,7 +463,7 @@
           career.title();
           g.changed('Closing scheduled for '+time(r.closeAt,true)+'.');
           this.phone('deal');
-        },true),button('Back to work',() => this.close())]);
+        },true),button('Back to work',() => this.close())],speaker);
       } else if (r.stage === 'sign') {
         this.dialog('Closing table', [
           f.client+' has the final statement and completed the last walkthrough. Funds are ready for disbursement.',
@@ -443,7 +473,7 @@
           g.clearRoute();
           g.changed('Closed · '+money(earned)+' to your ledger.');
           this.phone('ledger');
-        },true),button('Back to work',() => this.close())]);
+        },true),button('Back to work',() => this.close())],speaker);
       } else {
         this.phone('deal');
       }
@@ -466,7 +496,27 @@
         ]);
         return;
       }
-      this.dialog(site.name,[c.file.client+' will meet you at the property '+time(r.showAt,true)+'. The seller sent the access instructions.'],[
+      const rival = c.rivalAtShowing();
+      if (rival) {
+        g.changed();
+        if (rival.impact && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          g.canvas.animate([
+            { transform:'translateX(0)' },{ transform:'translateX(-9px) scale(1.025)' },
+            { transform:'translateX(6px) scale(1.015)' },{ transform:'none' },
+          ],{duration:320});
+          g.sound.arcade(false);
+        }
+        this.dialog(rival.title,[rival.crew+rival.line,rival.minutes+' minutes lost on this showing.'],[
+          button('Continue to the showing',() => this.lockbox(),true),
+          button('Return to parked SUV',() => { this.close(); g.returnToCar(); }),
+        ]);
+        return;
+      }
+      const copies = [c.file.client+' will meet you at the property '+time(r.showAt,true)+'. The seller sent the access instructions.'];
+      if (c.file.advisor==='bridger' && c.state.agent!=='bridger') {
+        copies.push('Bridger is joining the walkthrough and will be fifteen minutes late.');
+      }
+      this.dialog(site.name,copies,[
         button(c.state.minute < r.showAt ? 'Wait and open lockbox' : 'Open lockbox',() => {
           c.openShowing();
           g.changed(c.file.side === 'seller' ? 'Lockbox open. Review the home for the listing.' : 'Lockbox open. Walk the house with the buyer.');
@@ -514,6 +564,9 @@
         },true));
       }
       const copies=[f.report,'Inspection appointment '+time(r.inspectAt,true)+'.'];
+      if (f.advisor==='bridger' && g.career.state.agent!=='bridger') {
+        copies.push('Bridger will arrive fifteen minutes after the inspection begins.');
+      }
       if (r.arcadeSeptic) copies.push('The contractor confirmed the failed septic report and included the work in the estimate.');
       if (f.side==='seller' && credit<f.repair) copies.push('The seller’s minimum leaves '+money(credit)+' for a repair credit.');
       this.dialog('Inspection with '+f.client,copies,actions);
@@ -532,24 +585,24 @@
         button('Back to work',() => this.close()),
       ];
       this.dialog('Tanya’s Laser Tag',[
-        'Play as Tanya with her arcade gun. Tag all five opponents in 45 seconds.',
+        'Good Lord, that scoreboard makes me fit to stab somebody. Step up here, sugar, and tag all five opponents in 45 seconds.',
         'Move with WASD. Aim with the mouse or arrow keys. Click or press F to fire. On touch screens, drag to aim and tap Fire.',
-      ],actions);
+      ],actions,'tanya');
     }
 
     tagResult(count,total) {
       this.dialog(count === total ? 'Tanya wins the match' : 'Match complete',
-        [count+' of '+total+' opponents tagged.'],[
+        [count+' of '+total+' opponents tagged.','Lord have mercy, that timer just about made me lose my religion.'],[
           button('Play again',() => this.game.startTag(),true),
           button('Back to work',() => this.close()),
-        ]);
+        ],'tanya');
     }
 
     graphics() {
       const g = this.game;
       const low = g.renderer.low;
       this.dialog('Graphics',[
-        'Low uses a smaller render size, fewer scenery details, and a 30 FPS cap. High draws more detail and a longer view.',
+        'Low uses a smaller render size, fewer scenery details, and a 30 FPS cap. High adds sun-cast shadows, wave detail, wet pavement reflections, and a longer view.',
       ],[
         button(low?'Low · Active':'Low',() => { g.setGraphics('low'); this.graphics(); },low),
         button(low?'High':'High · Active',() => { g.setGraphics('high'); this.graphics(); },!low),
@@ -563,6 +616,7 @@
       const marks = [['Files accepted',report.files],['Showings',report.showings],['Offers',report.offers],
         ['Closings',report.closings],['Miles driven',report.miles.toFixed(1)],['Net earnings',money(report.net)],
         ['Trust gained','+'+report.trust],['Road delays',report.roadNotes]];
+      if (report.rivals) marks.push(['Rival run-ins',report.rivals]);
       const actions = [next ? button('Start next workday',() => {
         this.close();
         this.notice(g.career.event.title+' · '+g.career.event.detail);

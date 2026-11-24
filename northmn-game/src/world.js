@@ -99,6 +99,36 @@
     return polygon;
   }
 
+  function cutFoundation(polygon, lot) {
+    const cos = Math.cos(lot.yaw);
+    const sin = Math.sin(lot.yaw);
+    const w = lot.w/2-.06;
+    const d = lot.d/2-.06;
+    const corners = [];
+    for (const [nx,nz,limit] of [[cos,sin,w],[-cos,-sin,w],[-sin,cos,d],[sin,-cos,d]]) {
+      if (!polygon.length) break;
+      const inside = [];
+      const outside = [];
+      const distance = (p) => (p[0]-lot.x)*nx+(p[2]-lot.z)*nz-limit;
+      for (let i=0;i<polygon.length;i++) {
+        const a = polygon[(i+polygon.length-1)%polygon.length];
+        const b = polygon[i];
+        const from = distance(a);
+        const to = distance(b);
+        if ((from>0)!==(to>0)) {
+          const t = from/(from-to);
+          const edge = a.map((v,j) => v+(b[j]-v)*t);
+          inside.push(edge);
+          outside.push(edge);
+        }
+        (to>0 ? outside : inside).push(b);
+      }
+      if (outside.length>2) corners.push(outside);
+      polygon = inside;
+    }
+    return corners;
+  }
+
   function softShadow(mesh, x, z, rx, rz, height) {
     const p = [x, height(x, z), z];
     for (let i = 0; i < 11; i++) {
@@ -119,12 +149,15 @@
       this.tiles = new Map();
       this.backdrops = new Map();
       this.obstacles = new Grid(CHUNK);
+      this.paving = new Grid(CHUNK);
       this.features = Object.fromEntries(sites.map((site) => [site.id, this.makeSite(site)]));
       this.unlocked = new Set();
       this.doors = Object.values(this.features).filter((site) => site.type !== 'office').map((site) => ({
         site, mesh:renderer.upload(Models.lockedDoor(site)),
       }));
       this.people = this.makePeople();
+      this.bridger = this.people.find((person) => person.id==='bridger');
+      this.bridgerDesk = {x:this.bridger.x,z:this.bridger.z,yaw:this.bridger.yaw};
       this.townStops = Object.fromEntries(geo.towns.map((town) => [town.name, this.makeStop(town)]));
       this.fixedMeshes = this.makeFeatures();
       this.actorMeshes = new Map();
@@ -154,11 +187,14 @@
       };
       let lot = trySide(site.side);
       if (geo.wet(lot.x, lot.z) || geo.nearest(lot.x, lot.z, 9)) lot = trySide(-site.side);
-      let approach = toWorld(lot, 0, -lot.d / 2 - 1.6);
-      lot.y = geo.height(approach.x, approach.z) + (site.type === 'office' ? .57 : .045);
+      const approach = toWorld(lot,0,-lot.d/2-1.6);
+      const threshold = toWorld(lot,0,-lot.d/2+.42);
+      lot.y = site.type==='office' ? geo.height(approach.x,approach.z)+.57 :
+        Math.max(this.grade(approach.x,approach.z),this.grade(threshold.x,threshold.z))+.045;
       lot.entry = { ...approach, y: lot.y, yaw: lot.yaw + Math.PI, label: lot.name, id: lot.id,markerHeight:1.65 };
-      lot.threshold = toWorld(lot,0,-lot.d/2+.42);
+      lot.threshold = threshold;
       if (lot.type === 'office') {
+        lot.porch = Models.officePorchLayout(lot.w,lot.d);
         lot.lobby = toWorld(lot,0,-lot.d/2+2.45);
         lot.deskApproach = toWorld(lot,3.69,-2.88);
         lot.desk = { ...toWorld(lot,3.41,-2.17),y:lot.y,label:'Liz’s desk',markerHeight:1.56 };
@@ -186,10 +222,11 @@
 
     makePeople() {
       const desk = [[-3.7,-1.08],[2.7,-3.24],[-5.9,2.3],[-5.8,-2.6],[2.05,3.2],
-        [-3.77,4.09],[4.19,-.75],[5.0,-2.72],[-1.52,-1.01],[5.9,-.54],[-2.92,.18]];
+        [-3.77,4.09],[4.19,-.75],[5.0,-2.72],[-1.52,-1.01],[5.9,-.54],[-2.92,.18],[-6.32,-3.67]];
       const walking = {
         liz:[[5.74,-.75],[5.74,-3.16],[5.74,-.75],[4.19,-.75]],
         scotty:[[-1.53,.34],[-.78,.26],[-.92,-1.72],[-1.52,-1.01]],
+        gene:[[-7.31,-3.67],[-6.07,-3.67]],
       };
       let i = 0;
       return ND.roster.map((agent) => {
@@ -233,6 +270,12 @@
           this.obstacle(lot, 3.72, -1.93, 2.50, .93);
           this.obstacle(lot, -.1, 3.2, 3.34, 1.22);
           this.obstacle(lot, -3.6, -2.05, 2.1, .76);
+          const {z,end} = lot.porch;
+          for (const x of [-2.1,2.1]) this.obstacle(lot,x,z+.18,2.10,.17);
+          for (const side of [z+.29,z+1.72]) {
+            this.obstacle(lot,(3.35+end)/2,side,end-3.35,.13);
+          }
+          this.obstacle(lot,-5.70,-lot.d/2-1.0,3.20,1.40);
         } else {
           this.obstacle(lot, -lot.w / 2 + 1.57, -lot.d / 2 + 1.18, 2.63, .82);
           this.obstacle(lot, lot.w / 2 - 1.49, -lot.d / 2 + .5, 2.61, .64);
@@ -251,18 +294,92 @@
     driveway(mesh, lot, material) {
       const park = lot.parking;
       const road = this.geo.nearest(park.x, park.z, 90, (s) => s.name === lot.road.segment.name) || lot.road;
-      const [a,b] = [Math.cos(road.heading) * 2.7, Math.sin(road.heading) * 2.7];
-      const p = (x,z) => [x, this.geo.height(x,z) + .086, z];
-      mesh.quad(p(road.x-a,road.z-b),p(road.x+a,road.z+b),p(park.x+a,park.z+b),p(park.x-a,park.z-b),
-        [.83,.84,.83],material,1.15,3.5);
-      const facing = angle(park.yaw);
-      const f = (across, along) => p(park.x+a*across+facing[0]*along,park.z+b*across+facing[2]*along);
-      mesh.quad(f(-1,4),f(1,4),f(1,-4),f(-1,-4),[.80,.82,.81],material,1.5,2.8);
+      const offset = Math.hypot(park.x-road.x,park.z-road.z) || 1;
+      const shoulder = Math.max(0,road.segment.width/2-.8)/offset;
+      const start = { x:road.x+(park.x-road.x)*shoulder,z:road.z+(park.z-road.z)*shoulder };
+      this.pavedStrip(mesh,start,park,4.3,material,.09);
+      this.pavedStrip(mesh,toWorld(park,0,3.7),toWorld(park,0,-3.7),6.3,material,.115);
       if (lot.type === 'office') {
         for (const s of [-.59,.59]) {
+          const f = (x,z) => {
+            const point = toWorld(park,x*2.7,z);
+            return [point.x,this.pavingHeight(point.x,point.z)+.012,point.z];
+          };
           mesh.quad(f(s,-3.1),f(s+.037,-3.1),f(s+.037,3.15),f(s,3.15), white);
         }
+        return;
       }
+      const front = toWorld(lot,0,-lot.d/2-2.25);
+      const door = { ...toWorld(lot,0,-lot.d/2-.035),height:lot.y };
+      const street = toWorld(lot,0,-lot.d/2-lot.setback+1.5);
+      const walk = lot.type==='cabin' ? M.gravel : M.concrete;
+      this.pavedStrip(mesh,park,front,1.75,walk,.145);
+      this.pavedStrip(mesh,street,front,1.75,walk,.13);
+      this.pavedStrip(mesh,front,door,1.75,walk,.13);
+    }
+
+    grade(x,z) {
+      const geo = this.geo;
+      let y = geo.height(x,z);
+      for (const step of [CHUNK/12,CHUNK/16]) {
+        const left = Math.floor(x/step)*step;
+        const top = Math.floor(z/step)*step;
+        const u = (x-left)/step;
+        const v = (z-top)/step;
+        const b = geo.height(left+step,top);
+        const d = geo.height(left,top+step);
+        const cell = u+v<=1 ? (1-u-v)*geo.height(left,top)+u*b+v*d :
+          (u+v-1)*geo.height(left+step,top+step)+(1-v)*b+(1-u)*d;
+        y = Math.max(y,cell);
+      }
+      return y;
+    }
+
+    pavedStrip(mesh,start,end,width,material,lift) {
+      const dx = end.x-start.x;
+      const dz = end.z-start.z;
+      const length = Math.hypot(dx,dz);
+      if (length<.08) return;
+      const yaw = Math.atan2(dx,-dz);
+      const strip = { x:(start.x+end.x)/2,z:(start.z+end.z)/2,yaw,w:width,d:length,rows:[] };
+      const sections = Math.ceil(length/.68);
+      const sideX = Math.cos(yaw)*width/2;
+      const sideZ = Math.sin(yaw)*width/2;
+      const tint = material===M.concrete ? [.88,.86,.81] : [.83,.84,.83];
+      for (let i=0;i<=sections;i++) {
+        const t = i/sections;
+        const row = [-1,1].map((side) => {
+          const x = start.x+t*dx+side*sideX;
+          const z = start.z+t*dz+side*sideZ;
+          const y = this.grade(x,z)+lift;
+          const blend = end.height===undefined ? 0 : clamp((t-.65)/.35,0,1);
+          return [x,blend ? Math.max(y-lift+.025,y+(end.height-y)*blend) : y,z];
+        });
+        if (i) {
+          const [a,b] = strip.rows[i-1];
+          mesh.quad(a,b,row[1],row[0],tint,material,width/1.9,length/sections/1.9);
+        }
+        strip.rows.push(row);
+      }
+      const radius = Math.hypot(width,length)/2+.02;
+      this.paving.add(strip,strip.x-radius,strip.z-radius,strip.x+radius,strip.z+radius);
+    }
+
+    pavingHeight(x,z) {
+      let y = -Infinity;
+      for (const strip of this.paving.at(x,z)) {
+        const [px,pz] = local(strip,x,z);
+        if (Math.abs(px)>strip.w/2 || Math.abs(pz)>strip.d/2) continue;
+        const s = (strip.d/2-pz)/strip.d*(strip.rows.length-1);
+        const i = Math.min(strip.rows.length-2,Math.floor(s));
+        const u = px/strip.w+.5;
+        const v = s-i;
+        const [[,a],[,b]] = strip.rows[i];
+        const [[,d],[,c]] = strip.rows[i+1];
+        const height = u>=v ? (1-u)*a+(u-v)*b+v*c : (1-v)*a+u*c+(v-u)*d;
+        y = Math.max(y,height);
+      }
+      return y;
     }
 
     bridge(mesh) {
@@ -317,19 +434,31 @@
       return Object.values(this.features).some((lot) => contains(lot,x,z,-.06));
     }
 
+    officeDeck(x,z) {
+      const office = this.features.office;
+      const [px,pz] = local(office,x,z);
+      const {z:front,end,steps} = office.porch;
+      if (Math.abs(px)<=3.36 && pz>=front && pz<=front+2.24) return office.y;
+      if (px>=3.32 && px<=end && pz>=front+.28 && pz<=front+1.73) {
+        return office.y-.58*(px-3.32)/(end-3.32);
+      }
+      for (const [sx,sy,sz,w,h,d] of steps) {
+        if (px>=sx && px<=sx+w && pz>=sz && pz<=sz+d) return office.y+sy+h;
+      }
+      return null;
+    }
+
     height(x, z) {
       if (this.bridgeDeck && contains(this.bridgeDeck,x,z,0)) {
         return Math.max(this.geo.height(x,z),this.bridgeDeck.y);
       }
-      const office = this.features.office;
-      const [side,front] = local(office,x,z);
-      const distance = -office.d/2-front;
-      if (Math.abs(side)<1.11 && distance > 0 && distance < 3.14) {
-        return Math.max(this.geo.height(x,z),office.y-Math.max(0,distance-2.03)*.56);
-      }
+      const deck = this.officeDeck(x,z);
+      if (deck!==null) return deck;
       for (const lot of Object.values(this.features)) {
         if (contains(lot, x, z, .5)) return lot.y;
       }
+      const paving = this.pavingHeight(x,z);
+      if (Number.isFinite(paving)) return paving;
       return this.geo.ground(x,z,!!this.geo.nearest(x,z,8,(s) => s.width >= 6));
     }
 
@@ -343,6 +472,7 @@
       }
       if (this.collides(x,z,radius)) return false;
       if (driving) {
+        if (this.officeDeck(x,z)!==null) return false;
         if (Object.values(this.features).some((lot) => contains(lot,x,z,.5))) return false;
         if (this.roadBlocker(x,z)) return false;
       }
@@ -377,6 +507,8 @@
       const n = size / steps;
       const r = rng(Math.floor(x0 * 1327 + z0 * 263));
       const heights = [];
+      const nearby = Object.values(this.features).map(lot=>({lot,r:Math.hypot(lot.w,lot.d)/2}))
+        .filter(({lot,r})=>lot.x+r>x0 && lot.z+r>z0 && lot.x-r<x0+size && lot.z-r<z0+size);
       for (let j = 0; j <= steps; j++) {
         for (let i = 0; i <= steps; i++) {
           const x = x0 + i * n;
@@ -392,8 +524,24 @@
           const k = j * (steps + 1) + i;
           const [a,b,c,d] = [heights[k],heights[k+1],heights[k+steps+2],heights[k+steps+1]];
           const rocky = Math.abs(c[1]-a[1]) > n * .44;
-          mesh.quad(d,c,b,a,background ? shades[0] : shades[Math.floor(r()*4)],
-            rocky ? M.granite : M.grass, n / 4.8,n / 4.8);
+          const tint = background ? shades[0] : shades[Math.floor(r()*4)];
+          const material = rocky ? M.granite : M.grass;
+          const foundations = nearby.filter(({lot,r})=>
+            lot.x+r>a[0] && lot.z+r>a[2] && lot.x-r<c[0] && lot.z-r<c[2]);
+          if (!foundations.length) {
+            mesh.quad(d,c,b,a,tint,material,n/4.8,n/4.8);
+            continue;
+          }
+          for (const face of [[d,c,b],[d,b,a]]) {
+            let ground = [face];
+            for (const {lot} of foundations) ground = ground.flatMap((part)=>cutFoundation(part,lot));
+            for (const part of ground) {
+              for (let k=1;k<part.length-1;k++) {
+                const corners = [part[0],part[k],part[k+1]];
+                mesh.triangle(...corners,tint,material,corners.map(([x,,z])=>[x/4.8,z/4.8]));
+              }
+            }
+          }
         }
       }
     }
@@ -614,11 +762,26 @@
       return this.actorMeshes.get(key);
     }
 
+    placeBridger(visit) {
+      const bridger = this.bridger;
+      if (bridger.site!==visit.site) {
+        const lot = this.features[visit.site];
+        const point = visit.site==='office' ? this.bridgerDesk :
+          { ...toWorld(lot,3.25,-lot.d/2-2.4), yaw:lot.yaw };
+        Object.assign(bridger,point,{
+          site:visit.site,town:lot.town,y:this.height(point.x,point.z),
+        });
+      }
+      bridger.late = visit.late;
+    }
+
     updatePeople(player,dt) {
+      let wallBump;
       for (const person of this.people) {
         person.walking=false;
         const separation=Math.hypot(player.x-person.x,player.z-person.z);
-        if (!person.path || player.agent===person.id || separation<2.65 || separation>38) continue;
+        const gene=person.id==='gene';
+        if (!person.path || player.agent===person.id || (!gene && separation<2.65) || separation>38) continue;
         person.dwell-=dt;
         if (person.dwell>0) continue;
         const point=person.path[person.leg];
@@ -626,11 +789,13 @@
         const dz=point.z-person.z;
         const distance=Math.hypot(dx,dz);
         if (distance<.075) {
+          const atWall = gene && person.leg===0;
           person.leg=(person.leg+1)%person.path.length;
-          person.dwell=5+person.leg*1.4;
+          person.dwell=gene ? (atWall?.35:3.6) : 5+person.leg*1.4;
+          if (atWall && separation<5.5) wallBump=person;
           continue;
         }
-        const pace=Math.min(1,dt*.84/distance);
+        const pace=Math.min(1,dt*(gene?(person.leg===0?2.65:1.18):.84)/distance);
         if (this.collides(person.x+dx*pace,person.z+dz*pace,.23)) {
           person.leg=(person.leg+1)%person.path.length;
           person.dwell=3;
@@ -639,9 +804,10 @@
         person.x+=dx*pace;
         person.z+=dz*pace;
         person.yaw=Math.atan2(dx,-dz);
-        person.steps+=dt*5.6;
+        person.steps+=dt*(gene?10:5.6);
         person.walking=true;
       }
+      return wallBump;
     }
 
     updateTraffic(player, dt) {
@@ -742,7 +908,7 @@
       const render = this.renderer;
       const tileVisible = (tile,size) => visibleFrom(camera,(tile.ix+.5)*size,(tile.iz+.5)*size,size*.72);
       const backdrops = [...this.backdrops.values()].filter((tile) => tileVisible(tile,BACKDROP));
-      for (const tile of backdrops) render.draw(tile.mesh);
+      render.drawDistantTerrain(backdrops);
       for (const tile of this.tiles.values()) if (tileVisible(tile,CHUNK)) render.draw(tile.mesh);
       for (const tile of backdrops) render.draw(tile.water);
       for (const lot of this.fixedMeshes) {
@@ -752,24 +918,44 @@
       for (const { site,mesh } of this.doors) {
         if (!this.unlocked.has(site.id) && Math.hypot(site.x-player.x,site.z-player.z) < 240) render.draw(mesh);
       }
+      this.drawPeopleAndVehicles(player,car,seconds,showPlayer,carView,
+        (x,z,radius) => visibleFrom(camera,x,z,radius));
+    }
+
+    drawShadows(center, player, car, seconds, showPlayer) {
+      const render = this.renderer;
+      const near = (x,z,radius) => Math.hypot(x-center[0],z-center[2])<123+radius;
+      for (const tile of this.tiles.values()) {
+        if (near((tile.ix+.5)*CHUNK,(tile.iz+.5)*CHUNK,CHUNK*.71)) render.draw(tile.mesh);
+      }
+      for (const lot of this.fixedMeshes) if (near(lot.x,lot.z,lot.radius)) render.draw(lot.mesh);
+      for (const { site,mesh } of this.doors) {
+        if (!this.unlocked.has(site.id) && near(site.x,site.z,9)) render.draw(mesh);
+      }
+      this.drawPeopleAndVehicles(player,car,seconds,showPlayer,false,near);
+    }
+
+    drawPeopleAndVehicles(player, car, seconds, showPlayer, carView, visible) {
+      const render = this.renderer;
       for (const person of this.people) {
-        if (person.id === player.agent || Math.hypot(person.x-player.x,person.z-player.z) > 105 ||
-            !visibleFrom(camera,person.x,person.z,1.6)) continue;
+        if (person.late || person.id === player.agent || Math.hypot(person.x-player.x,person.z-player.z) > 105 ||
+            !visible(person.x,person.z,1.6)) continue;
         const d = Math.hypot(person.x-player.x,person.z-player.z);
-        const facing = !person.walking && d<4.5 ? Math.atan2(player.x-person.x,person.z-player.z) : person.yaw;
+        const facing = !person.walking && d<4.5 && !(person.id==='gene' && person.leg===1) ?
+          Math.atan2(player.x-person.x,person.z-player.z) : person.yaw;
         const pose=person.walking ? [0,1,0,-1][Math.floor(person.steps)%4] : 0;
         render.draw(this.actor(person.id,pose),person.x,person.y+Math.sin(seconds*1.9+person.x)*.007,person.z,facing);
       }
       for (const other of this.traffic) {
-        if (!visibleFrom(camera,other.x,other.z,other.truck?7:3)) continue;
+        if (!visible(other.x,other.z,other.truck?7:3)) continue;
         render.draw(other.truck?this.truckMesh:this.trafficModels[other.model],
           other.x,this.height(other.x,other.z)+.13,other.z,other.yaw);
       }
-      if (this.deer && visibleFrom(camera,this.deer.x,this.deer.z,1.2)) {
+      if (this.deer && visible(this.deer.x,this.deer.z,1.2)) {
         const d=this.deer;
         render.draw(this.deerMesh,d.x,this.height(d.x,d.z)+Math.sin(d.age*14)*.036,d.z,d.yaw);
       }
-      if (!carView && Math.hypot(car.x-player.x,car.z-player.z) < 340) {
+      if (!carView && Math.hypot(car.x-player.x,car.z-player.z)<340 && visible(car.x,car.z,3)) {
         render.draw(this.suv,car.x,this.height(car.x,car.z)+.13,car.z,car.yaw);
       }
       if (showPlayer) {

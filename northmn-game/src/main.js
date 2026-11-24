@@ -7,6 +7,8 @@
     'ShiftLeft','ShiftRight','Space','KeyE','KeyC','KeyM','KeyP','Escape']);
   const tagMovement = new Set(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight']);
   const turnRate = 3.05;
+  const milesPerHour = 2.23694;
+  const topSpeed = 120/milesPerHour;
   const distance = (a,b) => Math.hypot(a.x-b.x,a.z-b.z);
   const direction = (a,b) => Math.atan2(b.x-a.x,a.z-b.z);
   const mix = (a,b,t) => a+(b-a)*t;
@@ -82,6 +84,7 @@
       this.sound.open();
       this.driving = false;
       this.snowContact = false;
+      this.geneTalkAt = 0;
       this.walkCamera = this.driveCamera = 0;
       this.cameraY = null;
       this.gps = null;
@@ -373,15 +376,17 @@
       const steering = Number(key('KeyD')||key('ArrowRight')) - Number(key('KeyA')||key('ArrowLeft'));
       const road = this.geo.nearest(car.x,car.z,13);
       const paved = road && road.distance < road.segment.width/2+1.2;
-      const limit = paved ? [34,27,18,9][road.segment.type] : 9.1;
+      const limit = paved ? [topSpeed,topSpeed,18,9][road.segment.type] : 9.1;
       const coffee = this.career.state.arcade.coffee>0 ? 1.28 : 1;
       const usable = this.career.state.tank > 0;
       const brake = key('Space') || !usable;
       const grip = 1-(this.weather.snow?.48:this.weather.label==='Rain'?.25:0)*this.rain;
-      const acceleration = push*(car.speed*push<-.4?12:6.8)*grip*(push>0?coffee:1);
+      const previousSpeed = car.speed;
+      const thrust = 7.2*(1-.42*Math.max(0,previousSpeed)/topSpeed);
+      const acceleration = push*(previousSpeed*push<-.4?12:thrust)*grip*(push>0?coffee:1);
       car.speed += brake ? -Math.sign(car.speed)*Math.min(Math.abs(car.speed),dt*17*grip) :
         push ? acceleration*dt : -car.speed*Math.min(1,dt*.9);
-      car.speed = clamp(car.speed,-7.4,Math.max(limit*coffee,car.speed-dt*6));
+      car.speed = clamp(car.speed,-7.4,Math.min(topSpeed,Math.max(limit*coffee,previousSpeed-dt*6)));
       car.yaw += steering * Math.sign(car.speed) * Math.min(1,Math.abs(car.speed)/2) * dt *
         (1.60-Math.min(.93,Math.abs(car.speed)*.027))*grip;
       const [hx,,hz] = angle(car.yaw);
@@ -601,7 +606,8 @@
       if (this.nearCar(4.5)) add(this.car,4.5,'Enter SUV',() => this.enterCar(),-.1);
       for (const person of this.world.people) {
         if (person.id === p.agent) continue;
-        add(person,2.3,'Talk to '+person.short,() => g.ui.person(person.id,false),.6);
+        if (person.late) add(person,2.3,'Check for Bridger',() => g.ui.waitForBridger(),.6);
+        else add(person,2.3,'Talk to '+person.short,() => g.ui.person(person.id,false),.6);
       }
       picks.sort((a,b)=>a.score-b.score);
       return picks[0] || null;
@@ -760,15 +766,16 @@
       const yaw = p.yaw+(this.driving ? (this.carLook || 0) : 0);
       const pitch = p.pitch;
       const [fx,,fz] = angle(yaw);
+      const speedFov = this.driving ? Math.abs(this.car.speed)/topSpeed*.24 : 0;
       if (this.driving && this.driveCamera === 0) {
         const back = this.world.cameraDistance(p.x,p.z,-fx,-fz,7.65+Math.min(2.4,Math.abs(this.car.speed)*.083));
         const x = p.x-fx*back;
         const z = p.z-fz*back;
         const y = Math.max(this.world.height(x,z)+1.6,ground+3.62);
-        return ND.frame([x,y,z],yaw,-.22+pitch*.49,aspect,Math.PI/3.0);
+        return ND.frame([x,y,z],yaw,-.22+pitch*.49,aspect,Math.PI/(3.0-speedFov));
       }
       if (this.driving) {
-        return ND.frame([p.x+fx*.54,ground+1.76,p.z+fz*.54],yaw,pitch-.073,aspect,Math.PI/3.09);
+        return ND.frame([p.x+fx*.54,ground+1.76,p.z+fz*.54],yaw,pitch-.073,aspect,Math.PI/(3.09-speedFov));
       }
       if (this.walkCamera) {
         const back = this.world.cameraDistance(p.x,p.z,-fx,-fz,4.35);
@@ -789,6 +796,7 @@
       this.hudAt = this.seconds+.16;
       const c = this.career;
       const p = this.player;
+      this.world.placeBridger(c.bridgerVisit);
       const active = this.nearby();
       const el = byId('interact');
       el.hidden = !active;
@@ -797,7 +805,7 @@
       byId('objective-title').textContent = goal.title;
       byId('objective-detail').textContent = goal.detail;
       byId('speedometer').hidden = !this.driving;
-      byId('speed').textContent = String(Math.round(Math.abs(this.car.speed)*2.23694));
+      byId('speed').textContent = String(Math.round(Math.abs(this.car.speed)*milesPerHour));
       byId('fuel').textContent = 'Fuel '+Math.round(c.state.tank)+'%';
       byId('fuel').classList.toggle('low-fuel',c.state.tank<18);
       const town = this.geo.townFor(p.x,p.z);
@@ -914,14 +922,19 @@
       const active = this.playing();
       if (active) {
         this.career.tickArcade(dt);
-        const steps = Math.ceil(dt/.038);
+        const steps = Math.ceil(dt/(this.driving && Math.abs(this.car.speed)>35 ? .022 : .038));
         for (let i=0;i<steps;i++) {
           if (this.driving) this.moveCar(dt/steps);
           else this.moveFoot(dt/steps);
         }
         this.career.addTime(dt*(this.driving ? .21 : .37));
         this.world.updateTraffic(this.player,dt);
-        this.world.updatePeople(this.player,dt);
+        const wallBump = this.world.updatePeople(this.player,dt);
+        if (wallBump && this.seconds>=this.geneTalkAt) {
+          this.geneTalkAt=this.seconds+18;
+          this.sound.speak(wallBump.id);
+          this.ui.notice('Gene · I only want people who are ready to buy a house in the next five minutes.');
+        }
         this.world.updateWildlife(this.car,dt,this.driving);
         if (this.gps && distance(this.player,this.routeAt)>130) {
           const route = this.geo.route(this.player,this.gps.target);
@@ -946,8 +959,11 @@
         if (this.started) this.weather=this.career.weather(nearSuperior);
         this.rain = mix(this.rain,this.weather.intensity,Math.min(1,frameDt*.85));
         const camera = this.camera(frameDt);
-        this.renderer.begin(camera,this.seconds,minutes,this.rain);
-        const shown = this.started && !this.driving && this.walkCamera && distance(p,{x:camera.eye[0],z:camera.eye[2]})>1;
+        const onFoot = this.started && !this.driving;
+        const castShadows = this.renderer.low ? null : (center) =>
+          this.world.drawShadows(center,p,this.car,this.seconds,onFoot);
+        this.renderer.begin(camera,this.seconds,minutes,this.rain,castShadows);
+        const shown = onFoot && this.walkCamera && distance(p,{x:camera.eye[0],z:camera.eye[2]})>1;
         this.world.draw(camera,p,this.car,this.seconds,shown,this.driving && this.driveCamera===1);
         if (this.started) this.arcade.draw(camera,this.career,this.car,this.seconds,this.driving && this.driveCamera===1);
         this.weatherOverlay();

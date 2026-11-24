@@ -183,15 +183,21 @@
   }
 
 
-  function officePorch(mesh, front, width) {
-    const z = front - 2.16;
+  function officePorchLayout(w,d) {
+    const front = -d/2;
+    const z = front-2.16;
+    const end = w/2+1.9;
+    return { z,end,
+      steps:[[-1.04,-.55,z-.52,2.08,.32,.55],[-1.11,-.62,z-.92,2.22,.24,.43],[-1.24,-.71,z-2.50,2.48,.15,1.68]],
+    };
+  }
+
+  function officePorch(mesh, front, { z,end,steps }) {
     const planks = [.71,.63,.52];
     const painted = c('#83928b');
     const fascia = c('#c3cab9');
     mesh.box(-3.36,-.29,z,6.72,.29,2.24,planks,M.cedar);
-    mesh.box(-1.04,-.55,z-.52,2.08,.32,.55,[.88,.85,.79],M.concrete);
-    mesh.box(-1.11,-.62,z-.92,2.22,.24,.43,[.88,.85,.79],M.concrete);
-    mesh.box(-1.24,-.71,z-2.50,2.48,.15,1.68,[.94,.91,.83],M.concrete);
+    for (const step of steps) mesh.box(...step,[.88,.85,.79],M.concrete);
     for (const side of [-1,1]) {
       mesh.box(side*3.10-.10,0,z+.09,.20,2.27,.20,painted,M.siding);
       mesh.box(side*2.1-1.05,.86,z+.13,2.1,.095,.102,painted,M.siding);
@@ -211,7 +217,6 @@
     beam(mesh,[3.62,2.24,signZ],[0,3.57,signZ],.14,fascia);
     mesh.quad([2.03,2.30,signZ],[-2.03,2.30,signZ],[-2.03,2.96,signZ],[2.03,2.96,signZ],
       ivory,M.sign);
-    const end = width/2+1.9;
     mesh.quad([3.32,0,z+.28],[end,-.58,z+.28],[end,-.58,z+1.73],[3.32,0,z+1.73],planks,M.cedar,3,1);
     for (const k of [z+.29,z+1.72]) {
       beam(mesh,[3.35,.93,k],[end,.35,k],.105,painted);
@@ -220,11 +225,9 @@
         mesh.box(x,y+.019,k-.043,.08,.92,.08,painted,M.siding);
       }
     }
-    for (const x of [-5.7,5.65]) {
-      mesh.box(x-1.60,-.60,front-1.7,3.20,.55,1.40,[.83,.84,.80], M.granite);
-      mesh.box(x-1.54,-.084,front-1.62,3.08,.046,1.22,[.51,.49,.42],M.gravel);
-      for (let i=0;i<3;i++) plant(mesh,x-1+i*.93,-.12,front-.91,.66);
-    }
+    mesh.box(-7.30,-.60,front-1.7,3.20,.55,1.40,[.83,.84,.80],M.granite);
+    mesh.box(-7.24,-.084,front-1.62,3.08,.046,1.22,[.51,.49,.42],M.gravel);
+    for (let i=0;i<3;i++) plant(mesh,-6.7+i*.93,-.12,front-.91,.66);
   }
 
   function featured(mesh, lot) {
@@ -265,7 +268,7 @@
     }
     if (office) {
       roof(mesh, w, d, h, 2.0, [.74,.80,.82]);
-      officePorch(mesh,front,w);
+      officePorch(mesh,front,lot.porch);
       mesh.box(-w / 2 + .23, 2.89, front + .19, w - .46, .062, d - .42, [.84,.83,.78], M.drywall);
       mesh.box(-w / 2 + .23, .075, d / 2 - .28, w - .46, 2.78, .065, [.87,.85,.79], M.drywall);
       for (const x of [-w/2+.239,w/2-.283]) {
@@ -391,7 +394,7 @@
     const top = compact ? 1.39 : 1.74;
     const hood = long * .59;
     const darkTrim = c('#303432');
-    mesh.box(-width, .34, -long, width * 2, base - .34, long * 2, tint);
+    mesh.box(-width, .34, -long, width * 2, base - .34, long * 2, tint,M.paint);
     mesh.box(-width * .97, .30, -long - .079, width * 1.94, .16, .17, darkTrim);
     mesh.box(-width * .96, .29, long - .068, width * 1.92, .16, .17, darkTrim);
     mesh.box(-width * .94, base - .12, -long - .014, width * 1.88, .12, .068, darkTrim);
@@ -402,7 +405,7 @@
       [-width*.73,top,-hood+.57], glass, M.glass);
     mesh.quad([width*.93,base,long-.15], [-width*.93,base,long-.15], [-width*.73,top,long-.49],
       [width*.73,top,long-.49], glass, M.glass);
-    mesh.box(-width*.74, top - .02, -hood+.55, width*1.48, .081, long+hood-.97, tint);
+    mesh.box(-width*.74, top - .02, -hood+.55, width*1.48, .081, long+hood-.97, tint,M.paint);
     for (const side of [-1,1]) {
       const x = side * width;
       mesh.quad([x*.93,base,-hood],[x*.73,top,-hood+.57],[x*.73,top,long-.49],[x*.93,base,long-.15],
@@ -426,22 +429,37 @@
     const mesh = new Mesh();
     const short = agent.style === 'small';
     const longBeard = agent.style === 'bald-long-beard';
-    const h = short ? .78 : agent.id === 'gaige' ? 1.045 : 1;
+    const heavy = agent.style === 'heavy';
+    const carryingTV = agent.id === 'brother-malcolm';
+    const h = short ? .78 : heavy ? 1.065 : agent.id === 'gaige' ? 1.045 : 1;
     const jacket = c(agent.shirt);
     const hair = c(agent.hair);
     const skin = c(agent.skin || '#c69173');
     const denim = c('#384653');
     const shoe = c('#3a3532');
-    const torso = agent.style === 'long' || agent.style === 'bob' || short ? .195 : .215;
+    const torso = heavy ? .363 : agent.style === 'long' || agent.style === 'bob' || short ? .195 : .215;
     for (const side of [-1, 1]) {
-      const x = side * .10;
+      const x = side * (heavy ? .137 : .10);
       const stride = step*side*.15;
-      mesh.ellipsoid(x, .076+Math.max(0,stride)*.28, -.044+stride, .087, .071, .153, shoe, -1, 8, 4);
-      mesh.ellipsoid(x, .47 * h, stride*.47, .091, .37 * h, .091, denim, -1, 8, 4);
-      mesh.ellipsoid(side * (torso + .034), 1.04 * h, -.015-stride*.40, .064, .27 * h, .068, jacket, -1, 8, 5);
-      mesh.ellipsoid(side * (torso + .038), .795 * h, -.026-stride*.67, .048, .078 * h, .041, skin, -1, 8, 5);
+      mesh.ellipsoid(x,.076+Math.max(0,stride)*.28,-.044+stride,heavy?.113:.087,.071,.153,shoe,-1,8,4);
+      const leg = heavy ? .133 : .091;
+      mesh.ellipsoid(x,.47*h,stride*.47,leg,.37*h,leg,denim,-1,8,4);
+      if (carryingTV) {
+        mesh.ellipsoid(side*.239,1.12,-.018,.070,.178,.077,jacket,-1,10,6);
+        beam(mesh,[side*.253,1.002,-.026],[side*.302,1.133,-.269],.095,jacket);
+        mesh.ellipsoid(side*.302,1.147,-.290,.043,.050,.055,skin,-1,8,5);
+      } else {
+        mesh.ellipsoid(side*(torso+.034),1.04*h,-.015-stride*.40,heavy?.105:.064,.27*h,heavy?.11:.068,jacket,-1,8,5);
+        mesh.ellipsoid(side*(torso+.038),.795*h,-.026-stride*.67,heavy?.060:.048,.078*h,.041,skin,-1,8,5);
+      }
     }
-    mesh.ellipsoid(0, 1.067 * h, 0, torso, .313 * h, .131, jacket, -1, 12, 7);
+    mesh.ellipsoid(0,1.067*h,heavy?-.016:0,torso,.313*h,heavy?.246:.131,jacket,-1,12,7);
+    if (carryingTV) {
+      mesh.box(-.305,1.029,-.325,.610,.346,.088,charcoal);
+      mesh.box(-.290,1.051,-.333,.580,.305,.009,c('#2b3b44'),M.glass);
+      mesh.box(-.168,1.108,-.243,.336,.171,.029,c('#45484b'));
+      mesh.box(.260,1.038,-.334,.014,.007,.008,c('#73c4a7'),M.lamp);
+    }
     if (agent.id === 'tanya') {
       const scarf = c('#f1d9b7');
       mesh.ellipsoid(0,1.302,-.036,.083,.067,.089,scarf,-1,10,5);
@@ -483,6 +501,9 @@
     } else if (agent.style === 'beard' || agent.style === 'shortbeard') {
       mesh.ellipsoid(0,1.475*h,-.052,.090,.073,.082,
         agent.style === 'beard' ? c('#261f1c') : c('#9b795c'), -1,12,6);
+    } else if (heavy) {
+      mesh.ellipsoid(0,1.454*h,-.062,.108,.096,.091,c('#8e8e88'),-1,12,7);
+      mesh.ellipsoid(0,1.521*h,-.127,.067,.027,.034,hair,-1,10,5);
     }
     return mesh;
   }
@@ -549,5 +570,6 @@
     return mesh;
   }
 
-  Object.assign(ND, { Models: { beam, featured, house, pine, birch, pole, suv, person, lockedDoor, loggingTruck, deer } });
+  Object.assign(ND, { Models: { beam, featured, house, pine, birch, pole, suv, person, lockedDoor, loggingTruck, deer,
+    officePorchLayout } });
 })();

@@ -5,6 +5,7 @@
     constructor() {
       this.enabled = true;
       this.lastStep = 0;
+      this.voices = new Map();
     }
 
     open() {
@@ -21,7 +22,7 @@
         return node;
       };
       this.master = makeGain(.34);
-      this.rustle = makeGain(.05,this.master);
+      this.rustle = makeGain(.004,this.master);
       this.weather = ctx.createBiquadFilter();
       this.weather.type = 'lowpass';
       this.weather.frequency.value = 270;
@@ -47,7 +48,44 @@
     toggle() {
       this.enabled = !this.enabled;
       if (this.enabled) this.open();
-      else this.context?.suspend().catch(() => {});
+      else {
+        this.stopVoice();
+        this.context?.suspend().catch(() => {});
+      }
+    }
+
+    speak(id) {
+      if (!this.enabled) return;
+      this.open();
+      const ctx = this.context;
+      if (!ctx) return;
+      this.stopVoice();
+      if (!this.voices.has(id)) this.voices.set(id,globalThis.ND.voiceBuffer(ctx,id));
+      const buffer = this.voices.get(id);
+      if (!buffer) return;
+      const source = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      const voice = { source,gain };
+      this.currentVoice = voice;
+      source.buffer = buffer;
+      source.playbackRate.value = .98+Math.random()*.04;
+      gain.gain.value = .76;
+      source.connect(gain).connect(this.master);
+      source.onended = () => {
+        source.disconnect();
+        gain.disconnect();
+        if (this.currentVoice===voice) this.currentVoice = null;
+      };
+      source.start();
+    }
+
+    stopVoice() {
+      const voice = this.currentVoice;
+      if (!voice) return;
+      this.currentVoice = null;
+      const now = this.context.currentTime;
+      voice.gain.gain.setTargetAtTime(0,now,.008);
+      voice.source.stop(now+.04);
     }
 
     step(paved) {
@@ -83,6 +121,7 @@
     }
 
     quiet() {
+      this.stopVoice();
       if (!this.context) return;
       const now = this.context.currentTime;
       this.engine.gain.setTargetAtTime(0,now,.12);

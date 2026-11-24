@@ -9,6 +9,7 @@
   const COIN_VALUE = 20;
   const COFFEE_SECONDS = 10;
   const STAR_SECONDS = 15;
+  const BRIDGER_DELAY = 15;
   const events = [
     { id:'steady', title:'Clear roads', detail:'Normal showing windows and light traffic in the morning.' },
     { id:'snow', title:'Morning flurries', detail:'Snow crossings and shaded pavement stay slick into late morning.' },
@@ -19,12 +20,24 @@
     { id:'contractor', title:'Contractor calls back', detail:'Same-day estimates shorten inspection follow-up.' },
   ];
 
+  const rivalCrews = ['Split Pine Crew','Iron Switch Crew','Last Key Crew','Copper Sign Crew'];
+  const rivalIncidents = [
+    { title:'Showing sign sabotage', minutes:8, trust:-2,
+      line:' flipped your showing sign. The buyer waited at the wrong driveway.' },
+    { title:'A rival tried to poach your buyer', minutes:6, trust:-3,
+      line:' told your buyer the showing was canceled. You spend a few minutes clearing it up.' },
+    { title:'You got jumped', minutes:12, trust:-2, impact:true,
+      line:' surprised you by the driveway. There was a brief scuffle before you got clear.' },
+    { title:'Two rival crews collide', minutes:15, trust:-3, impact:true,
+      line:' and a second crew turned up at the same showing. A scuffle broke out and you waited for them to leave.' },
+  ];
+
   function makeDay(index,seed) {
     let hash = (seed^Math.imul(index,0x9e3779b9)) >>> 0;
     hash = Math.imul(hash^(hash>>>16),0x7feb352d) >>> 0;
     const random=(hash^(hash>>>15))>>>0;
     const event = index===0 ? 0 : index===1 ? 1+random%(events.length-1) : random%events.length;
-    return { index,event,files:0,showings:0,offers:0,closings:0,miles:0,trust:0,roadNotes:0 };
+    return { index,event,files:0,showings:0,offers:0,closings:0,miles:0,trust:0,roadNotes:0,rivals:0 };
   }
 
   function openingEntry() {
@@ -186,6 +199,17 @@
       return this.state.day;
     }
 
+    get bridgerVisit() {
+      const cabin = this.state.files.cabin;
+      const meeting = cabin.stage==='inspection' ? cabin.inspectAt :
+        ['booked','tour'].includes(cabin.stage) ? cabin.showAt : null;
+      const minute = this.state.minute;
+      const atCabin = Number.isFinite(meeting) && minute>=meeting && minute<meeting+75;
+      const scheduled = atCabin ? meeting : this.day.index*DAY+8*60;
+      const arrival = scheduled+BRIDGER_DELAY;
+      return { site:atCabin?'cabin':'office',scheduled,arrival,late:minute<arrival };
+    }
+
     get event() {
       return events[this.day.event] || events[0];
     }
@@ -235,7 +259,8 @@
       if (index===day.index) return;
       const net = this.state.ledger.filter((line)=>line.kind!=='opening' && Math.floor(line.day/DAY)===day.index)
         .reduce((sum,line)=>sum+line.amount,0);
-      if (wrap || net || day.files || day.showings || day.offers || day.closings || day.miles>.01 || day.trust || day.roadNotes) {
+      if (wrap || net || day.files || day.showings || day.offers || day.closings || day.miles>.01 ||
+          day.trust || day.roadNotes || day.rivals) {
         this.state.recaps.push({...day,net});
         if (this.state.recaps.length>21) this.state.recaps.shift();
       }
@@ -347,6 +372,21 @@
       this.record.showAt = tomorrow || next >= open+this.showingEnd-9*60 ? open+DAY : next;
       this.record.stage = 'booked';
       this.addTime(3);
+    }
+
+    rivalAtShowing() {
+      const r = this.record;
+      if (r.stage!=='booked' || !Number.isFinite(r.showAt) || r.rivalVisit===r.showAt) return null;
+      const fileNumber = files.indexOf(this.file)+1;
+      const roll = ND.rng(this.state.seed^Math.imul(r.showAt,0x9e3779b9)^Math.imul(fileNumber,0x85ebca6b));
+      if (roll()>=.48) return null;
+      const incident = rivalIncidents[Math.floor(roll()*rivalIncidents.length)];
+      const crew = rivalCrews[Math.floor(roll()*rivalCrews.length)];
+      r.rivalVisit = r.showAt;
+      this.day.rivals++;
+      this.trust(incident.trust);
+      this.addTime(incident.minutes);
+      return { ...incident,crew };
     }
 
     openShowing() {

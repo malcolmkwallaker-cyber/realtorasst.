@@ -24,6 +24,7 @@
     tania: ['Range local','Earn extra client trust for walkthroughs in Hibbing and Hoyt Lakes.',{markets:['range','hoyt'],marketTrust:5}],
     tanya: ['Listing packet','Write each walkthrough note in three minutes.',{noteTime:3}],
     'brother-malcolm': ['Twin’s cut','Pocket $125 from the North Desk expense float once per career.',{floatCash:125}],
+    gene: ['Five-minute buyer','Review a new file in five minutes.',{intake:5}],
   };
 
   const team = [
@@ -34,7 +35,7 @@
     ['bethany', 'Bethany Leadley', 'Buyer care', '#bda37d', '#526759', 'long', 'rapids',
       'Give them a time you’ll call back. That helps more than telling them there’s nothing to worry about.'],
     ['bridger', 'Bridger Hopkins', 'Pricing and comps', '#a5492e', '#344a5a', 'red', 'rapids',
-      'I pulled the last three closes. Look at the condition adjustments. I’d rather explain a number once than defend it all week.'],
+      'You may applaud now. I brought the best comps in the county and gave the room time to miss me. Look at the condition adjustments.'],
     ['deb', 'Deb Danley', 'Relocation and travel', '#b8a27b', '#4a716e', 'bob', 'range',
       'Give them the drive time in both directions. A half hour in July can look different after a January storm.'],
     ['emily', 'Emily Lutz', 'Online buyer leads', '#d9b76c', '#80556c', 'long', 'rapids',
@@ -52,7 +53,7 @@
     ['liz', 'Liz Rein', 'Chief operating officer', '#584134', '#536b77', 'bob', 'rapids',
       'Good morning. Check the file with your name on it. For every contingency I want a date and someone responsible for it.'],
     ['matt', 'Matt Huebscher', 'Fixers and home services', '#33323a', '#495361', 'bald-long-beard', 'range',
-      'The photos look great. I’d still separate the work you can price today from what’s behind the walls.'],
+      'Arrgh! Those fancy listing photos won’t keep this deal afloat. Get me prices for the work we can see before we start guessing what’s behind the walls.'],
     ['parker', 'Parker Pemberton', 'CEO', '#bc8159', '#324358', 'short', 'rapids',
       'Call the office if a file stalls. We’ve got people who can help with title, lending, and marketing.'],
     ['bekkah', 'Rebekkah Anderson', 'Commercial property and grant research', '#ccac6c', '#906850', 'long', 'tower',
@@ -64,9 +65,11 @@
     ['tania', 'Tania Suonvieri', 'Iron Range market', '#c9ab73', '#754340', 'bob', 'range',
       'I know this block. If they’re comparing that place in Chisholm, remind them to look at the two condition reports.'],
     ['tanya', 'Tanya Sage', 'Listing coordinator', '#794735', '#78917c', 'long', 'rapids',
-      'Come on in, honey. I’ve got the disclosures ready and a fresh pot of coffee. Tell me what would make your day a little easier.'],
+      'Come on in, sugar. If that printer eats one more disclosure, I swear I’m gonna stab somebody. Now, y’all tell me what’s holding up this file.'],
     ['brother-malcolm', 'Brother Malcolm', 'Malcolm’s evil twin', '#302522', '#584257', 'short', 'rapids',
-      'My brother and I keep score differently. I like to leave the office with more than I came in with.', '#76503d'],
+      'My brother and I keep score differently. The TV? Let’s just say I like to leave this office with more than I came in with.', '#76503d'],
+    ['gene', 'Gene', 'Zillow lender', '#a9a9a4', '#637688', 'heavy', 'rapids',
+      'I only want people who are ready to buy a house in the next five minutes. I was just on the phone with that wall, actually.'],
   ].map(([id, name, title, hair, shirt, style, base, line, skin]) => ({
     id, name, title, hair, shirt, style, base, line, skin,
     short: id === 'bekkah' ? 'Bekkah' : id === 'brother-malcolm' ? name : name.split(' ')[0],
@@ -88,6 +91,24 @@
       'It was clear up the hill and fog by the lake. Leave a little room in the showing schedule.',
       'The hill looks short on the map. Let the clients see how they’d actually park.',
       'The Lift Bridge traffic can make the whole afternoon run ten minutes late.',
+    ],
+  };
+
+  const personalBanter = {
+    bridger: [
+      'I’m fifteen minutes late because an entrance like mine needs a little suspense.',
+      'If my name is going in the pricing report, make it the biggest thing on the page.',
+      'I corrected three comps before breakfast. If anyone asks, yes, I do accept applause in the hallway.',
+    ],
+    tanya: [
+      'Bless your heart, those signatures are in the wrong spots again. I am fixin’ to holler till the whole town hears me.',
+      'Lord, that lockbox has me mad enough to chew nails. Put the right code in the file, honey.',
+      'Y’all, this cold coffee has me about to pitch a fit. Bring me the closing folder before I start fussin’ at the clock.',
+    ],
+    gene: [
+      'I put a five-minute timer on the pre-approval. I don’t remember if it was set to minutes or potatoes.',
+      'I thought the wall was a door. Zillow should really put that in the listing remarks.',
+      'I pre-approved myself for the break room. We’re just waiting for the microwave to sign.',
     ],
   };
 
@@ -121,7 +142,8 @@
         closed: 'You got '+name+' all the way to the keys. Go grab a bar from the break room.',
       },
     };
-    const regional = townBanter[person.base] || townBanter[person.town === 'Grand Rapids'?'rapids':'range'];
+    const regional = personalBanter[person.id] || townBanter[person.base] ||
+      townBanter[person.town === 'Grand Rapids'?'rapids':'range'];
     const stages = ['lead','schedule','booked','tour','offer','counter','inspection','title','sign','closed'];
     const index = (career.day.index+career.closed+stages.indexOf(r.stage))%regional.length;
     const line = topics[person.id]?.[r.stage] || (person.id === file.staff && r.stage === 'lead' ?
