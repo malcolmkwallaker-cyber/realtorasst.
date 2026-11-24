@@ -236,14 +236,14 @@
         canvas.focus({preventScroll:true});
         if (this.tag && event.pointerType === 'mouse' && event.button === 0) this.tag.fire();
         if (document.pointerLockElement === canvas) return;
+        canvas.setPointerCapture(event.pointerId);
+        drag = {cx:event.clientX,cy:event.clientY};
         if (event.pointerType === 'mouse' && event.button === 0 && canvas.requestPointerLock) {
           try {
             const lock = canvas.requestPointerLock();
             lock?.catch(() => {});
           } catch {}
         }
-        canvas.setPointerCapture(event.pointerId);
-        drag = {cx:event.clientX,cy:event.clientY};
       };
       canvas.onpointermove = (event) => {
         if (document.pointerLockElement === canvas || !drag || !this.canLook()) return;
