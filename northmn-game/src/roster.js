@@ -51,7 +51,7 @@
       'I know a guy who can get you a real estimate. Bring me the well disclosure first.'],
     ['liz', 'Liz Rein', 'Chief operating officer', '#584134', '#536b77', 'bob', 'rapids',
       'Good morning. Check the file with your name on it. For every contingency I want a date and someone responsible for it.'],
-    ['matt', 'Matt Huebscher', 'Fixers and home services', '#33323a', '#495361', 'beard', 'range',
+    ['matt', 'Matt Huebscher', 'Fixers and home services', '#33323a', '#495361', 'bald-long-beard', 'range',
       'The photos look great. I’d still separate the work you can price today from what’s behind the walls.'],
     ['parker', 'Parker Pemberton', 'CEO', '#bc8159', '#324358', 'short', 'rapids',
       'Call the office if a file stalls. We’ve got people who can help with title, lending, and marketing.'],

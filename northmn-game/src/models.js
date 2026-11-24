@@ -425,6 +425,7 @@
   function person(agent,step = 0) {
     const mesh = new Mesh();
     const short = agent.style === 'small';
+    const longBeard = agent.style === 'bald-long-beard';
     const h = short ? .86 : agent.id === 'gaige' ? 1.045 : 1;
     const jacket = c(agent.shirt);
     const hair = c(agent.hair);
@@ -453,8 +454,9 @@
       mesh.ellipsoid(side * .102, 1.55*h, -.004, .024, .043, .025, skin, -1, 6, 4);
       mesh.ellipsoid(side * .040, 1.574*h, -.103, .018, .009, .008, c('#463a33'), -1, 6, 4);
     }
-    if (agent.style === 'bald') {
+    if (agent.style === 'bald' || longBeard) {
       for (const side of [-1,1]) mesh.ellipsoid(side * .087, 1.583*h, .033, .027,.076,.079,hair,-1,8,5);
+      if (longBeard) mesh.ellipsoid(0,1.534*h,.063,.096,.073*h,.063,hair,-1,12,5);
     } else {
       mesh.ellipsoid(0, 1.648*h, .015, .107,.067,.110,hair,-1,12,6);
       if (['long','bob','small'].includes(agent.style)) {
@@ -468,7 +470,17 @@
       }
       mesh.ellipsoid(-.118,1.516*h,-.005,.009,.011,.010,ivory,-1,6,4);
     }
-    if (agent.style === 'beard' || agent.style === 'shortbeard') {
+    if (longBeard) {
+      const beard = c('#392921');
+      const highlights = c('#46352c');
+      mesh.ellipsoid(0,1.395*h,-.093,.128,.166*h,.109,beard,-1,14,8);
+      mesh.ellipsoid(0,1.276*h,-.141,.101,.145*h,.086,beard,-1,14,7);
+      for (const side of [-1,1]) {
+        mesh.ellipsoid(side*.077,1.446*h,-.066,.052,.103*h,.087,beard,-1,10,6);
+        mesh.ellipsoid(side*.048,1.32*h,-.169,.052,.127*h,.064,highlights,-1,10,6);
+        mesh.ellipsoid(side*.027,1.522*h,-.145,.049,.018*h,.036,highlights,-1,8,4);
+      }
+    } else if (agent.style === 'beard' || agent.style === 'shortbeard') {
       mesh.ellipsoid(0,1.475*h,-.052,.090,.073,.082,
         agent.style === 'beard' ? c('#261f1c') : c('#9b795c'), -1,12,6);
     }
