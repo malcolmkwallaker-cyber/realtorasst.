@@ -146,7 +146,9 @@
           html = '<div class="day-brief"><strong>'+escape(career.event.title)+'</strong><p>'+escape(career.event.detail)+'</p></div>'+
             '<div class="rows">'+ND.files.map((f) => {
             const site = g.world.features[f.id];
-            return this.row(f.id,site.name,f.contact+' · '+site.town,status[career.state.files[f.id].stage]);
+            const r = career.state.files[f.id];
+            const stage = r.stage==='lead' && r.arcadeApproval ? 'Pre-approved' : status[r.stage];
+            return this.row(f.id,site.name,f.contact+' · '+site.town,stage);
           }).join('')+'</div>';
           break;
         case 'deal': {
@@ -216,9 +218,14 @@
       const seller = f.side === 'seller';
       let extra = '';
       if (r.stage === 'lead') {
-        extra = seller ? '<p>Review the listing agreement at the Grand Rapids office.</p>' :
-          '<p>Review the client’s intake and preapproval at the Grand Rapids office.</p>';
-        actions.push(navigate('office','Route to office'));
+        if (r.arcadeApproval) {
+          extra = '<p>'+escape(career.role('joel'))+' sent the lender’s pre-approval. You can accept the buyer file here.</p>';
+          actions.push(button('Accept pre-approved buyer',() => this.acceptFile(),true));
+        } else {
+          extra = seller ? '<p>Review the listing agreement at the Grand Rapids office.</p>' :
+            '<p>Review the client’s intake and preapproval at the Grand Rapids office.</p>';
+          actions.push(navigate('office','Route to office'));
+        }
       }
       if (r.stage === 'schedule') {
         const end=time(career.showingEnd);
@@ -396,6 +403,13 @@
       ]);
     }
 
+    acceptFile() {
+      const g = this.game;
+      g.career.accept();
+      g.changed('File accepted · Schedule the showing on your phone.','accept');
+      this.phone('deal');
+    }
+
     desk() {
       const g = this.game;
       const career = g.career;
@@ -407,11 +421,9 @@
         const intro = seller ? f.client+' signed the listing agreement. '+career.role('tanya')+' has the disclosure packet ready.' :
           deskAgent+' hands you the file. '+f.client+' signed the representation agreement. '+career.role('joel')+
           ' verified the lender’s approval up to '+money(f.limit)+'.';
-        this.dialog(seller ? 'New listing file' : 'New buyer file',[intro,f.intake],[button('Accept file',() => {
-          career.accept();
-          g.changed('File accepted · Schedule the showing on your phone.','accept');
-          this.phone('deal');
-        },true),button('Back to work',() => this.close())]);
+        this.dialog(seller ? 'New listing file' : 'New buyer file',[intro,f.intake],[
+          button('Accept file',() => this.acceptFile(),true),button('Back to work',() => this.close()),
+        ]);
       } else if (r.stage === 'title') {
         this.dialog('Title and lender review', [
           career.role('liz')+' matched the inspection addendum to the contract. '+career.role('joel')+
@@ -502,8 +514,16 @@
         },true));
       }
       const copies=[f.report,'Inspection appointment '+time(r.inspectAt,true)+'.'];
+      if (r.arcadeSeptic) copies.push('The contractor confirmed the failed septic report and included the work in the estimate.');
       if (f.side==='seller' && credit<f.repair) copies.push('The seller’s minimum leaves '+money(credit)+' for a repair credit.');
       this.dialog('Inspection with '+f.client,copies,actions);
+    }
+
+    warpShack() {
+      const available = ND.arcadeDestinations.filter((name) => this.game.world.townStops[name]);
+      this.dialog('Ice-fishing shack',[
+        'Choose a shortcut. Your SUV comes with you and the workday advances '+ND.shortcutMinutes+' minutes.',
+      ],available.map((name) => button(name,() => this.game.warpTo(name),name===available[0])));
     }
 
     tagInvite() {
@@ -592,7 +612,7 @@
         '<div class="map-buttons"><button type="button" id="zoom-in" aria-label="Zoom in">+</button>'+
         '<button type="button" id="zoom-out" aria-label="Zoom out">−</button>'+
         '<button type="button" id="local-map">My location</button><button type="button" id="all-map">Region</button></div>'+
-        '</div><aside class="map-side"><input id="map-search" class="map-search" type="search" aria-label="Find a town or property" placeholder="Find a town or property">'+
+        '</div><aside class="map-side"><input id="map-search" class="map-search" type="search" aria-label="Find a town, property, or coin run" placeholder="Find a place or coin run">'+
         '<div id="map-route" class="map-route"></div><div id="map-places" class="rows"></div></aside></div>'+
         '<div class="map-source">Street and water data from <a href="https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html" target="_blank" rel="noopener">U.S. Census TIGER/Line</a>. '+
         'Terrain from <a href="https://www.usgs.gov/3d-elevation-program/about-3dep-products-services" target="_blank" rel="noopener">USGS 3DEP</a>.</div>');
@@ -640,6 +660,7 @@
           const pz = z+(e.clientY-rect.top-rect.height/2)*zoom;
           const items = [
             ...Object.values(g.world.features).map((s)=>({x:s.x,z:s.z,id:s.id})),
+            ...Object.values(g.arcade.stops),
             ...g.geo.towns.map((t)=>({x:t.x,z:t.z,id:t.name})),
           ];
           const hit = items.map((p)=>({ id:p.id,d:Math.hypot(p.x-px,p.z-pz) }))
@@ -670,8 +691,9 @@
       const g = this.game;
       const q = byId('map-search').value.trim().toLowerCase();
       const presets = Object.values(g.world.features).map((site) => [site.id,site.name,site.town]);
+      const coinRuns = Object.values(g.arcade.stops).map((stop) => [stop.id,stop.label,stop.town]);
       const towns = g.geo.towns.slice().sort((a,b)=>a.name.localeCompare(b.name)).map((town)=>[town.name,town.name,'']);
-      const matches = [...presets,...towns].filter((p)=>p.slice(1).join(' ').toLowerCase().includes(q));
+      const matches = [...presets,...coinRuns,...towns].filter((p)=>p.slice(1).join(' ').toLowerCase().includes(q));
       byId('map-places').innerHTML = matches.map(([id,label,town]) => '<button type="button" class="row" data-place="'+escape(id)+
         '" aria-current="'+(g.gps?.id===id)+'">'+escape(label)+(town?'<span class="tag">'+escape(town)+'</span>':'')+'</button>').join('') ||
         '<p>No places match.</p>';
@@ -686,7 +708,7 @@
       const selected = g.gps;
       const el = byId('map-route');
       if (!selected) {
-        el.innerHTML = '<p>Select a town or property to set your GPS.</p>';
+        el.innerHTML = '<p>Select a town, property, or coin run to set your GPS.</p>';
         return;
       }
       const miles = selected.route.meters * ND.MILES;

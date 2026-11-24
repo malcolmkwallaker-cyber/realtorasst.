@@ -17,6 +17,7 @@
       this.geo = geo;
       this.renderer = renderer;
       this.world = new ND.World(geo,renderer);
+      this.arcade = new ND.Arcade(this.world);
       this.maps = new ND.MapPainter(geo);
       this.sound = new ND.Soundscape();
       this.keys = new Set();
@@ -80,6 +81,7 @@
       this.started = true;
       this.sound.open();
       this.driving = false;
+      this.snowContact = false;
       this.walkCamera = this.driveCamera = 0;
       this.cameraY = null;
       this.gps = null;
@@ -349,7 +351,8 @@
       p.yaw += turn * dt * turnRate;
       const d = Math.hypot(right,forward) || 1;
       const run = key('ShiftLeft') || key('ShiftRight');
-      const step = (run?5.8:3.65)*dt/d;
+      const coffee = this.career.state.arcade.coffee>0 ? 1.24 : 1;
+      const step = (run?5.8:3.65)*coffee*dt/d;
       const sin = Math.sin(p.yaw);
       const cos = Math.cos(p.yaw);
       const dx = (sin*forward+cos*right)*step;
@@ -371,25 +374,28 @@
       const road = this.geo.nearest(car.x,car.z,13);
       const paved = road && road.distance < road.segment.width/2+1.2;
       const limit = paved ? [34,27,18,9][road.segment.type] : 9.1;
+      const coffee = this.career.state.arcade.coffee>0 ? 1.28 : 1;
       const usable = this.career.state.tank > 0;
       const brake = key('Space') || !usable;
       const grip = 1-(this.weather.snow?.48:this.weather.label==='Rain'?.25:0)*this.rain;
-      const acceleration = push*(car.speed*push<-.4?12:6.8)*grip;
+      const acceleration = push*(car.speed*push<-.4?12:6.8)*grip*(push>0?coffee:1);
       car.speed += brake ? -Math.sign(car.speed)*Math.min(Math.abs(car.speed),dt*17*grip) :
         push ? acceleration*dt : -car.speed*Math.min(1,dt*.9);
-      car.speed = clamp(car.speed,-7.4,Math.max(limit,car.speed-dt*6));
+      car.speed = clamp(car.speed,-7.4,Math.max(limit*coffee,car.speed-dt*6));
       car.yaw += steering * Math.sign(car.speed) * Math.min(1,Math.abs(car.speed)/2) * dt *
         (1.60-Math.min(.93,Math.abs(car.speed)*.027))*grip;
       const [hx,,hz] = angle(car.yaw);
       const dx = hx * car.speed * dt;
       const dz = hz * car.speed * dt;
       const move = Math.hypot(dx,dz);
+      let moved = false;
       if (move) {
         const [x,z] = [car.x+dx,car.z+dz];
         const nose = Math.sign(car.speed)*1.65;
         if (this.world.allowed(x,z,.81,true) && this.world.allowed(x+hx*nose,z+hz*nose,.74,true)) {
           car.x = x;
           car.z = z;
+          moved = true;
           this.career.drive(move);
         } else {
           car.speed = 0;
@@ -409,6 +415,31 @@
       p.z=car.z;
       p.yaw=car.yaw;
       this.carLook = (this.carLook || 0) * (push ? (1-dt*.92) : 1);
+      if (moved) this.checkRoadArcade();
+    }
+
+    collectPrize(prize) {
+      const message = this.career.collectPrize(prize);
+      if (!message) return;
+      this.sound.arcade(prize.kind!=='septic');
+      this.ui.notice(message);
+      this.save();
+    }
+
+    checkRoadArcade() {
+      const prize = this.arcade.roadAt(this.car,this.career);
+      const snow = prize?.kind==='snow' && !this.career.state.arcade.star;
+      if (snow) {
+        if (!this.snowContact) {
+          this.car.speed *= .48;
+          this.career.day.roadNotes++;
+          this.ui.notice('Snowbank · Speed reduced.');
+          this.save();
+        }
+      } else if (prize) {
+        this.collectPrize(prize);
+      }
+      this.snowContact = snow;
     }
 
     nearCar(radius) {
@@ -442,6 +473,7 @@
       if (!outside) { this.ui.notice('Move the SUV to a clear spot.'); return; }
       this.driving = false;
       this.car.speed = 0;
+      this.snowContact = false;
       Object.assign(this.player,{...outside,yaw:this.car.yaw,pitch:0});
       this.cameraY = null;
       this.changed();
@@ -543,7 +575,10 @@
         });
       } else {
         add(o.entry,4.7,'Enter North Desk',() => this.enterBuilding(o),-.6);
+        add(this.arcade.shackDoor,2.1,'Open the ice-fishing shack',() => this.ui.warpShack());
       }
+      const prize = this.arcade.roomAt(p,c);
+      if (prize) add(prize,1.5,'Open mystery block',() => this.collectPrize(prize),-1.4);
       if (stage === 'booked' || (stage === 'schedule' && !r.unlocked)) {
         add(s.entry,4.8,'Check property lockbox',() => this.ui.lockbox(),-2.3);
       }
@@ -584,7 +619,7 @@
       const office = this.world.features.office;
       const [x,z] = ND.local(office,p.x,p.z);
       const stage = this.career.record.stage;
-      if (['lead','title','sign'].includes(stage) && Math.abs(x)<office.w/2 && Math.abs(z)<office.d/2) {
+      if (goal.point && ['lead','title','sign'].includes(stage) && Math.abs(x)<office.w/2 && Math.abs(z)<office.d/2) {
         return { ...goal,point:office.desk };
       }
       if (Math.abs(x)<office.w/2 && Math.abs(z)<office.d/2 && stage === 'booked') {
@@ -617,7 +652,7 @@
 
     setGPS(id, openMap = false) {
       const site = this.world.features[id];
-      const target = site ? site.parking : this.world.townStops[id];
+      const target = site ? site.parking : this.arcade.stops[id] || this.world.townStops[id];
       if (!target) { if (openMap) this.ui.notice('No paved approach is available for this destination.'); return; }
       const route = this.geo.route(this.driving ? this.car : this.player,target);
       if (!route) { this.ui.notice('This destination is outside the road network.'); return; }
@@ -641,7 +676,7 @@
     assistedDrive() {
       if (!this.gps || this.transit) return;
       if (!this.driving && !this.nearCar(12)) return;
-      const { id,target } = this.gps;
+      const { target } = this.gps;
       const route = this.geo.route(this.car,target);
       if (!route) { this.ui.notice('The GPS could not find a route from your SUV.'); return; }
       const miles = route.meters * ND.MILES;
@@ -649,32 +684,53 @@
         this.ui.notice('There isn’t enough fuel for this drive. Arrange fuel from your phone ledger.');
         return;
       }
+      this.travelTo(target,route.end,{
+        mode:'ON THE ROAD',detail:miles.toFixed(1)+' mi · '+Math.round(this.career.driveMinutes(miles))+' min',
+        duration:1750,advance:() => this.career.drive(route.meters,true),
+      });
+    }
+
+    warpTo(name) {
+      const target = this.world.townStops[name];
+      if (this.transit || this.driving || !ND.arcadeDestinations.includes(name) || !target ||
+          distance(this.player,this.arcade.shackDoor)>2.1) return;
+      this.travelTo(target,this.geo.nearest(target.x,target.z,45),{
+        mode:'ICE SHACK SHORTCUT',detail:'SUV comes with you · '+ND.shortcutMinutes+' min',
+        duration:1250,advance:() => this.career.addTime(ND.shortcutMinutes),keepRoute:true,
+      });
+    }
+
+    travelTo(target, fallback, { mode,detail,duration,advance,keepRoute }) {
+      const destination = this.gps?.id;
       this.transit = true;
       this.ui.close(false);
       this.keys.clear();
+      const curtain = byId('transit');
+      curtain.style.setProperty('--trip-duration',duration+'ms');
+      byId('transit-mode').textContent = mode;
       byId('transit-destination').textContent = target.label;
-      byId('transit-miles').textContent = miles.toFixed(1)+' mi · '+Math.round(this.career.driveMinutes(miles))+' min';
-      byId('transit').hidden = false;
+      byId('transit-miles').textContent = detail;
+      curtain.hidden = false;
       setTimeout(() => {
-        this.career.drive(route.meters,true);
+        advance();
         this.world.warm(target.x,target.z);
         let position = target;
-        if (!this.world.allowed(target.x,target.z,.85,true)) {
-          position = { ...target,x:route.end.x,z:route.end.z,yaw:route.end.heading };
+        if (fallback && !this.world.allowed(target.x,target.z,.85,true)) {
+          position = { ...target,x:fallback.x,z:fallback.z,yaw:fallback.heading };
         }
         this.car={ ...position,speed:0 };
         this.enterCar();
-        this.clearRoute();
+        this.gps = null;
         this.transit = false;
-        byId('transit').hidden = true;
+        this.frameDirty = true;
+        curtain.hidden = true;
         this.exitCar();
+        const site = this.world.features[target.id];
+        if (site && !this.driving) this.player.yaw = direction(this.player,site.entry);
+        if (keepRoute && destination && destination!==target.name) this.setGPS(destination);
         this.changed('Arrived · '+target.label+'.');
-        if (this.world.features[id]) {
-          const entry = this.world.features[id].entry;
-          this.player.yaw = direction(this.player,entry);
-        }
         this.canvas.focus({preventScroll:true});
-      },1750);
+      },duration);
     }
 
     mapView(pose) {
@@ -748,6 +804,11 @@
       byId('hud-town').textContent = town.name;
       byId('hud-street').textContent = this.labelForRoad;
       byId('hud-clock').textContent = time(c.state.minute,true)+' · '+this.weather.label;
+      const boost = byId('arcade-status');
+      const { star,coffee } = c.state.arcade;
+      boost.hidden = !star && !coffee;
+      if (!boost.hidden) boost.textContent = (star ? 'Top Producer Star' : 'Caribou Coffee boost')+
+        ' · '+Math.ceil(star||coffee)+'s';
       byId('hud-agent').textContent = ND.agents[c.state.agent].name;
       byId('hud-cash').textContent = money(c.state.cash);
       const deg = (Math.round(p.yaw*180/Math.PI)%360+360)%360;
@@ -761,7 +822,8 @@
         byId('nav-step').textContent=next.instruction;
       }
       const warning=byId('road-warning');
-      const alert=this.driving && (this.world.roadWarning(this.car) || (this.weather.snow?'Snow on the road':''));
+      const alert=this.driving && (this.world.roadWarning(this.car) ||
+        (this.arcade.snowAhead(this.car,c)?'Snowbank ahead':this.weather.snow?'Snow on the road':''));
       warning.hidden=!alert;
       if (alert && warning.textContent!==alert) warning.textContent=alert;
       byId('heading').textContent = heading+' '+String(deg).padStart(3,'0')+'°'+
@@ -851,6 +913,7 @@
       }
       const active = this.playing();
       if (active) {
+        this.career.tickArcade(dt);
         const steps = Math.ceil(dt/.038);
         for (let i=0;i<steps;i++) {
           if (this.driving) this.moveCar(dt/steps);
@@ -886,6 +949,7 @@
         this.renderer.begin(camera,this.seconds,minutes,this.rain);
         const shown = this.started && !this.driving && this.walkCamera && distance(p,{x:camera.eye[0],z:camera.eye[2]})>1;
         this.world.draw(camera,p,this.car,this.seconds,shown,this.driving && this.driveCamera===1);
+        if (this.started) this.arcade.draw(camera,this.career,this.car,this.seconds,this.driving && this.driveCamera===1);
         this.weatherOverlay();
         if (this.started && !this.ui.panel) this.updateHUD();
         this.pin(camera);

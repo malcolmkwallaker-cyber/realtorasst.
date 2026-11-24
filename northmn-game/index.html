@@ -19,6 +19,7 @@
       <span id="hud-town"></span>
       <span id="hud-street"></span>
       <span id="hud-clock"></span>
+      <span id="arcade-status" hidden></span>
     </div>
     <div id="heading" aria-hidden="true"></div>
     <div id="navigation" class="navigation" hidden><strong id="nav-arrow" aria-hidden="true"></strong><span id="nav-step"></span></div>
@@ -107,7 +108,7 @@
   </div>
   <div id="toast" class="toast" role="status" hidden></div>
   <section id="transit" class="transit" hidden>
-    <div><span>ON THE ROAD</span><h2 id="transit-destination"></h2><p id="transit-miles"></p><div class="progress"><i></i></div></div>
+    <div><span id="transit-mode"></span><h2 id="transit-destination"></h2><p id="transit-miles"></p><div class="progress"><i></i></div></div>
   </section>
 </main>
 <script defer src="assets/roads.js"></script>
@@ -129,6 +130,7 @@
 <script defer src="src/ui.js"></script>
 <script defer src="src/sound.js"></script>
 <script defer src="src/laser-tag.js"></script>
+<script defer src="src/arcade.js"></script>
 <script defer src="src/main.js"></script>
 </body>
 </html>

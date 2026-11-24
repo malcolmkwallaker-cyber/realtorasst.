@@ -6,6 +6,9 @@
   const DAY = 1440;
   const OPENING_MINUTE = 8*60+8;
   const OPENING_FLOAT = 1650;
+  const COIN_VALUE = 20;
+  const COFFEE_SECONDS = 10;
+  const STAR_SECONDS = 15;
   const events = [
     { id:'steady', title:'Clear roads', detail:'Normal showing windows and light traffic in the morning.' },
     { id:'snow', title:'Morning flurries', detail:'Snow crossings and shaded pavement stay slick into late morning.' },
@@ -155,6 +158,12 @@
       const index = Math.floor(s.minute/DAY);
       s.day = { ...makeDay(index,s.seed),...(s.day?.index===index?s.day:null) };
       s.recaps ||= [];
+      const arcade = s.arcade;
+      s.arcade = {
+        collected:Array.isArray(arcade?.collected) ? arcade.collected : [],
+        coffee:ND.clamp(Number(arcade?.coffee)||0,0,COFFEE_SECONDS),
+        star:ND.clamp(Number(arcade?.star)||0,0,STAR_SECONDS),
+      };
       for (const file of files) {
         const record = s.files[file.id];
         if (!Number.isFinite(record.trust)) record.trust=50+Math.min(35,record.notes.length*9);
@@ -255,6 +264,63 @@
       const before=this.record.trust;
       this.record.trust=ND.clamp(before+points,0,100);
       this.day.trust+=this.record.trust-before;
+    }
+
+    hasPrize(id) {
+      return this.state.arcade.collected.includes(id);
+    }
+
+    tickArcade(seconds) {
+      const a = this.state.arcade;
+      if (a.coffee>0) a.coffee = Math.max(0,a.coffee-seconds);
+      if (a.star>0) a.star = Math.max(0,a.star-seconds);
+    }
+
+    collectPrize({id,kind}) {
+      if (this.hasPrize(id)) return '';
+      const s = this.state;
+      let message;
+      switch (kind) {
+        case 'coin': {
+          s.cash += COIN_VALUE;
+          const today = s.ledger.find((line) => line.kind==='arcade-coins' && Math.floor(line.day/DAY)===this.day.index);
+          if (today) today.amount += COIN_VALUE;
+          else s.ledger.push({ label:'Commission coins',amount:COIN_VALUE,day:s.minute,kind:'arcade-coins' });
+          message = 'Commission coin · +'+money(COIN_VALUE);
+          break;
+        }
+        case 'coffee':
+          s.arcade.coffee = COFFEE_SECONDS;
+          message = 'Caribou Coffee boost · '+COFFEE_SECONDS+' seconds';
+          break;
+        case 'star':
+          s.arcade.star = STAR_SECONDS;
+          message = 'Top Producer Star · '+STAR_SECONDS+' seconds of snowbank clearance';
+          break;
+        case 'snow':
+          if (!s.arcade.star) return '';
+          message = 'Top Producer Star · Snowbank cleared';
+          break;
+        case 'approval': {
+          const buyer = [this.file,...files].find((file) =>
+            file.side!=='seller' && s.files[file.id].stage==='lead' && !s.files[file.id].arcadeApproval);
+          if (buyer) {
+            s.files[buyer.id].arcadeApproval = true;
+            message = 'Buyer pre-approval · '+buyer.client+' is ready in your phone inbox';
+          } else {
+            message = 'Buyer pre-approval · Every buyer file already has approval';
+          }
+          break;
+        }
+        case 'septic':
+          s.files.cabin.arcadeSeptic = true;
+          this.addTime(12);
+          message = 'Failed septic report · 12 minutes to call the contractor';
+          break;
+        default: return '';
+      }
+      s.arcade.collected.push(id);
+      return message;
     }
 
     review() {
@@ -459,6 +525,9 @@
       const r = this.record;
       const site = world.features[f.id];
       const desk = world.features.office;
+      if (r.stage==='lead' && r.arcadeApproval) {
+        return { title:'Accept the approved buyer file',detail:f.client+' · Open Deal on your phone.',point:null };
+      }
       const [title, detail, point] = {
         lead: ['Review the inquiry', this.role(f.staff) + ' left a file at Liz’s desk.', desk.entry],
         schedule: [f.side === 'seller' ? 'Book the listing visit' : 'Book the showing', site.name + ' · Open your phone to schedule.', site.entry],

@@ -112,8 +112,9 @@ h1 em { padding-right: .10em; color: #ead4a8; font-weight: 400; }
 .location { left: max(24px, env(safe-area-inset-left)); }
 .location span, .balance span { display: block; }
 #hud-town { font: 500 1.55rem/1.08 Georgia, serif; }
-#hud-street, #hud-clock, #hud-agent { font-size: .76rem; color: #e3e4d7; }
+#hud-street, #hud-clock, #hud-agent, #arcade-status { font-size: .76rem; color: #e3e4d7; }
 #hud-clock { margin-top: 2px; color: #fff5df; }
+#arcade-status { margin-top: 3px; color: #ffd57e; font-weight: 660; }
 .balance { right: max(24px, env(safe-area-inset-right)); justify-items: end; }
 #hud-cash { color: #edf4dc; font-weight: 690; font-size: 1.10rem; }
 #heading {
@@ -509,7 +510,7 @@ h1 em { padding-right: .10em; color: #ead4a8; font-weight: 400; }
 .transit h2 { margin: 8px 0; font: 500 clamp(1.9rem,6vw,3.8rem)/1.1 Georgia, serif; }
 .transit p { color: #e3ca9e; font-size: .9rem; }
 .progress { height: 2px; max-width: 200px; margin: 16px auto 0; background: #bed1b55c; }
-.progress i { display: block; height: 100%; width: 100%; background: #f0dcb1; transform-origin: left; animation: drive 1.8s linear both; }
+.progress i { display: block; height: 100%; width: 100%; background: #f0dcb1; transform-origin: left; animation: drive var(--trip-duration, 1.8s) linear both; }
 @keyframes drive { from { transform: scaleX(.01); } to { transform: scaleX(1); } }
 
 @media (max-width: 690px) {
@@ -520,7 +521,7 @@ h1 em { padding-right: .10em; color: #ead4a8; font-weight: 400; }
   .location { left: 13px; }
   .balance { right: 13px; }
   #hud-town { font-size: 1.22rem; }
-  #hud-street, #hud-clock, #hud-agent { font-size: .65rem; }
+  #hud-street, #hud-clock, #hud-agent, #arcade-status { font-size: .65rem; }
   #hud-cash { font-size: .95rem; }
   #heading { min-width: 68px; font-size: .64rem; padding-inline: 3px; }
   .mini { width: 140px; height: 100px; left: 12px; bottom: max(13px,env(safe-area-inset-bottom)); }

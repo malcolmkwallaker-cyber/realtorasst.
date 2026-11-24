@@ -31,6 +31,14 @@ Speak to Tanya Sage in the office or select **Tanya’s laser tag** from the pau
 
 Brother Malcolm is a fictional African American character and Malcolm’s evil twin. Find him near the spare desk. Meeting him in person triggers a one-time swipe of up to $125 from your expense float. If you play as him, check the expense envelope by that desk to pocket the cash. The ledger records the swipe and any repayment.
 
+## Arcade pickups
+
+Search **coin run** on the regional map to find US 169 in Grand Rapids and US 53 near Virginia. Drive through the floating coins to add $20 each to your ledger. The highway mystery block gives ten seconds of Caribou Coffee boost. The Top Producer Star on US 53 lights up the SUV and clears a snowbank if you reach it within 15 seconds.
+
+Press **E** at mystery blocks during house tours. A block can send instant buyer pre-approval to your phone or turn up a failed septic report that costs you time. Each pickup can be claimed once per career.
+
+The glowing ice-fishing shack beside the Grand Rapids office can send you and your SUV to Hibbing, Virginia, or Canal Park. Open the shack with **E**. Each shortcut advances the workday four minutes and recalculates your GPS route from the new town.
+
 ## The Northland
 
 The map includes Grand Rapids, Cohasset, Coleraine, Bovey, Nashwauk, Keewatin, Hibbing, Chisholm, Buhl, Mountain Iron, Virginia, Eveleth, Gilbert, Biwabik, Aurora, Hoyt Lakes, Hermantown, Proctor, and Duluth, plus Deer River, Bigfork, Marcell, Effie, Tower, Jacobson, Lake Vermilion, Canal Park, the Aerial Lift Bridge, and Hull–Rust Mine View.

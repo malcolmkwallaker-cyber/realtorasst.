@@ -778,5 +778,5 @@
     }
   }
 
-  Object.assign(ND, { World, toWorld, local, MILES, CHUNK });
+  Object.assign(ND, { World, toWorld, local, visibleFrom, MILES, CHUNK });
 })();
