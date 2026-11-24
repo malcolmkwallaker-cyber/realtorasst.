@@ -162,6 +162,7 @@
       this.fixedMeshes = this.makeFeatures();
       this.actorMeshes = new Map();
       this.suv = renderer.upload(Models.suv(color('#536c5d')));
+      this.cockpit = renderer.upload(Models.cockpit());
       this.trafficModels = ['#838989','#794b3f','#b9b2a0','#3b4958','#6e705a'].map((paint) =>
         renderer.upload(Models.suv(color(paint), true)));
       this.truckMesh=renderer.upload(Models.loggingTruck());
@@ -280,9 +281,13 @@
           this.obstacle(lot, -lot.w / 2 + 1.57, -lot.d / 2 + 1.18, 2.63, .82);
           this.obstacle(lot, lot.w / 2 - 1.49, -lot.d / 2 + .5, 2.61, .64);
           this.obstacle(lot, lot.w / 2 - 2.38, -1.11, 1.37, .84);
+          if (['ramble','hoyt','duluth'].includes(lot.id)) {
+            this.obstacle(lot,lot.w/2-.63,-lot.d/2+1.58,.54,.54);
+          }
         }
         const asphalt = lot.type === 'cabin' ? M.gravel : M.asphalt;
         this.driveway(mesh, lot, asphalt);
+        this.yard(mesh,lot);
         meshes.push({x:lot.x,z:lot.z,radius:25,mesh:this.renderer.upload(mesh)});
       }
       const bridge = new Mesh();
@@ -316,6 +321,37 @@
       this.pavedStrip(mesh,park,front,1.75,walk,.145);
       this.pavedStrip(mesh,street,front,1.75,walk,.13);
       this.pavedStrip(mesh,front,door,1.75,walk,.13);
+    }
+
+    yard(mesh,lot) {
+      const roadside = -lot.d/2-lot.setback+1.86;
+      const post = toWorld(lot,lot.type==='office'?-3.75:-2.22,roadside);
+      if (!this.geo.wet(post.x,post.z)) {
+        mesh.at(post.x,this.grade(post.x,post.z),post.z,lot.yaw,()=>{
+          if (lot.type==='office' || lot.type==='brick') Models.streetMarker(mesh);
+          else Models.mailbox(mesh);
+        });
+        this.obstacle(lot,lot.type==='office'?-3.75:-2.22,roadside,.20,.20);
+      }
+      if (lot.type==='office') return;
+      for (const side of [-1,1]) {
+        const plant = toWorld(lot,side*(lot.w/2+.46),lot.d/2-.47);
+        mesh.at(plant.x,this.grade(plant.x,plant.z),plant.z,lot.yaw,()=>Models.shrub(mesh));
+      }
+      if (lot.type==='cabin') return;
+      const side = -lot.w/2-.82;
+      const ends = [-.52,1.13,2.78].map((z)=>{
+        const point = toWorld(lot,side,z);
+        return [point.x,this.grade(point.x,point.z),point.z];
+      });
+      const wood = color('#928773');
+      for (const [x,y,z] of ends) mesh.box(x-.053,y-.06,z-.053,.106,1.02,.106,wood,M.oak);
+      for (let i=1;i<ends.length;i++) {
+        for (const y of [.32,.73]) {
+          Models.beam(mesh,ends[i-1].map((v,j)=>v+(j===1?y:0)),ends[i].map((v,j)=>v+(j===1?y:0)),.085,wood);
+        }
+      }
+      this.obstacle(lot,side,1.12,.115,3.38);
     }
 
     grade(x,z) {
@@ -497,10 +533,19 @@
     }
 
     cameraDistance(x,z,dx,dz,distance) {
-      for (let at=.15; at<=distance; at+=.15) {
-        if (this.collides(x+dx*at,z+dz*at,.19)) return Math.max(0,at-.18);
+      const steps = Math.ceil(distance/.13);
+      for (let i=1;i<=steps;i++) {
+        const at = i/steps*distance;
+        if (this.collides(x+dx*at,z+dz*at,.23)) return Math.max(0,at-.28);
       }
       return distance;
+    }
+
+    canSee(from,to) {
+      const d = Math.hypot(to.x-from.x,to.z-from.z);
+      if (d<=.58) return true;
+      const limit = d-.48;
+      return this.cameraDistance(from.x,from.z,(to.x-from.x)/d,(to.z-from.z)/d,limit)>=limit;
     }
 
     terrain(mesh, x0, z0, size, steps, background) {
@@ -756,10 +801,62 @@
       }
     }
 
-    actor(id,pose = 0) {
+    actor(id,pose = 0,profile = ND.agents[id]) {
       const key=id+':'+pose;
-      if (!this.actorMeshes.has(key)) this.actorMeshes.set(key,this.renderer.upload(Models.person(ND.agents[id],pose)));
+      if (!this.actorMeshes.has(key)) this.actorMeshes.set(key,this.renderer.upload(Models.person(profile,pose)));
       return this.actorMeshes.get(key);
+    }
+
+    updateVisitor(career, player, driving, dt = 0) {
+      const file = career.file;
+      const lot = this.features[file.id];
+      const { stage } = career.record;
+      const showing = ['booked','tour','offer','inspection'].includes(stage);
+      if (!showing || driving || Math.hypot(player.x-lot.x,player.z-lot.z)>45) {
+        this.visitor = null;
+        return;
+      }
+      const type = stage==='inspection' ? 'inspector' : file.id;
+      const profile = ND.visitors[type];
+      const indoor = stage!=='booked' && contains(lot,player.x,player.z,-.10);
+      if (this.visitor?.id!==profile.id || this.visitor.site!==lot.id || this.visitor.indoor!==indoor) {
+        const z = indoor ? -lot.d/2+1.35 : -lot.d/2-1.62;
+        const farSide = local(lot,lot.parking.x,lot.parking.z)[0]>0 ? -1 : 1;
+        const clear = (p) => this.allowed(p.x,p.z,.23,false) && Math.hypot(player.x-p.x,player.z-p.z)>.58;
+        const options = (indoor ? [.91,-.91,.37,-.37] : [2.06,2.46,-2.06,-2.46].map((x)=>x*farSide))
+          .map((x)=>toWorld(lot,x,z));
+        const position = options.find(clear) || options.find((p)=>this.allowed(p.x,p.z,.23,false));
+        if (!position) { this.visitor = null; return; }
+        this.visitor = {...profile,...position,site:lot.id,indoor,y:this.height(position.x,position.z),yaw:lot.yaw,
+          steps:0,walking:false,trail:[]};
+      }
+      const visitor = this.visitor;
+      visitor.walking = false;
+      if (!visitor.indoor || !dt) return;
+      const trail = visitor.trail;
+      const latest = trail.at(-1);
+      if (!latest || Math.hypot(player.x-latest.x,player.z-latest.z)>.48) {
+        trail.push({x:player.x,z:player.z});
+        if (trail.length>30) trail.shift();
+      }
+      while (trail.length>1 && Math.hypot(visitor.x-trail[0].x,visitor.z-trail[0].z)<.23) trail.shift();
+      if (Math.hypot(player.x-visitor.x,player.z-visitor.z)<1.39) return;
+      const target = trail[0];
+      const dx = target.x-visitor.x;
+      const dz = target.z-visitor.z;
+      const span = Math.hypot(dx,dz);
+      if (span<.08) return;
+      const step = Math.min(span,dt*1.9);
+      const x = visitor.x+dx/span*step;
+      const z = visitor.z+dz/span*step;
+      for (const [px,pz] of [[x,z],[x,visitor.z],[visitor.x,z]]) {
+        if (!contains(lot,px,pz,-.14) || !this.allowed(px,pz,.20,false)) continue;
+        const moved = Math.hypot(px-visitor.x,pz-visitor.z);
+        if (moved<.001) continue;
+        visitor.yaw = Math.atan2(px-visitor.x,visitor.z-pz);
+        Object.assign(visitor,{x:px,z:pz,y:lot.y,walking:true,steps:visitor.steps+moved*4.7});
+        break;
+      }
     }
 
     placeBridger(visit) {
@@ -937,14 +1034,15 @@
 
     drawPeopleAndVehicles(player, car, seconds, showPlayer, carView, visible) {
       const render = this.renderer;
-      for (const person of this.people) {
+      const people = this.visitor ? [...this.people,this.visitor] : this.people;
+      for (const person of people) {
         if (person.late || person.id === player.agent || Math.hypot(person.x-player.x,person.z-player.z) > 105 ||
             !visible(person.x,person.z,1.6)) continue;
         const d = Math.hypot(person.x-player.x,person.z-player.z);
         const facing = !person.walking && d<4.5 && !(person.id==='gene' && person.leg===1) ?
           Math.atan2(player.x-person.x,person.z-player.z) : person.yaw;
         const pose=person.walking ? [0,1,0,-1][Math.floor(person.steps)%4] : 0;
-        render.draw(this.actor(person.id,pose),person.x,person.y+Math.sin(seconds*1.9+person.x)*.007,person.z,facing);
+        render.draw(this.actor(person.id,pose,person),person.x,person.y+Math.sin(seconds*1.9+person.x)*.007,person.z,facing);
       }
       for (const other of this.traffic) {
         if (!visible(other.x,other.z,other.truck?7:3)) continue;
@@ -958,8 +1056,10 @@
       if (!carView && Math.hypot(car.x-player.x,car.z-player.z)<340 && visible(car.x,car.z,3)) {
         render.draw(this.suv,car.x,this.height(car.x,car.z)+.13,car.z,car.yaw);
       }
+      if (carView) render.draw(this.cockpit,car.x,this.height(car.x,car.z)+.13,car.z,car.yaw);
       if (showPlayer) {
-        render.draw(this.actor(player.agent),player.x,this.height(player.x,player.z)+player.bob,player.z,player.yaw);
+        const pose = player.walking ? [0,1,0,-1][Math.floor(player.stride/1.55)%4] : 0;
+        render.draw(this.actor(player.agent,pose),player.x,this.height(player.x,player.z)+player.bob,player.z,player.yaw);
       }
     }
   }

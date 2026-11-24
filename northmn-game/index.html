@@ -20,6 +20,9 @@
       <span id="hud-street"></span>
       <span id="hud-clock"></span>
       <span id="arcade-status" hidden></span>
+      <div id="showing-clock" class="showing-clock" role="status" hidden>
+        <strong id="showing-when"></strong><span id="showing-who"></span>
+      </div>
     </div>
     <div id="heading" aria-hidden="true"></div>
     <div id="navigation" class="navigation" hidden><strong id="nav-arrow" aria-hidden="true"></strong><span id="nav-step"></span></div>
@@ -42,7 +45,9 @@
     </div>
     <div class="center-dot" aria-hidden="true"></div>
     <div class="world-pin" id="world-pin" hidden aria-hidden="true"></div>
+    <div class="visitor-tag" id="visitor-tag" hidden></div>
     <button id="interact" class="interact" type="button" hidden><kbd>E</kbd><span></span></button>
+    <button id="mouse-look" class="mouse-look" type="button" hidden>Click to use mouse look</button>
     <nav class="hud-tools" aria-label="Game controls">
       <button id="open-phone" type="button"><kbd>P</kbd> Phone</button>
       <button id="open-menu" type="button"><kbd>Esc</kbd> Pause</button>
@@ -107,6 +112,7 @@
     </section>
   </div>
   <div id="toast" class="toast" role="status" hidden></div>
+  <div id="visitor-caption" class="visitor-caption" role="status" hidden><strong></strong><span></span></div>
   <section id="transit" class="transit" hidden>
     <div><span id="transit-mode"></span><h2 id="transit-destination"></h2><p id="transit-miles"></p><div class="progress"><i></i></div></div>
   </section>

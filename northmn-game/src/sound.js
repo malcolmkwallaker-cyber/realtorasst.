@@ -79,7 +79,29 @@
       source.start();
     }
 
+    say(text,id) {
+      if (!this.enabled) return;
+      const speech = globalThis.speechSynthesis;
+      const localVoice = speech?.getVoices().find((voice)=>voice.localService && voice.lang.startsWith('en-US'));
+      if (!localVoice || typeof SpeechSynthesisUtterance==='undefined') {
+        this.speak(id);
+        return;
+      }
+      this.stopVoice();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.voice = localVoice;
+      utterance.volume = .78;
+      this.utterance = utterance;
+      utterance.onend = () => { if (this.utterance===utterance) this.utterance = null; };
+      utterance.onerror = () => { if (this.utterance===utterance) this.speak(id); };
+      speech.speak(utterance);
+    }
+
     stopVoice() {
+      if (this.utterance) {
+        this.utterance = null;
+        globalThis.speechSynthesis.cancel();
+      }
       const voice = this.currentVoice;
       if (!voice) return;
       this.currentVoice = null;
@@ -144,6 +166,41 @@
         tone.start(start);
         tone.stop(start+.22);
       }
+    }
+
+    phoneBuzz() {
+      const ctx = this.context;
+      if (!this.enabled || !ctx || ctx.state!=='running') return;
+      const tone = ctx.createOscillator();
+      const volume = ctx.createGain();
+      const now = ctx.currentTime;
+      tone.type = 'triangle';
+      tone.frequency.value = 137;
+      volume.gain.setValueAtTime(.001,now);
+      for (const offset of [0,.16]) {
+        volume.gain.setValueAtTime(.001,now+offset);
+        volume.gain.linearRampToValueAtTime(.25,now+offset+.014);
+        volume.gain.exponentialRampToValueAtTime(.001,now+offset+.105);
+      }
+      tone.connect(volume).connect(this.master);
+      tone.start(now);
+      tone.stop(now+.28);
+    }
+
+    roadBump() {
+      const ctx = this.context;
+      if (!this.enabled || !ctx || ctx.state!=='running') return;
+      const tone = ctx.createOscillator();
+      const volume = ctx.createGain();
+      const now = ctx.currentTime;
+      tone.type = 'triangle';
+      tone.frequency.setValueAtTime(81,now);
+      tone.frequency.exponentialRampToValueAtTime(37,now+.12);
+      volume.gain.setValueAtTime(.24,now);
+      volume.gain.exponentialRampToValueAtTime(.001,now+.16);
+      tone.connect(volume).connect(this.master);
+      tone.start(now);
+      tone.stop(now+.17);
     }
 
     update({ moving, driving, rain, stride, speed, indoors, paved }) {

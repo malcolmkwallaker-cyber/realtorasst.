@@ -92,7 +92,7 @@
       this.ui.close(false);
       if (saved && this.validPoint(saved.player) && this.validPoint(saved.car)) {
         Object.assign(this.player,{ x:saved.player.x,z:saved.player.z,
-          yaw:saved.player.yaw,pitch:clamp(saved.player.pitch??0,-.95,1.05) });
+          yaw:saved.player.yaw,pitch:clamp(saved.player.pitch??0,-.65,.66) });
         this.car = { x:saved.car.x,z:saved.car.z,yaw:saved.car.yaw,speed:0 };
         this.driving = !!saved.driving;
         if (this.driving) {
@@ -103,7 +103,7 @@
         this.world.warm(this.player.x,this.player.z);
       }
       this.syncDoors();
-      if (saved && !this.driving && this.world.collides(this.player.x,this.player.z,.30)) {
+      if (saved && !this.driving && !this.canWalk(this.player.x,this.player.z)) {
         this.clearFooting();
       }
       if (saved?.destination) this.setGPS(saved.destination);
@@ -112,13 +112,31 @@
       this.canvas.focus({preventScroll:true});
       this.save();
       this.updateHUD(true);
-      if (!resume) this.ui.notice('WASD move · Mouse or arrows look · E interact · P phone · M map');
+      this.showingReminders();
+      if (resume) this.captureLook();
+      else this.ui.tutorial();
     }
 
     validPoint(point) {
       const [x0,z0,x1,z1] = this.geo.bounds;
       return point && [point.x,point.z,point.yaw].every(Number.isFinite) &&
         point.x >= x0 && point.x <= x1 && point.z >= z0 && point.z <= z1;
+    }
+
+    endWorkday() {
+      const destination = this.gps?.id;
+      const report = this.career.endDay();
+      this.keys.clear();
+      this.driving = false;
+      this.carLook = 0;
+      this.walkCamera = this.driveCamera = 0;
+      this.snowContact = false;
+      this.setupScene(this.career.state.agent);
+      this.gps = null;
+      if (destination) this.setGPS(destination);
+      this.frameDirty = true;
+      this.changed();
+      return report;
     }
 
     clearFooting() {
@@ -128,7 +146,7 @@
           const yaw=i*Math.PI/4;
           const x=p.x+Math.sin(yaw)*radius;
           const z=p.z-Math.cos(yaw)*radius;
-          if (this.world.allowed(x,z,.30,false)) {
+          if (this.canWalk(x,z)) {
             Object.assign(p,{x,z});
             return;
           }
@@ -159,8 +177,27 @@
       if (message) this.ui.notice(message);
       if (cue) this.sound.progress(cue);
       this.syncDoors();
+      this.world.updateVisitor(this.career,this.player,this.driving);
       this.save();
       this.updateHUD(true);
+      this.showingReminders();
+    }
+
+    showingReminders() {
+      const alerts = this.career.showingAlerts;
+      if (!alerts.length) return;
+      const {file,level,left,lost,closes} = alerts.splice(0).sort((a,b)=>b.level-a.level)[0];
+      const client = file.client;
+      if (level===1) {
+        this.ui.notice(left===0 ? client+'’s showing is due now.' : client+'’s showing in '+left+' min.',5200);
+      } else if (level===2) {
+        this.sound.phoneBuzz();
+        this.ui.notice('Late for '+client+' · You can arrive until '+time(closes)+'.',6000);
+      } else {
+        this.sound.phoneBuzz();
+        this.ui.notice('Missed showing with '+client+(lost?' · −'+lost+' trust':'')+' · Rebook in Phone.',6500);
+      }
+      this.save();
     }
 
     chooseAgent(id) {
@@ -183,6 +220,11 @@
         this.frameDirty = true;
       }
       this.graphicsLabel();
+    }
+
+    setLighting(mode) {
+      this.renderer.setLighting(mode);
+      this.frameDirty = true;
     }
 
     startTag() {
@@ -228,6 +270,7 @@
       byId('open-phone').onclick = () => this.ui.phone();
       byId('open-menu').onclick = () => this.ui.pause();
       byId('interact').onclick = () => this.interact();
+      byId('mouse-look').onclick = () => this.captureLook();
       byId('touch-view').onclick = () => this.toggleView();
       byId('tag-fire').onclick = () => this.tag?.fire();
       byId('tag-exit').onclick = () => this.endTag(false);
@@ -295,14 +338,9 @@
         canvas.focus({preventScroll:true});
         if (this.tag && event.pointerType === 'mouse' && event.button === 0) this.tag.fire();
         if (document.pointerLockElement === canvas) return;
+        if (event.pointerType==='mouse' && event.button===0) this.captureLook();
         canvas.setPointerCapture(event.pointerId);
         drag = {cx:event.clientX,cy:event.clientY};
-        if (event.pointerType === 'mouse' && event.button === 0 && canvas.requestPointerLock) {
-          try {
-            const lock = canvas.requestPointerLock();
-            lock?.catch(() => {});
-          } catch {}
-        }
       };
       canvas.onpointermove = (event) => {
         if (document.pointerLockElement === canvas || !drag || !this.canLook()) return;
@@ -310,6 +348,12 @@
         drag = {cx:event.clientX,cy:event.clientY};
       };
       canvas.onpointercancel = canvas.onpointerup = canvas.onlostpointercapture = () => { drag = null; };
+      document.addEventListener('pointerlockchange',() => {
+        drag = null;
+        if (document.pointerLockElement===canvas) this.lockUnavailable = false;
+        this.updateMouseHint();
+      });
+      document.addEventListener('pointerlockerror',() => this.mouseLockFallback());
       document.addEventListener('mousemove',(event) => {
         if (document.pointerLockElement === canvas && this.canLook()) this.look(event.movementX,event.movementY);
       });
@@ -323,6 +367,34 @@
       return this.playing() || (this.tag && !this.ui.panel && !document.hidden);
     }
 
+    captureLook() {
+      if (!this.canLook() || document.pointerLockElement===this.canvas ||
+          !matchMedia('(pointer: fine)').matches) return;
+      this.canvas.focus({preventScroll:true});
+      if (!this.canvas.requestPointerLock) { this.mouseLockFallback(); return; }
+      try {
+        const lock = this.canvas.requestPointerLock();
+        lock?.catch(() => this.mouseLockFallback());
+      } catch {
+        this.mouseLockFallback();
+      }
+    }
+
+    mouseLockFallback() {
+      this.lockUnavailable = true;
+      this.updateMouseHint();
+    }
+
+    updateMouseHint() {
+      const hint = byId('mouse-look');
+      hint.hidden = !this.started || this.ui.panel || this.transit || this.tag ||
+        document.pointerLockElement===this.canvas || !matchMedia('(pointer: fine)').matches;
+      if (!hint.hidden) {
+        const text = this.lockUnavailable ? 'Drag the scene to look' : 'Click to use mouse look';
+        if (hint.textContent!==text) hint.textContent = text;
+      }
+    }
+
     look(dx,dy) {
       if (this.tag) {
         this.tag.look(dx,dy);
@@ -331,10 +403,10 @@
       const p = this.player;
       if (this.driving) {
         this.carLook = clamp((this.carLook || 0) + dx*.0028,-.95,.95);
-        p.pitch = clamp(p.pitch - dy*.0026,-.50,.42);
+        p.pitch = clamp(p.pitch - dy*.0013,-.36,.32);
       } else {
         p.yaw += dx*.0028;
-        p.pitch = clamp(p.pitch - dy*.0026,-1.08,1.18);
+        p.pitch = clamp(p.pitch - dy*.00132,-.65,.66);
       }
     }
 
@@ -362,10 +434,17 @@
       const dz = (-cos*forward+sin*right)*step;
       const oldX = p.x;
       const oldZ = p.z;
-      if (dx && this.world.allowed(p.x+dx,p.z,.30,false)) p.x += dx;
-      if (dz && this.world.allowed(p.x,p.z+dz,.30,false)) p.z += dz;
-      p.stride += Math.hypot(p.x-oldX,p.z-oldZ) * (run ? 4.8 : 5.5);
+      if (dx && this.canWalk(p.x+dx,p.z)) p.x += dx;
+      if (dz && this.canWalk(p.x,p.z+dz)) p.z += dz;
+      const moved = Math.hypot(p.x-oldX,p.z-oldZ);
+      p.walking = moved>.0001;
+      p.stride += moved * (run ? 4.8 : 5.5);
       p.bob = mix(p.bob,forward||right ? Math.sin(p.stride)*.026 : 0,Math.min(1,dt*13));
+    }
+
+    canWalk(x,z) {
+      const [px,pz] = ND.local(this.car,x,z);
+      return (Math.abs(px)>1.23 || Math.abs(pz)>2.51) && this.world.allowed(x,z,.30,false);
     }
 
     moveCar(dt) {
@@ -402,6 +481,7 @@
           car.z = z;
           moved = true;
           this.career.drive(move);
+          this.checkCurb(road,x,z);
         } else {
           car.speed = 0;
           const obstacle=this.world.roadBlocker(x+hx*nose,z+hz*nose) || this.world.roadBlocker(x,z);
@@ -409,6 +489,10 @@
             obstacle.stopped=true;
             this.career.day.roadNotes++;
             this.ui.notice(obstacle.kind==='deer crossing'?'Stopped for a deer crossing.':'Stopped for '+obstacle.kind+' ahead.');
+          } else if (!obstacle && Math.abs(previousSpeed)>2.7 && this.seconds>(this.lastBump||0)) {
+            this.lastBump = this.seconds+1.25;
+            this.sound.roadBump();
+            this.ui.notice('Bump · Back up to clear the obstacle.');
           }
         }
       }
@@ -429,6 +513,18 @@
       this.sound.arcade(prize.kind!=='septic');
       this.ui.notice(message);
       this.save();
+    }
+
+    checkCurb(road,x,z) {
+      if (Math.abs(this.car.speed)<4 || road?.segment.type!==2 || !road.segment.name ||
+          road.distance>road.segment.width/2+.42 || this.seconds<(this.lastBump||0)) return;
+      const next = this.geo.nearest(x,z,12);
+      if (!next || next.segment!==road.segment || next.distance<=next.segment.width/2+.42 ||
+          Number.isFinite(this.world.pavingHeight(x,z))) return;
+      this.car.speed *= .72;
+      this.lastBump = this.seconds+1.25;
+      this.sound.roadBump();
+      this.ui.notice('Curb · SUV slowed.');
     }
 
     checkRoadArcade() {
@@ -461,27 +557,26 @@
       this.updateHUD(true);
     }
 
-    findExit(car) {
-      for (const [dx,dz] of [[2.75,0],[-2.75,0],[0,3.29],[0,-3.29],[3.5,1.3],[-3.5,1.3]]) {
-        const p = ND.toWorld(car,dx,dz);
-        if (this.world.allowed(p.x,p.z,.25,false)) return p;
-      }
-      return null;
+    findExit(car, toward) {
+      const exits = [[2.75,0],[-2.75,0],[0,3.29],[0,-3.29],[3.5,1.3],[-3.5,1.3]]
+        .map(([x,z])=>ND.toWorld(car,x,z));
+      if (toward) exits.sort((a,b)=>distance(a,toward)-distance(b,toward));
+      return exits.find((p)=>this.world.allowed(p.x,p.z,.25,false)) || null;
     }
 
-    exitCar() {
+    exitCar(update = true, toward) {
       if (Math.abs(this.car.speed) > 1.9) {
         this.ui.notice('Stop the SUV before getting out.');
         return;
       }
-      const outside = this.findExit(this.car);
+      const outside = this.findExit(this.car,toward);
       if (!outside) { this.ui.notice('Move the SUV to a clear spot.'); return; }
       this.driving = false;
       this.car.speed = 0;
       this.snowContact = false;
       Object.assign(this.player,{...outside,yaw:this.car.yaw,pitch:0});
       this.cameraY = null;
-      this.changed();
+      if (update) this.changed();
     }
 
     returnToCar() {
@@ -510,7 +605,7 @@
     enterBuilding(lot) {
       if (this.driving) return;
       const inside = lot.lobby || ND.toWorld(lot,0,-lot.d/2+2.12);
-      const focus = lot.type === 'office' ? lot.desk : ND.toWorld(lot,-1.6,.18);
+      const focus = lot.type === 'office' ? lot.desk : this.walkPoints(lot).living;
       this.transitionDoor(inside,direction(inside,focus));
     }
 
@@ -540,15 +635,20 @@
 
     walkPoints(lot) {
       return {
-        living: ND.toWorld(lot,-lot.w*.27,-lot.d*.28),
+        living: ND.toWorld(lot,-lot.w*.27,-lot.d/2+2.03),
         kitchen: ND.toWorld(lot,lot.w*.26,-2.1),
-        rear: ND.toWorld(lot,-.30,lot.d*.34),
+        rear: ND.toWorld(lot,-.30,lot.d/2-1.72),
         roof: ND.toWorld(lot,-1.28,-lot.d/2-3.78),
       };
     }
 
+    inspectionPoint(lot) {
+      const note = this.career.file.notes.find((item)=>item[3] && item[0]!=='roof');
+      return this.walkPoints(lot)[note?.[0] || 'rear'];
+    }
+
     nearby() {
-      if (this.driving) return { label:'Exit SUV',play:() => this.exitCar() };
+      if (this.driving) return { label:Math.abs(this.car.speed)>1.9?'Stop SUV before exiting':'Exit SUV',play:() => this.exitCar() };
       const g = this;
       const p = this.player;
       const c = this.career;
@@ -557,19 +657,23 @@
       const o = this.world.features.office;
       const [ox,oz] = ND.local(o,p.x,p.z);
       const inOffice = Math.abs(ox)<o.w/2 && Math.abs(oz)<o.d/2;
-      const [sx,sz] = ND.local(s,p.x,p.z);
-      const inListing = Math.abs(sx)<s.w/2 && Math.abs(sz)<s.d/2;
+      const inside = Object.values(this.world.features).find((site)=>{
+        const [x,z] = ND.local(site,p.x,p.z);
+        return Math.abs(x)<site.w/2 && Math.abs(z)<site.d/2;
+      });
+      const inListing = inside===s;
       const stage = r.stage;
       const picks = [];
-      const add = (point,radius,label,play,priority=0) => {
+      const doorAt = (site) => ND.toWorld(site,0,-site.d/2-.16);
+      const add = (point,radius,label,play,visible=false) => {
         const d = distance(point,p);
-        if (d <= radius) picks.push({label,play,score:d+priority});
+        if (d<=radius && (!visible || this.world.canSee(p,point))) picks.push({label,play,d});
       };
       if (inOffice) {
         const title = { lead:c.file.side==='seller'?'Review the listing file':'Review the buyer file',
           title:'Review title and financing',sign:'Sign at the closing table' }[stage];
         if (title) {
-          add(o.deskApproach,4.4,title,() => this.ui.desk(),-2.2);
+          add(o.deskApproach,4.25,title,() => this.ui.desk());
         }
         if (p.agent==='brother-malcolm') {
           add(o.expenseFloat,1.9,'Check the expense envelope',() => this.ui.brotherCash());
@@ -578,44 +682,66 @@
           const outside = ND.toWorld(o,0,-o.d/2-3.44);
           this.transitionDoor(outside,o.yaw);
         });
-      } else {
-        add(o.entry,4.7,'Enter North Desk',() => this.enterBuilding(o),-.6);
+      } else if (!inside) {
+        add(doorAt(o),4.6,'Enter North Desk',() => this.enterBuilding(o));
         add(this.arcade.shackDoor,2.1,'Open the ice-fishing shack',() => this.ui.warpShack());
       }
       const prize = this.arcade.roomAt(p,c);
-      if (prize) add(prize,1.5,'Open mystery block',() => this.collectPrize(prize),-1.4);
-      if (stage === 'booked' || (stage === 'schedule' && !r.unlocked)) {
-        add(s.entry,4.8,'Check property lockbox',() => this.ui.lockbox(),-2.3);
+      if (prize) add(prize,1.5,'Open mystery block',() => this.collectPrize(prize));
+      if (!inside) {
+        if (stage==='booked' || (stage==='schedule' && !r.unlocked)) {
+          add(doorAt(s),3.45,'Check property lockbox',() => this.ui.lockbox());
+        } else if (stage==='inspection') {
+          add(doorAt(s),3.45,r.inspectionWalk?'Enter for inspection':'Meet the inspector',() => this.ui.beginInspection());
+        }
+        for (const file of ND.files) {
+          const lot = this.world.features[file.id];
+          if (!c.state.files[file.id].unlocked || (lot===s && ['booked','inspection'].includes(stage))) continue;
+          add(doorAt(lot),3.05,'Enter '+lot.name,() => this.enterBuilding(lot));
+        }
+      } else if (!inOffice) {
+        add(inside.threshold,1.65,'Step outside',() => {
+          this.transitionDoor(ND.toWorld(inside,0,-inside.d/2-2.62),inside.yaw);
+        });
       }
       if (stage === 'tour') {
         const points = this.walkPoints(s);
         const remaining=c.file.notes.filter((note)=>!r.notes.includes(note[0]));
-        if (!inListing && remaining.some((note)=>note[0]!=='roof')) {
-          add(s.entry,5,'Enter '+s.name,() => this.enterBuilding(s),-2);
-        }
-        if (inListing) {
-          add(s.threshold,1.5,'Step outside',() => this.transitionDoor(ND.toWorld(s,0,-s.d/2-2.62),s.yaw));
-        }
         for (const note of remaining) {
-          if (inListing===(note[0]!=='roof')) {
-            add(points[note[0]],note[0]==='roof'?3.25:2.9,'Inspect '+note[1].toLowerCase(),() => this.ui.observation(note),-2.6);
+          if ((inListing && note[0]!=='roof') || (!inside && note[0]==='roof')) {
+            add(points[note[0]],note[0]==='roof'?2.8:2.45,'Inspect '+note[1].toLowerCase(),() => this.ui.observation(note));
           }
         }
       }
-      if (stage === 'inspection') add(s.entry,5.2,'Meet the inspector',() => this.ui.inspection(),-3);
-      if (this.nearCar(4.5)) add(this.car,4.5,'Enter SUV',() => this.enterCar(),-.1);
+      if (stage==='inspection' && inListing) {
+        add(this.inspectionPoint(s),2.5,'Review the inspection',() => this.ui.inspection());
+      }
+      if (!inside) {
+        const [x,z] = ND.local(this.car,p.x,p.z);
+        add(ND.toWorld(this.car,clamp(x,-.98,.98),clamp(z,-2.26,2.26)),1.86,'Enter SUV',() => this.enterCar(),true);
+      }
       for (const person of this.world.people) {
         if (person.id === p.agent) continue;
-        if (person.late) add(person,2.3,'Check for Bridger',() => g.ui.waitForBridger(),.6);
-        else add(person,2.3,'Talk to '+person.short,() => g.ui.person(person.id,false),.6);
+        if (person.late) add(person,2.05,'Check for Bridger',() => g.ui.waitForBridger(),true);
+        else add(person,2.05,'Talk to '+person.short,() => g.ui.person(person.id,false),true);
       }
-      picks.sort((a,b)=>a.score-b.score);
+      const visitor = this.world.visitor;
+      if (visitor) add(visitor,1.85,'Talk to '+visitor.name,() => this.ui.talkToVisitor(visitor),true);
+      picks.sort((a,b)=>a.d-b.d);
       return picks[0] || null;
     }
 
     interact() {
       if (!this.playing()) return;
-      this.nearby()?.play();
+      this.updateInteraction()?.play();
+    }
+
+    updateInteraction() {
+      const active = this.nearby();
+      const el = byId('interact');
+      el.hidden = !active;
+      if (active && el.querySelector('span').textContent!==active.label) el.querySelector('span').textContent = active.label;
+      return active;
     }
 
     goal() {
@@ -641,6 +767,13 @@
         if (note) return {...goal,point:{...points[note[0]],y:site.y,label:note[1],markerHeight:1.58}};
         if (indoors && remaining.some((n)=>n[0]==='roof')) {
           return {...goal,point:{...site.threshold,y:site.y,label:'Exit for the roof view',markerHeight:1.78}};
+        }
+      }
+      if (stage==='inspection' && this.career.record.inspectionWalk) {
+        const [sx,sz] = ND.local(site,p.x,p.z);
+        if (Math.abs(sx)<site.w/2 && Math.abs(sz)<site.d/2) {
+          return {title:'Review the visible defect',detail:'Walk to the inspection marker to review the estimate.',
+            point:{...this.inspectionPoint(site),y:site.y,label:'Inspection finding',markerHeight:1.1}};
         }
       }
       return goal;
@@ -691,7 +824,7 @@
         return;
       }
       this.travelTo(target,route.end,{
-        mode:'ON THE ROAD',detail:miles.toFixed(1)+' mi · '+Math.round(this.career.driveMinutes(miles))+' min',
+        mode:'FAST TRAVEL',detail:miles.toFixed(1)+' mi · '+Math.round(this.career.driveMinutes(miles))+' in-game min',
         duration:1750,advance:() => this.career.drive(route.meters,true),
       });
     }
@@ -730,8 +863,8 @@
         this.transit = false;
         this.frameDirty = true;
         curtain.hidden = true;
-        this.exitCar();
         const site = this.world.features[target.id];
+        this.exitCar(false,site?.entry);
         if (site && !this.driving) this.player.yaw = direction(this.player,site.entry);
         if (keepRoute && destination && destination!==target.name) this.setGPS(destination);
         this.changed('Arrived · '+target.label+'.');
@@ -775,7 +908,8 @@
         return ND.frame([x,y,z],yaw,-.22+pitch*.49,aspect,Math.PI/(3.0-speedFov));
       }
       if (this.driving) {
-        return ND.frame([p.x+fx*.54,ground+1.76,p.z+fz*.54],yaw,pitch-.073,aspect,Math.PI/(3.09-speedFov));
+        const seat = ND.toWorld(this.car,-.427,-.19);
+        return ND.frame([seat.x,ground+1.68,seat.z],yaw,pitch-.075,aspect,Math.PI/(2.91-speedFov));
       }
       if (this.walkCamera) {
         const back = this.world.cameraDistance(p.x,p.z,-fx,-fz,4.35);
@@ -787,20 +921,21 @@
             yaw,pitch*.66-.21,aspect,Math.PI/3.31);
         }
       }
-      return ND.frame([p.x,ground+1.66+p.bob,p.z],yaw,pitch,aspect,Math.PI/3.04);
+      const clearance = this.world.cameraDistance(p.x,p.z,Math.sin(yaw),-Math.cos(yaw),.76);
+      const setback = clearance<.69 ? this.world.cameraDistance(p.x,p.z,-Math.sin(yaw),Math.cos(yaw),.73-clearance) : 0;
+      return ND.frame([p.x-Math.sin(yaw)*setback,ground+1.66+p.bob,p.z+Math.cos(yaw)*setback],
+        yaw,pitch,aspect,Math.PI/3.04);
     }
 
     updateHUD(quick = false) {
       if (!this.started || this.transit) return;
+      this.updateInteraction();
       if (!quick && this.seconds < this.hudAt) return;
       this.hudAt = this.seconds+.16;
+      this.updateMouseHint();
       const c = this.career;
       const p = this.player;
       this.world.placeBridger(c.bridgerVisit);
-      const active = this.nearby();
-      const el = byId('interact');
-      el.hidden = !active;
-      if (active) el.querySelector('span').textContent = active.label;
       const goal = this.goal();
       byId('objective-title').textContent = goal.title;
       byId('objective-detail').textContent = goal.detail;
@@ -812,6 +947,17 @@
       byId('hud-town').textContent = town.name;
       byId('hud-street').textContent = this.labelForRoad;
       byId('hud-clock').textContent = time(c.state.minute,true)+' · '+this.weather.label;
+      const showing = c.nextShowing;
+      const appointment = byId('showing-clock');
+      appointment.hidden = !showing;
+      if (showing) {
+        const {state,file,left,at} = showing;
+        const when = state==='missed' ? 'Showing missed · Rebook' : state==='due' ? 'Showing due now' :
+          state==='late' ? Math.abs(left)+' min late' : left>=24*60 ? time(at,true) : left+' min to showing';
+        appointment.dataset.state = state;
+        if (byId('showing-when').textContent!==when) byId('showing-when').textContent = when;
+        if (byId('showing-who').textContent!==file.client) byId('showing-who').textContent = file.client;
+      }
       const boost = byId('arcade-status');
       const { star,coffee } = c.state.arcade;
       boost.hidden = !star && !coffee;
@@ -861,6 +1007,19 @@
       el.textContent = (target.label || goal.title)+(d>8?' · '+(d<1609?Math.round(d)+' m':(d*ND.MILES).toFixed(1)+' mi'):'');
     }
 
+    visitorTag(camera) {
+      const person = this.world.visitor;
+      const tag = byId('visitor-tag');
+      tag.hidden = true;
+      if (!person || this.ui.panel || distance(this.player,person)>8 || !this.world.canSee(this.player,person)) return;
+      const pos = ND.project(camera,[person.x,person.y+1.93,person.z]);
+      if (!pos || pos.some((v)=>v<.05 || v>.95)) return;
+      tag.textContent = person.name+' · '+person.title;
+      tag.style.left = pos[0]*100+'%';
+      tag.style.top = pos[1]*100+'%';
+      tag.hidden = false;
+    }
+
     weatherOverlay() {
       const canvas = byId('rain');
       const snow=this.weather.snow;
@@ -869,7 +1028,7 @@
         return;
       }
       canvas.hidden = false;
-      const ratio = this.renderer.low ? .64 : Math.min(devicePixelRatio||1,1.45);
+      const ratio = this.renderer.low ? .64 : this.renderer.software ? .84 : Math.min(devicePixelRatio||1,1.45);
       const w = Math.round(canvas.clientWidth*ratio);
       const h = Math.round(canvas.clientHeight*ratio);
       if (canvas.width !== w || canvas.height !== h) { canvas.width=w; canvas.height=h; }
@@ -899,6 +1058,28 @@
       ctx.stroke();
     }
 
+    nearLake(p) {
+      if (!this.lakeCheck || distance(p,this.lakeCheck)>210) {
+        const reach = 620;
+        const water = this.geo.water.area(p.x-reach,p.z-reach,p.x+reach,p.z+reach);
+        const nearby = [...water].some((body)=>{
+          if (body.moving) return false;
+          const [x0,z0,x1,z1] = body.bounds;
+          return (x1-x0)*(z1-z0)>75000 && p.x+reach>x0 && p.x-reach<x1 && p.z+reach>z0 && p.z-reach<z1;
+        });
+        this.lakeCheck = {x:p.x,z:p.z,nearby};
+      }
+      return this.lakeCheck.nearby;
+    }
+
+    headlightBeam(minutes) {
+      const hour = minutes%1440/60;
+      if (!this.driving || (hour>=7 && hour<18 && this.rain<.25)) return null;
+      const front = ND.toWorld(this.car,0,-2.23);
+      return {position:[front.x,this.world.height(this.car.x,this.car.z)+.99,front.z],
+        forward:angle(this.car.yaw,-.065)};
+    }
+
     loop(timestamp) {
       const dt = Math.min(.15,Math.max(.001,(timestamp-(this.last || timestamp))/1000));
       this.last=timestamp;
@@ -907,7 +1088,8 @@
       const draw = this.frameDirty || (!this.ui.panel && timestamp>=this.nextDraw);
       const frameDt = Math.min(.15,(timestamp-(this.lastDraw||timestamp))/1000);
       if (draw && !this.transit) {
-        const rate = this.renderer.low ? (this.started?30:16) : (this.started?60:30);
+        const rate = this.renderer.low ? (this.started?30:16) :
+          (this.started && !this.renderer.software ? 60 : 30);
         this.frameDirty = false;
         this.lastDraw = timestamp;
         this.nextDraw = timestamp+(1000/rate-1.5);
@@ -936,6 +1118,8 @@
           this.ui.notice('Gene · I only want people who are ready to buy a house in the next five minutes.');
         }
         this.world.updateWildlife(this.car,dt,this.driving);
+        this.world.updateVisitor(this.career,this.player,this.driving,dt);
+        this.showingReminders();
         if (this.gps && distance(this.player,this.routeAt)>130) {
           const route = this.geo.route(this.player,this.gps.target);
           if (route) this.gps.route=route;
@@ -955,20 +1139,24 @@
         const p = this.player;
         this.world.stream(p.x,p.z);
         const minutes = this.started ? this.career.state.minute : 549;
-        const nearSuperior = p.x>97000 && p.z>42500;
-        if (this.started) this.weather=this.career.weather(nearSuperior);
+        if (this.started) this.weather=this.career.weather(this.nearLake(p));
         this.rain = mix(this.rain,this.weather.intensity,Math.min(1,frameDt*.85));
         const camera = this.camera(frameDt);
         const onFoot = this.started && !this.driving;
         const castShadows = this.renderer.low ? null : (center) =>
           this.world.drawShadows(center,p,this.car,this.seconds,onFoot);
-        this.renderer.begin(camera,this.seconds,minutes,this.rain,castShadows);
+        const snow = this.weather.snow ? this.rain : 0;
+        const mist = this.weather.label==='Lake mist' ? this.rain : 0;
+        this.renderer.begin(camera,this.seconds,minutes,this.rain-mist*.79-snow*.55,castShadows,{
+          world:true,snow,mist,headlights:this.headlightBeam(minutes),
+        });
         const shown = onFoot && this.walkCamera && distance(p,{x:camera.eye[0],z:camera.eye[2]})>1;
         this.world.draw(camera,p,this.car,this.seconds,shown,this.driving && this.driveCamera===1);
         if (this.started) this.arcade.draw(camera,this.career,this.car,this.seconds,this.driving && this.driveCamera===1);
         this.weatherOverlay();
         if (this.started && !this.ui.panel) this.updateHUD();
         this.pin(camera);
+        this.visitorTag(camera);
       }
       requestAnimationFrame((t) => this.loop(t));
     }

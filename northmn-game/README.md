@@ -6,14 +6,14 @@ Open `index.html` in a browser with WebGL 2. The game loads its assets locally a
 
 **Choose agent** on the title screen or in Pause shows all 21 agents and their perks and plays a voice preview when you pick one. Each coworker speaks in their own gibberish during conversations. Use **Replay voice** to hear them again and **Pause → Mute sound** to mute the game.
 
-Graphics offers **Low** and **High**. The game defaults to Low on detected software renderers and touch devices. Low caps world rendering at 30 FPS and uses simpler scenery. High adds sunlight shadows, detailed water reflections, and damp road surfaces.
+Graphics starts on **High** for new players and remembers your selection. High adds sun-cast shadows, detailed water reflections, and damp road surfaces. **Low** reduces resolution and scenery detail for lighter hardware. **Natural lighting** follows the workday. **Golden hour** gives you warm late-afternoon light without moving appointments.
 
 ## Controls
 
 | Input | Action |
 | --- | --- |
-| W A S D | Walk or drive |
-| Mouse or right-drag | Look around |
+| W A S D | Walk or drive. Hold W to accelerate in the SUV |
+| Click the scene, then move the mouse | Look around. Drag to look if pointer lock is unavailable |
 | Left and right arrows | Turn on foot or steer |
 | Shift | Run |
 | Space | Brake |
@@ -23,11 +23,13 @@ Graphics offers **Low** and **High**. The game defaults to Low on detected softw
 | M | Open the regional GPS |
 | Esc | Pause or close a window |
 
-Touch screens show movement, turning, camera, and interaction controls. Choose any town or property on the regional map to set a route. **Drive with GPS** advances your clock, mileage, and fuel for longer trips. You can also drive the roads yourself.
+Touch screens show movement, turning, camera, and interaction controls. **Route to showing** puts driving directions on the map. **Fast Travel** parks you at the destination and advances your clock, mileage, and fuel use. Press **C** in the SUV to see the cockpit.
 
-When driving yourself, follow the GPS arrow and watch your speed, fuel, and notices for deer, logging trucks, and slick pavement. The SUV tops out at 120 mph on highways. During a showing, walk to the inspection markers and decide which observations need follow-up. Accurate notes build client trust and can earn a closing bonus. Fictional rival crews sometimes disrupt a showing or surprise you with a scuffle, costing time and trust.
+Watch the showing countdown for a 15-minute reminder and a buzz when you run late. If the showing window closes, you lose up to four trust and can rebook from your phone. Phone and menus pause the field clock. The first-day tutorial is available from Pause.
 
-The Pemberton office seeds your ledger with a fictional $1,650 expense float. Check **Phone → Inbox** for the day's conditions and **Pause → End workday** for a recap with files, showings, offers, closings, mileage, earnings, and trust. The phone ledger also keeps the latest completed day.
+When driving yourself, follow the GPS arrow and watch your speed, fuel, and notices for deer, logging trucks, and slick pavement. The SUV tops out at 120 mph on highways. During a showing, the client follows your tour and reacts to your observations. At inspection, walk with Riley to the marked finding to review the estimate and credit. Fictional rival crews sometimes disrupt a showing or surprise you with a scuffle, costing time and trust.
+
+The Pemberton office seeds your ledger with a fictional $1,650 expense float. Check **Phone → Inbox** for the day's conditions. **Pause → End workday** shows the daily recap and starts the next morning at North Desk. The phone ledger keeps the latest completed day.
 
 Speak to Tanya Sage in the office or select **Tanya’s laser tag** from the pause menu to play her 45-second arcade match against five fictional opponents. Click, press **F**, or tap **Fire** to tag an opponent. Your real estate career pauses during the match.
 

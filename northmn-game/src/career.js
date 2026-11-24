@@ -10,6 +10,8 @@
   const COFFEE_SECONDS = 10;
   const STAR_SECONDS = 15;
   const BRIDGER_DELAY = 15;
+  const SHOWING_REMINDER = 15;
+  const MISSED_SHOWING_TRUST = 4;
   const events = [
     { id:'steady', title:'Clear roads', detail:'Normal showing windows and light traffic in the morning.' },
     { id:'snow', title:'Morning flurries', detail:'Snow crossings and shaded pavement stay slick into late morning.' },
@@ -37,7 +39,7 @@
     hash = Math.imul(hash^(hash>>>16),0x7feb352d) >>> 0;
     const random=(hash^(hash>>>15))>>>0;
     const event = index===0 ? 0 : index===1 ? 1+random%(events.length-1) : random%events.length;
-    return { index,event,files:0,showings:0,offers:0,closings:0,miles:0,trust:0,roadNotes:0,rivals:0 };
+    return { index,event,files:0,showings:0,missed:0,offers:0,closings:0,miles:0,trust:0,roadNotes:0,rivals:0 };
   }
 
   function openingEntry() {
@@ -51,9 +53,12 @@
       list: 249000, low: 239000, high: 253000, limit: 251000, reserve: 245000, repair: 2100, fee: .024,
       intake: 'Mara wants a starter home within a short drive of work. She asked about the basement and wants an inspection even if the seller gets another offer.',
       notes: [
-        ['living', 'Living room & front windows', 'The front window opens freely. The lower sash has light staining from condensation.'],
-        ['kitchen', 'Kitchen & plumbing', 'The cabinets are dry below the sink. The water heater date is in the seller’s disclosure.'],
-        ['rear', 'Basement entry & grading', 'At the basement stairwell, there’s a water mark under the rear window. The outside grade runs toward that wall.', true],
+        ['living', 'Living room & front windows', 'The front window opens freely. The lower sash has light staining from condensation.',
+          false,'Light condensation on a working sash is a routine condition.'],
+        ['kitchen', 'Kitchen & plumbing', 'The cabinets are dry below the sink. The water heater date is in the seller’s disclosure.',
+          false,'Dry cabinets and a documented heater age call for a routine note.'],
+        ['rear', 'Basement entry & grading', 'At the basement stairwell, there’s a water mark under the rear window. The outside grade runs toward that wall.',
+          true,'The water mark and grade point to possible water intrusion.'],
       ],
       report: 'The inspector found a disconnected downspout and soil sloped toward the foundation. The buyer wants a written drainage plan.',
       guidance: 'Recent closes cluster near $246,000. Keep the inspection contingency and leave room to negotiate the drainage separately.',
@@ -113,6 +118,24 @@
     },
   ];
 
+  const visitors = {
+    ramble: { id:'mara',name:'Mara Chen',title:'Buyer',hair:'#24262b',shirt:'#46676d',skin:'#cc9a77',style:'bob',
+      greeting:'Hi, I’m Mara. Can we take a look at the basement before we talk numbers?',
+      reactions:{ living:'I can see the condensation on the sash. Let’s ask how often that happens.',
+        kitchen:'That cabinet looks dry. I’d still like to see the water heater’s service date.',
+        rear:'That water mark worries me. Can we ask the inspector where the water is coming from?' } },
+    cabin: { id:'nora',name:'Nora Ortiz',title:'Buyer',hair:'#3e2c26',shirt:'#77634b',skin:'#b97d5c',style:'long',
+      greeting:'Ben asked me to check the well and septic before we make a decision.' },
+    range: { id:'rowan',name:'Rowan Fields',title:'Buyer',hair:'#6d493d',shirt:'#406064',skin:'#d3a783',style:'short',
+      greeting:'I can handle paint and flooring. Tell me if you see anything that needs a specialist.' },
+    hoyt: { id:'avery',name:'Avery Lund',title:'Seller',hair:'#806b55',shirt:'#827568',skin:'#ca9476',style:'short',
+      greeting:'I pulled the furnace records. Let’s make sure we have the right details for the listing.' },
+    duluth: { id:'lena',name:'Lena Patel',title:'Buyer',hair:'#29292e',shirt:'#8e654d',skin:'#a66c50',style:'long',
+      greeting:'Sam and I are both curious about the retaining wall and who gets to use the driveway.' },
+    inspector: { id:'inspector',name:'Riley Morgan',title:'Inspector',hair:'#685644',shirt:'#827444',style:'shortbeard',
+      greeting:'Come take a look. I’ll point out what I found, then we can review the estimate.' },
+  };
+
   const status = {
     lead: 'New inquiry', schedule: 'Book showing', booked: 'Showing booked', tour: 'Walkthrough',
     offer: 'Write offer', counter: 'Seller counter', inspection: 'Inspection', title: 'Title & lender',
@@ -165,6 +188,7 @@
   class Career {
     constructor(agent, saved) {
       this.state = saved || fresh(agent);
+      this.showingAlerts = [];
       const s = this.state;
       if (!Number.isInteger(s.seed)) s.seed = Math.floor(Math.random()*4294967296);
       if (!s.ledger.some((line)=>line.kind==='opening')) s.ledger.unshift(openingEntry());
@@ -181,6 +205,7 @@
         const record = s.files[file.id];
         if (!Number.isFinite(record.trust)) record.trust=50+Math.min(35,record.notes.length*9);
       }
+      this.checkShowings(s.minute);
     }
 
     get file() {
@@ -230,6 +255,44 @@
       return 50+(this.perk.grace??0);
     }
 
+    showing(file = this.file) {
+      const r = this.state.files[file.id];
+      if (r.stage==='schedule' && Number.isFinite(r.missedAt)) {
+        return { state:'missed',file,at:r.missedAt };
+      }
+      if (r.stage!=='booked' || !Number.isFinite(r.showAt)) return null;
+      const left = r.showAt-Math.floor(this.state.minute);
+      return { state:left<0?'late':left===0?'due':left<=SHOWING_REMINDER?'soon':'booked',
+        file,at:r.showAt,left,closes:r.showAt+this.showingGrace };
+    }
+
+    get nextShowing() {
+      const active = this.showing();
+      if (active && active.state!=='missed') return active;
+      const upcoming = files.map((file)=>this.showing(file))
+        .filter((showing)=>showing && showing.state!=='missed').sort((a,b)=>a.at-b.at);
+      return upcoming[0] || active;
+    }
+
+    checkShowings(minute) {
+      for (const file of files) {
+        const r = this.state.files[file.id];
+        if (r.stage!=='booked' || !Number.isFinite(r.showAt)) continue;
+        const left = r.showAt-Math.floor(minute);
+        const level = left < -this.showingGrace ? 3 : left < 0 ? 2 : left <= SHOWING_REMINDER ? 1 : 0;
+        if (level <= (r.showingAlert || 0)) continue;
+        r.showingAlert = level;
+        let lost = 0;
+        if (level===3) {
+          r.missedAt = r.showAt;
+          r.stage = 'schedule';
+          lost = -this.trust(-MISSED_SHOWING_TRUST,r);
+          this.day.missed++;
+        }
+        this.showingAlerts.push({ level,file,left,lost,closes:r.showAt+this.showingGrace });
+      }
+    }
+
     get showingEnd() {
       return 18*60+(this.perk.afterHours??0);
     }
@@ -254,17 +317,21 @@
     advanceTo(minute, wrap = false) {
       if (!Number.isFinite(minute) || minute<=this.state.minute) return;
       const day = this.day;
+      const previous = this.state.minute;
       this.state.minute=minute;
       const index=Math.floor(minute/DAY);
-      if (index===day.index) return;
-      const net = this.state.ledger.filter((line)=>line.kind!=='opening' && Math.floor(line.day/DAY)===day.index)
-        .reduce((sum,line)=>sum+line.amount,0);
-      if (wrap || net || day.files || day.showings || day.offers || day.closings || day.miles>.01 ||
-          day.trust || day.roadNotes || day.rivals) {
-        this.state.recaps.push({...day,net});
-        if (this.state.recaps.length>21) this.state.recaps.shift();
+      if (index!==day.index) {
+        this.checkShowings((day.index+1)*DAY-1);
+        const net = this.state.ledger.filter((line)=>line.kind!=='opening' && Math.floor(line.day/DAY)===day.index)
+          .reduce((sum,line)=>sum+line.amount,0);
+        if (wrap || net || day.files || day.showings || day.missed || day.offers || day.closings || day.miles>.01 ||
+            day.trust || day.roadNotes || day.rivals) {
+          this.state.recaps.push({...day,net});
+          if (this.state.recaps.length>21) this.state.recaps.shift();
+        }
+        this.state.day=makeDay(index,this.state.seed);
       }
-      this.state.day=makeDay(index,this.state.seed);
+      if (Math.floor(minute)!==Math.floor(previous)) this.checkShowings(minute);
     }
 
     endDay() {
@@ -276,19 +343,20 @@
       return events[report.event] || events[0];
     }
 
-    weather(nearSuperior) {
+    weather(nearLake) {
       const hour = this.state.minute%DAY/60;
       const event = this.event.id;
       if (event==='snow' && hour<12) return { label:'Snow flurries', intensity:hour<10.5?.67:.39, snow:true };
       if (event==='rain' && hour>=12) return { label:'Rain',intensity:.71 };
-      if (nearSuperior && hour<(event==='fog'?13:10)) return { label:'Lake mist',intensity:event==='fog'?.58:.31 };
+      if (nearLake && hour<(event==='fog'?13:10)) return { label:'Lake mist',intensity:event==='fog'?.58:.31 };
       return { label:'Clear',intensity:0 };
     }
 
-    trust(points) {
-      const before=this.record.trust;
-      this.record.trust=ND.clamp(before+points,0,100);
-      this.day.trust+=this.record.trust-before;
+    trust(points, record = this.record) {
+      const before = record.trust;
+      record.trust = ND.clamp(before+points,0,100);
+      this.day.trust += record.trust-before;
+      return record.trust-before;
     }
 
     hasPrize(id) {
@@ -371,6 +439,8 @@
       const next = Math.max(open, Math.ceil((now+travel)/15)*15);
       this.record.showAt = tomorrow || next >= open+this.showingEnd-9*60 ? open+DAY : next;
       this.record.stage = 'booked';
+      this.record.showingAlert = 0;
+      delete this.record.missedAt;
       this.addTime(3);
     }
 
@@ -390,11 +460,13 @@
     }
 
     openShowing() {
-      this.advanceTo(this.record.showAt);
+      const r = this.record;
+      if (r.stage!=='booked') return;
+      r.stage = 'tour';
+      r.unlocked = true;
+      this.advanceTo(r.showAt);
       this.day.showings++;
-      if (this.state.minute<=this.record.showAt+8) this.trust(7);
-      this.record.stage = 'tour';
-      this.record.unlocked = true;
+      if (this.state.minute<=r.showAt+8) this.trust(7);
     }
 
     observe(item, flag) {
@@ -403,12 +475,11 @@
       const matched = Boolean(note[3])===flag;
       const regional = this.perk.markets?.includes(this.file.id) ? this.perk.marketTrust : 0;
       const structural = ['rear','roof'].includes(item) ? (this.perk.structuralTrust??0) : 0;
-      const gained = matched ? (note[3]?14:9)+regional+structural : 2;
-      this.trust(gained);
+      const gained = this.trust(matched ? (note[3]?14:9)+regional+structural : 2);
       this.record.notes.push(item);
       if (this.record.notes.length === this.file.notes.length) this.record.stage = 'offer';
       this.addTime(this.perk.noteTime??5);
-      return { matched, gained };
+      return { matched,gained,important:Boolean(note[3]),bonus:matched ? regional+structural : 0 };
     }
 
     publish(price) {
@@ -480,6 +551,12 @@
       r.inspection = request ? 'Seller credit confirmed in writing' : 'Buyer accepted condition after review';
       this.trust(request?5:3);
       r.stage = 'title';
+    }
+
+    startInspection() {
+      if (this.record.stage!=='inspection') return;
+      this.advanceTo(this.record.inspectAt);
+      this.record.inspectionWalk = true;
     }
 
     title() {
@@ -568,6 +645,9 @@
       if (r.stage==='lead' && r.arcadeApproval) {
         return { title:'Accept the approved buyer file',detail:f.client+' · Open Deal on your phone.',point:null };
       }
+      if (r.stage==='schedule' && Number.isFinite(r.missedAt)) {
+        return { title:'Rebook the missed showing',detail:f.client+' · Open Deal on your phone.',point:null };
+      }
       const [title, detail, point] = {
         lead: ['Review the inquiry', this.role(f.staff) + ' left a file at Liz’s desk.', desk.entry],
         schedule: [f.side === 'seller' ? 'Book the listing visit' : 'Book the showing', site.name + ' · Open your phone to schedule.', site.entry],
@@ -586,5 +666,5 @@
     }
   }
 
-  Object.assign(ND, { files, Career, status, restore, persist, money, time });
+  Object.assign(ND, { files, visitors, Career, status, restore, persist, money, time });
 })();

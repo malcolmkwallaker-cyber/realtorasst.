@@ -6,22 +6,26 @@
   const TAU = 2 * Math.PI;
   const white = [1, 1, 1];
   const graphicsKey = 'north-desk-graphics';
+  const lightingKey = 'north-desk-lighting';
 
-  function preferredGraphics(gl) {
+  function preferredGraphics() {
     try {
       const saved = localStorage.getItem(graphicsKey);
       if (saved === 'low' || saved === 'high') return saved;
     } catch {}
+    return 'high';
+  }
+
+  function softwareRenderer(gl) {
     const debug = gl.getExtension('WEBGL_debug_renderer_info');
     const renderer = debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : '';
-    return /swiftshader|llvmpipe|softpipe|software|warp/i.test(renderer) ||
-      matchMedia('(pointer: coarse)').matches ? 'low' : 'high';
+    return /swiftshader|llvmpipe|softpipe|software|warp/i.test(renderer);
   }
 
   const SURFACE = Object.freeze({
     asphalt: 0, grass: 1, concrete: 2, siding: 3, shingles: 4, brick: 5,
     oak: 6, bark: 7, gravel: 8, water: 9, needles: 10, cedar: 11, drywall: 12,
-    granite: 13, boards: 14, cloth: 15, glass: -2, lamp: -3, sign: -4, shade: -5, paint: -6,
+    granite: 13, boards: 14, cloth: 15, glass: -2, lamp: -3, sign: -4, shade: -5, paint: -6, plate: -7,
   });
 
   function color(hex) {
@@ -201,7 +205,7 @@
   `;
 
   const atmosphere = `
-    uniform vec3 uSun, uHaze, uZenith;
+    uniform vec3 uSun, uHaze, uZenith, uSunTint;
     uniform float uDay, uRain, uTime;
     uniform bool uLow;
     float hash(vec2 p) {
@@ -219,7 +223,7 @@
       float up = max(0., ray.y);
       vec3 sky = mix(uHaze, uZenith, pow(up, .52));
       float radial = max(0., dot(ray,uSun));
-      sky += vec3(.26,.19,.10) * pow(radial, 28.) * uDay * (1. - uRain);
+      sky += uSunTint*.41 * pow(radial, 22.) * uDay * (1. - uRain*.81);
       return sky;
     }
   `;
@@ -233,10 +237,13 @@
     flat in int vMaterial;
     uniform sampler2DArray uMaterials;
     uniform sampler2D uSign;
+    uniform sampler2D uPlate;
     uniform sampler2D uShadow;
     uniform vec3 uEye, uShadowCenter;
+    uniform vec3 uHeadlight, uBeam;
+    uniform float uSnow, uMist;
     uniform mat3 uShadowBasis;
-    uniform bool uShadows;
+    uniform bool uShadows, uHeadlights;
     ${atmosphere}
     out vec4 oColor;
     float sunlight(float facing) {
@@ -246,7 +253,7 @@
       if (edge >= .99 || abs(q.z) >= 1.) return 1.;
       vec2 uv = q.xy*.5+.5;
       vec2 texel = 1. / vec2(textureSize(uShadow,0));
-      float depth = q.z*.5+.5 - (.00042 + (1.-facing)*.0007);
+      float depth = q.z*.5+.5 - (.00084 + (1.-facing)*.00103);
       float seen = 0.;
       for (int y=0;y<2;y++) {
         for (int x=0;x<2;x++) {
@@ -271,12 +278,24 @@
         paint *= tex;
       }
       if (vMaterial == -4) paint = texture(uSign,vUV).rgb;
+      if (vMaterial == -7) paint = texture(uPlate,vUV).rgb;
+      if (uSnow>.02 && (vMaterial==1 || vMaterial==4 || vMaterial==10)) {
+        float cover = uSnow*(.31+.69*noise(vPosition.xz*.42))*smoothstep(.12,.66,n.y);
+        paint = mix(paint,vec3(.81,.87,.89),cover*(vMaterial==10?.43:.88));
+      }
       float bounce = .07 + .17 * max(n.y, 0.);
       float shadow = max(dot(n,uSun), 0.);
       float sun = sunlight(shadow);
-      vec3 light = mix(vec3(.33,.39,.48), vec3(.49,.54,.63), uDay) + bounce;
-      light += vec3(.69,.58,.43) * (shadow * sun * uDay * (1. - uRain * .65));
+      vec3 light = mix(vec3(.24,.31,.44), vec3(.42,.47,.54), uDay) + bounce;
+      light += uSunTint * (shadow * sun * uDay * (1. - uRain * .68));
       vec3 lit = paint * light;
+      if (uHeadlights && dist<73.) {
+        vec3 beamRay = vPosition-uHeadlight;
+        float travel = length(beamRay);
+        float cone = smoothstep(.91,.989,dot(beamRay/max(travel,.01),uBeam));
+        float glow = cone*(1.-smoothstep(4.,58.,travel))*(.59+.41*max(n.y,0.));
+        lit += paint*vec3(.77,.67,.49)*glow;
+      }
       if (vMaterial == 0) lit *= (1. - uRain * .28);
       if (!uLow && vMaterial == 1) {
         float ground = noise(vPosition.xz*.066);
@@ -312,7 +331,8 @@
           vec3(.95,.78,.56)*(shine * sun * uDay * (1.-uRain*.58)*.55);
       }
       if (vMaterial == -3) lit = paint * 1.09;
-      float dust = uLow ? 0. : .00014*exp(-max(0.,vPosition.y-uEye.y)*.065);
+      float groundHaze = exp(-max(0.,vPosition.y-uEye.y)*.065);
+      float dust = (uLow ? 0. : .00014*groundHaze)+uMist*groundHaze*.00146;
       float fogWeight = 1. - exp(-dist * (.00037 + uRain * .0017 + dust));
       lit = mix(lit, skyColor(dir), fogWeight);
       oColor = vec4(lit, vMaterial == -5 ? .24 : 1.);
@@ -375,8 +395,8 @@
         cloud *= .86 + .30*smoothstep(-.28,.28,shade);
         cloud += vec3(.14,.08,.03)*uDay*pow(max(0.,dot(ray,uSun)),12.)*(1.-uRain);
       }
-      float sun = smoothstep(.99938, .99982, dot(ray, uSun)) * uDay * (1.-uRain);
-      sky = mix(sky, cloud, density * .76) + sun * vec3(1.,.72,.34);
+      float sun = smoothstep(.99953, .99988, dot(ray, uSun)) * uDay * (1.-uRain*.85);
+      sky = mix(sky, cloud, density * .76) + sun * (.43+uSunTint);
       oColor = vec4(sky,1.);
     }
   `;
@@ -389,13 +409,17 @@
       });
       if (!this.gl) throw new Error('WebGL 2 is required to render North Desk.');
       const gl = this.gl;
-      this.quality = preferredGraphics(gl);
+      this.quality = preferredGraphics();
+      this.software = softwareRenderer(gl);
+      this.lighting = 'natural';
+      try { if (localStorage.getItem(lightingKey)==='golden') this.lighting='golden'; } catch {}
       this.land = this.program(vertex, fragment);
       this.sky = this.program(skyVertex, skyFragment);
       this.skyVao = gl.createVertexArray();
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       this.createSign();
+      this.createPlate();
     }
 
     get low() {
@@ -407,6 +431,11 @@
       this.quality = mode;
       try { localStorage.setItem(graphicsKey,mode); } catch {}
       return true;
+    }
+
+    setLighting(mode) {
+      this.lighting = mode==='golden' ? 'golden' : 'natural';
+      try { localStorage.setItem(lightingKey,this.lighting); } catch {}
     }
 
     program(vs, fs) {
@@ -458,6 +487,34 @@
       gl.generateMipmap(gl.TEXTURE_2D);
     }
 
+    createPlate() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 112;
+      const ink = canvas.getContext('2d');
+      ink.fillStyle = '#e3e9de';
+      ink.fillRect(0,0,256,112);
+      ink.strokeStyle = '#456a80';
+      ink.lineWidth = 8;
+      ink.strokeRect(8,8,240,96);
+      ink.textAlign = 'center';
+      ink.fillStyle = '#35566a';
+      ink.font = 'bold 20px system-ui';
+      ink.fillText('MINNESOTA',128,32);
+      ink.fillStyle = '#233744';
+      ink.font = 'bold 49px monospace';
+      ink.fillText('ND-169',128,81);
+      const gl = this.gl;
+      this.plate = gl.createTexture();
+      gl.activeTexture(gl.TEXTURE3);
+      gl.bindTexture(gl.TEXTURE_2D,this.plate);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,canvas);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+      gl.generateMipmap(gl.TEXTURE_2D);
+    }
+
     async loadMaterials() {
       const gl = this.gl;
       const image = new Image();
@@ -503,8 +560,9 @@
 
     resize() {
       const canvas = this.canvas;
-      const scale = this.low ? Math.min(.72, 800/(canvas.clientWidth||1), 500/(canvas.clientHeight||1)) :
-        Math.min(devicePixelRatio || 1, 1.5, 1920 / (canvas.clientWidth || 1));
+      const scale = this.low ? Math.min(.72,800/(canvas.clientWidth||1),500/(canvas.clientHeight||1)) :
+        this.software ? Math.min(1,1080/(canvas.clientWidth||1),675/(canvas.clientHeight||1)) :
+          Math.min(devicePixelRatio||1,1.5,1920/(canvas.clientWidth||1));
       const width = Math.max(1, Math.round(canvas.clientWidth * scale));
       const height = Math.max(1, Math.round(canvas.clientHeight * scale));
       if (canvas.width !== width || canvas.height !== height) {
@@ -525,6 +583,7 @@
       gl.uniform3fv(u.uForward, camera.forward);
       gl.uniform2f(u.uLens, camera.zoom / camera.aspect, camera.zoom);
       gl.uniform3fv(u.uSun, atmosphere.sun);
+      gl.uniform3fv(u.uSunTint, atmosphere.sunTint);
       gl.uniform3fv(u.uHaze, atmosphere.haze);
       gl.uniform3fv(u.uZenith, atmosphere.zenith);
       gl.uniform1f(u.uDay, atmosphere.day);
@@ -535,7 +594,7 @@
 
     createShadowMap() {
       const gl = this.gl;
-      const size = 1536;
+      const size = this.software ? 1024 : 1536;
       const texture = gl.createTexture();
       const framebuffer = gl.createFramebuffer();
       gl.activeTexture(gl.TEXTURE2);
@@ -564,7 +623,7 @@
       const map = this.shadowMap;
       if (!map) return null;
       const center = camera.eye.map((v,i) => v + (i===1?-1.6:camera.forward[i]*23));
-      if (seconds-map.at<.075 && Math.hypot(...center.map((v,i)=>v-map.center[i]))<4 &&
+      if (seconds-map.at<(this.software?.139:.075) && Math.hypot(...center.map((v,i)=>v-map.center[i]))<4 &&
           dot(sun,map.sun)>.9999) return map;
 
       const span = 82;
@@ -599,17 +658,20 @@
       return map;
     }
 
-    begin(camera, seconds, minutes, rain, castShadows) {
+    begin(camera, seconds, minutes, rain, castShadows, { world=false,snow=0,mist=0,headlights } = {}) {
       const gl = this.gl;
-      const hour = minutes % 1440 / 60;
+      const naturally = minutes % 1440 / 60;
+      const hour = world && this.lighting==='golden' ? 18.95 : naturally;
       const solar = Math.sin((hour - 5.9) / 14.8 * Math.PI);
       const day = ND.clamp(solar * 2.6 + .15, .18, 1);
       const blend = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
       const dawn = Math.max(0, 1 - Math.abs(hour - 6.8) / 3, 1 - Math.abs(hour - 20) / 3);
+      const warm = ND.clamp(dawn+(world && this.lighting==='golden'?.30:0),0,1);
       const color = {
         sun: angle((hour - 6) * .23 + .98, Math.max(.04, solar * .98)),
-        haze: blend(blend([.17,.22,.31], [.72,.79,.79], day), [.91,.66,.49], dawn * .59),
-        zenith: blend([.039,.064,.114], [.23,.49,.70], day),
+        sunTint:blend([.86,.78,.64],[1.08,.68,.39],warm),
+        haze: blend(blend([.17,.22,.31], [.67,.77,.79], day), [.94,.66,.48], warm * .64),
+        zenith: blend([.035,.057,.117], [.21,.47,.72], day),
         day, rain,
       };
       color.haze = blend(color.haze, [.54,.62,.67], rain * .64);
@@ -629,6 +691,14 @@
       const u = this.land.uniforms;
       gl.uniform1i(u.uMaterials,0);
       gl.uniform1i(u.uSign,1);
+      gl.uniform1i(u.uPlate,3);
+      gl.uniform1f(u.uSnow,snow);
+      gl.uniform1f(u.uMist,mist);
+      gl.uniform1i(u.uHeadlights,Number(Boolean(headlights)));
+      if (headlights) {
+        gl.uniform3fv(u.uHeadlight,headlights.position);
+        gl.uniform3fv(u.uBeam,headlights.forward);
+      }
       gl.uniform1i(u.uShadow,shadow?2:1);
       gl.uniform1i(u.uShadows,Number(Boolean(shadow)));
       if (shadow) {

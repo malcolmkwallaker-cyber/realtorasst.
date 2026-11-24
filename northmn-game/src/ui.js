@@ -8,6 +8,24 @@
   const { money, time, status } = ND;
 
   const button = (label, handler, primary = false) => ({ label, handler, primary });
+  const tutorial = [
+    ['Find your footing',[
+      'Use WASD to walk. Click the scene to capture the mouse, or use the arrow keys to look. On a touch screen, drag the scene to look.',
+      'Press E to use the closest object named on screen. Press C to change camera.',
+    ]],
+    ['Start with a buyer',[
+      'Go inside North Desk and review Mara Chen’s file at Liz’s desk. Open Phone with P and book the showing in Deal.',
+      'Watch the showing countdown. You get a fifteen-minute reminder and a buzz when you’re late. A missed showing costs a little trust and goes back to scheduling.',
+    ]],
+    ['Get to the showing',[
+      'Route to showing sets directions on the map. You can hold W to drive your SUV there, or choose Fast Travel from Map to arrive parked. Fast Travel uses fuel and advances the workday.',
+      'Open the lockbox at the property. Walk with the buyer and flag conditions worth checking. Your notes carry through to the offer and inspection.',
+    ]],
+    ['Take a break',[
+      'Phone and menus pause the field clock. End workday returns you to the office in the morning and shows your daily recap.',
+      'Tanya’s Laser Tag is an optional 45-second arcade match. Find it in Pause or talk to Tanya at North Desk.',
+    ]],
+  ];
 
   class Interface {
     constructor(game) {
@@ -18,6 +36,7 @@
       this.panel = '';
       this.prevFocus = null;
       this.toastTimer = null;
+      this.captionTimer = null;
       this.mapPose = null;
       byId('close-window').onclick = () => this.close();
       this.overlay.addEventListener('click', (event) => {
@@ -29,6 +48,7 @@
     show(title, kind, html) {
       this.game.keys.clear();
       this.game.sound.quiet();
+      byId('visitor-caption').hidden = true;
       if (document.pointerLockElement) document.exitPointerLock();
       if (!this.panel) this.prevFocus = document.activeElement;
       this.panel = kind;
@@ -36,6 +56,7 @@
       this.window.classList.toggle('map-window',kind === 'map');
       byId('window-title').textContent = title;
       this.content.innerHTML = html;
+      this.content.scrollTop = 0;
       this.overlay.hidden = false;
       byId('hud').inert = true;
       byId('title-screen').inert = true;
@@ -69,12 +90,30 @@
       }
     }
 
-    notice(message) {
+    notice(message, duration = 3900) {
       const toast = byId('toast');
       toast.textContent = message;
       toast.hidden = false;
       clearTimeout(this.toastTimer);
-      this.toastTimer = setTimeout(() => { toast.hidden = true; },3900);
+      this.toastTimer = setTimeout(() => { toast.hidden = true; },duration);
+    }
+
+    visitorLine(person, line) {
+      const caption = byId('visitor-caption');
+      caption.querySelector('strong').textContent = person.name;
+      caption.querySelector('span').textContent = line;
+      caption.hidden = false;
+      clearTimeout(this.captionTimer);
+      this.captionTimer = setTimeout(() => { caption.hidden=true; },5800);
+      this.game.sound.say(line,person.id);
+    }
+
+    talkToVisitor(person) {
+      this.dialog(person.name,[person.greeting],[
+        button('Back to the property',() => this.close(),true),
+        button('Replay voice',() => this.game.sound.say(person.greeting,person.id)),
+      ]);
+      this.game.sound.say(person.greeting,person.id);
     }
 
     actions(actions) {
@@ -135,6 +174,19 @@
       this.dialog('Start a new career', ['Starting over replaces the North Desk save in this browser.'],actions);
     }
 
+    tutorial(step = 0) {
+      const [title,copies] = tutorial[step];
+      const finish = () => {
+        this.close();
+        this.game.captureLook();
+      };
+      const actions = step===tutorial.length-1 ?
+        [button('Start workday',finish,true)] :
+        [button('Next',() => this.tutorial(step+1),true),button('Skip tutorial',finish)];
+      if (step>0) actions.push(button('Back',() => this.tutorial(step-1)));
+      this.dialog(title,copies,actions);
+    }
+
     phone(tab = 'inbox') {
       const g = this.game;
       if (g.driving && Math.abs(g.car.speed) > 1.9) {
@@ -153,7 +205,9 @@
             '<div class="rows">'+ND.files.map((f) => {
             const site = g.world.features[f.id];
             const r = career.state.files[f.id];
-            const stage = r.stage==='lead' && r.arcadeApproval ? 'Pre-approved' : status[r.stage];
+            const showing = career.showing(f);
+            const stage = showing?.state==='missed' ? 'Missed · Rebook' : showing?.state==='late' ? 'Showing late' :
+              r.stage==='lead' && r.arcadeApproval ? 'Pre-approved' : status[r.stage];
             return this.row(f.id,site.name,f.contact+' · '+site.town,stage);
           }).join('')+'</div>';
           break;
@@ -237,11 +291,14 @@
         const end=time(career.showingEnd);
         extra = '<p>'+ (seller ? 'Avery is available for a listing walkthrough' : 'The seller is taking appointments') +
           ' from 9 AM to '+end+'.</p>';
+        if (Number.isFinite(r.missedAt)) extra = '<p>You missed the showing at '+time(r.missedAt,true)+'. Book a new time with the client.</p>'+extra;
         if (career.event.id==='hesitant') extra+='<p class="detail">'+escape(career.event.detail)+'</p>';
         actions.push(button(seller ? 'Book first listing visit' : 'Book earliest showing',() => g.book(false),true),button('Book tomorrow at 9 AM',() => g.book(true)));
       }
       if (r.stage === 'booked') {
-        extra = '<p>Showing booked for '+time(r.showAt,true)+'. The lockbox is at the front door.</p>';
+        const showing = career.showing();
+        extra = '<p>Showing booked for '+time(r.showAt,true)+'. The lockbox is at the front door.</p>'+
+          (showing?.state==='late' ? '<p>Running late. The showing window closes at '+time(showing.closes)+'.</p>' : '');
         actions.push(navigate(f.id,'Route to showing'));
       }
       if (r.stage === 'tour') {
@@ -485,14 +542,10 @@
       const site = g.world.features[c.file.id];
       const r = c.record;
       if (r.stage !== 'booked') {
-        this.dialog('Property lockbox',['The seller releases access for booked showings.'],[
+        const message = Number.isFinite(r.missedAt) ? 'This showing window has closed. Rebook with '+c.file.client+'.' :
+          'The seller releases access for booked showings.';
+        this.dialog('Property lockbox',[message],[
           button('Open deal',() => this.phone('deal'),true),
-        ]);
-        return;
-      }
-      if (c.state.minute > r.showAt+c.showingGrace) {
-        this.dialog('Showing window passed',['Contact the seller for the next available time.'],[
-          button('Request a new time',() => { r.stage = 'schedule'; g.changed(); this.phone('deal'); },true),
         ]);
         return;
       }
@@ -518,24 +571,32 @@
       }
       this.dialog(site.name,copies,[
         button(c.state.minute < r.showAt ? 'Wait and open lockbox' : 'Open lockbox',() => {
+          this.close();
           c.openShowing();
           g.changed(c.file.side === 'seller' ? 'Lockbox open. Review the home for the listing.' : 'Lockbox open. Walk the house with the buyer.');
-          this.close();
           g.enterBuilding(site);
+          const visitor = ND.visitors[c.file.id];
+          this.visitorLine(visitor,visitor.greeting);
         },true),
       ]);
     }
 
     observation(note) {
       const g = this.game;
+      const visitor = ND.visitors[g.career.file.id];
       const log = (flag) => {
         const result = g.career.observe(note[0],flag);
         if (!result) return;
-        const feedback = result.matched ? 'Well documented' :
-          note[3] ? 'Worth a closer look during inspection' : 'The client marked this as routine';
-        const next = g.career.record.stage === 'offer' ? ' · Open the deal on your phone.' : '';
-        g.changed(feedback+' · +'+result.gained+' trust'+next);
         this.close();
+        const reason = note[4] || (result.important ? 'This condition can affect the inspection or repair estimate.' :
+          'This is a routine condition to document for the client.');
+        const scoring = result.matched ? '' : result.important ?
+          ' Flagging it would have earned more trust.' : ' Escalating it earned partial credit.';
+        const bonus = result.bonus ? ' Includes an agent-perk bonus.' : '';
+        g.changed('+'+result.gained+' trust · '+reason+scoring+bonus);
+        this.visitorLine(visitor,visitor.reactions?.[note[0]] ??
+          (result.important ? 'Thanks for pointing that out. I want the inspector to look at it.' :
+            'Thanks. That helps me understand the condition.'));
       };
       this.dialog(note[1],[note[2],'Does this need a follow-up before the client moves forward?'],[
         button('Flag for follow-up',() => log(true)),
@@ -544,10 +605,38 @@
       ]);
     }
 
+    beginInspection() {
+      const g = this.game;
+      const c = g.career;
+      const site = g.world.features[c.file.id];
+      if (c.record.inspectionWalk) {
+        g.enterBuilding(site);
+        return;
+      }
+      const inspector = ND.visitors.inspector;
+      this.dialog('Meet '+inspector.name,[
+        'Inspection appointment '+time(c.record.inspectAt,true)+'.',
+        'Walk inside with the inspector and head to the marked finding to review the estimate.',
+      ],[
+        button(c.state.minute<c.record.inspectAt?'Wait for the inspector':'Walk the inspection',() => {
+          this.close();
+          c.startInspection();
+          g.changed();
+          g.enterBuilding(site);
+          this.visitorLine(inspector,inspector.greeting);
+        },true),
+        button('Back to the property',() => this.close()),
+      ]);
+    }
+
     inspection() {
       const g = this.game;
       const r = g.career.record;
       const f = g.career.file;
+      if (!r.inspectionWalk) {
+        g.career.startInspection();
+        g.changed();
+      }
       const credit=g.career.repairCredit;
       const actions=[
         button('Proceed at contract terms',() => {
@@ -569,7 +658,7 @@
       }
       if (r.arcadeSeptic) copies.push('The contractor confirmed the failed septic report and included the work in the estimate.');
       if (f.side==='seller' && credit<f.repair) copies.push('The seller’s minimum leaves '+money(credit)+' for a repair credit.');
-      this.dialog('Inspection with '+f.client,copies,actions);
+      this.dialog('Inspection with '+ND.visitors.inspector.name,copies,actions);
     }
 
     warpShack() {
@@ -585,6 +674,7 @@
         button('Back to work',() => this.close()),
       ];
       this.dialog('Tanya’s Laser Tag',[
+        'Take an optional 45-second arcade break. Your real estate workday pauses during the match.',
         'Good Lord, that scoreboard makes me fit to stab somebody. Step up here, sugar, and tag all five opponents in 45 seconds.',
         'Move with WASD. Aim with the mouse or arrow keys. Click or press F to fire. On touch screens, drag to aim and tap Fire.',
       ],actions,'tanya');
@@ -601,11 +691,15 @@
     graphics() {
       const g = this.game;
       const low = g.renderer.low;
+      const golden = g.renderer.lighting==='golden';
       this.dialog('Graphics',[
-        'Low uses a smaller render size, fewer scenery details, and a 30 FPS cap. High adds sun-cast shadows, wave detail, wet pavement reflections, and a longer view.',
+        'High adds sun-cast shadows, wave detail, and wet pavement reflections. Low is available for lighter hardware.',
+        'Natural lighting follows the game clock. Golden hour gives you a warm late-afternoon look while the workday clock keeps its own time.',
       ],[
         button(low?'Low · Active':'Low',() => { g.setGraphics('low'); this.graphics(); },low),
         button(low?'High':'High · Active',() => { g.setGraphics('high'); this.graphics(); },!low),
+        button(golden?'Natural lighting':'Natural lighting · Active',() => { g.setLighting('natural'); this.graphics(); }),
+        button(golden?'Golden hour · Active':'Golden hour',() => { g.setLighting('golden'); this.graphics(); }),
         button('Done',() => this.close()),
       ]);
     }
@@ -615,7 +709,8 @@
       const weather = g.career.recapEvent(report);
       const marks = [['Files accepted',report.files],['Showings',report.showings],['Offers',report.offers],
         ['Closings',report.closings],['Miles driven',report.miles.toFixed(1)],['Net earnings',money(report.net)],
-        ['Trust gained','+'+report.trust],['Road delays',report.roadNotes]];
+        ['Trust change',(report.trust>0?'+':'')+report.trust],['Road delays',report.roadNotes]];
+      if (report.missed) marks.push(['Missed showings',report.missed]);
       if (report.rivals) marks.push(['Rival run-ins',report.rivals]);
       const actions = [next ? button('Start next workday',() => {
         this.close();
@@ -637,12 +732,8 @@
         button('Tanya’s laser tag',() => this.tagInvite()),
         button('Graphics · '+(g.renderer.low?'Low':'High'),() => this.graphics()),
         button('Choose agent',() => this.choose()),
-        button('End workday',() => {
-          g.car.speed=0;
-          const report=g.career.endDay();
-          g.changed();
-          this.dailyReport(report,true);
-        }),
+        button('First-day tutorial',() => this.tutorial()),
+        button('End workday',() => this.dailyReport(g.endWorkday(),true)),
         button('New career',() => this.newCareer()),
       ];
       if (g.driving) actions.splice(3,1);
@@ -768,8 +859,10 @@
       const miles = selected.route.meters * ND.MILES;
       const near = g.driving || g.nearCar(12);
       el.innerHTML = '<strong>'+escape(selected.target.label)+'</strong><p>'+miles.toFixed(1)+' mi by road</p>'+
-        '<div class="actions"><button type="button" class="small primary" id="follow-gps">Back to world</button>'+
-        '<button type="button" class="small" id="assist-gps">'+(near?'Drive with GPS':'Return to SUV')+'</button></div>'+
+        '<p class="detail">Follow GPS for directions. Fast Travel arrives parked and uses about '+
+        Math.round(g.career.driveMinutes(miles))+' in-game minutes and fuel.</p>'+
+        '<div class="actions"><button type="button" class="small primary" id="follow-gps">Follow GPS</button>'+
+        '<button type="button" class="small" id="assist-gps">'+(near?'Fast Travel':'Return to SUV')+'</button></div>'+
         '<div class="actions"><button class="small" type="button" id="zoom-stop">Show destination</button>'+
         '<button class="small" type="button" id="clear-route">Clear GPS</button></div>';
       byId('follow-gps').onclick = () => this.close();

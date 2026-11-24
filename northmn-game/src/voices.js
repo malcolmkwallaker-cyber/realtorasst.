@@ -32,12 +32,18 @@
     tanya: { pitch:196, beat:.167, tract:1.07, rasp:.30, drawl:true, melody:[0,4,-2,7,-3], phrase:'hyeh~ naw~ rrah! yoh~ gah!' },
     'brother-malcolm': { pitch:68, beat:.225, tract:.70, rasp:.63, melody:[-2,-4,0,-6], phrase:'vroom hruhm~ zheh gahm' },
     gene: { pitch:129, beat:.130, tract:.81, rasp:.37, melody:[4,-3,5,1,-5], phrase:'bwuh dahm hohk bleh waw!' },
+    mara: { pitch:218, beat:.154, tract:1.08, melody:[0,3,-2,1,-3], phrase:'meh vah loh nee yeh' },
+    nora: { pitch:194, beat:.183, tract:1.02, phrase:'voh neh wahm heh' },
+    rowan: { pitch:147, beat:.129, tract:.99, phrase:'yeh duk roh kih wah' },
+    avery: { pitch:157, beat:.168, tract:1.05, phrase:'muh bay rahm oh' },
+    lena: { pitch:231, beat:.150, tract:1.12, phrase:'beh lah muh teh loo' },
+    inspector: { pitch:114, beat:.170, tract:.91, phrase:'dreh noh bahm steh' },
   };
 
   function syllable(word, index, voice, count) {
     const match = vowelPattern.exec(word);
-    const vowel = match[0];
-    const prefix = word.slice(0,match.index);
+    const vowel = match?.[0] || 'uh';
+    const prefix = word.slice(0,match?.index || 0);
     const accented = word.includes('!');
     const long = word.includes('~');
     const semitones = voice.melody?.[index] ?? (index===count-1 ? -3 : [0,2,-1,3][index%4]);
