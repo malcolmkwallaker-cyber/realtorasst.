@@ -426,7 +426,7 @@
     const mesh = new Mesh();
     const short = agent.style === 'small';
     const longBeard = agent.style === 'bald-long-beard';
-    const h = short ? .86 : agent.id === 'gaige' ? 1.045 : 1;
+    const h = short ? .78 : agent.id === 'gaige' ? 1.045 : 1;
     const jacket = c(agent.shirt);
     const hair = c(agent.hair);
     const skin = c(agent.skin || '#c69173');
