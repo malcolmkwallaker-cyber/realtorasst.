@@ -23,6 +23,7 @@
     stephanie: ['Seller’s advocate','Attract stronger opening offers when you publish a listing.',{buyerBump:1250}],
     tania: ['Range local','Earn extra client trust for walkthroughs in Hibbing and Hoyt Lakes.',{markets:['range','hoyt'],marketTrust:5}],
     tanya: ['Listing packet','Write each walkthrough note in three minutes.',{noteTime:3}],
+    'brother-malcolm': ['Twin’s cut','Pocket $125 from the North Desk expense float once per career.',{floatCash:125}],
   };
 
   const team = [
@@ -64,8 +65,11 @@
       'I know this block. If they’re comparing that place in Chisholm, remind them to look at the two condition reports.'],
     ['tanya', 'Tanya Sage', 'Listing coordinator', '#794735', '#78917c', 'long', 'rapids',
       'Come on in, honey. I’ve got the disclosures ready and a fresh pot of coffee. Tell me what would make your day a little easier.'],
-  ].map(([id, name, title, hair, shirt, style, base, line]) => ({
-    id, name, title, hair, shirt, style, base, line, short: id === 'bekkah' ? 'Bekkah' : name.split(' ')[0],
+    ['brother-malcolm', 'Brother Malcolm', 'Malcolm’s evil twin', '#302522', '#584257', 'short', 'rapids',
+      'My brother and I keep score differently. I like to leave the office with more than I came in with.', '#76503d'],
+  ].map(([id, name, title, hair, shirt, style, base, line, skin]) => ({
+    id, name, title, hair, shirt, style, base, line, skin,
+    short: id === 'bekkah' ? 'Bekkah' : id === 'brother-malcolm' ? name : name.split(' ')[0],
     perk:{name:perks[id][0],description:perks[id][1],...perks[id][2]},
   }));
 

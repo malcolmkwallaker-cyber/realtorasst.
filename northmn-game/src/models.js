@@ -127,6 +127,7 @@
     chair(mesh, 3.75, 0, -1.15, Math.PI, [.85, .87, .85]);
     table(mesh, -3.6, 0, -2.05, 2.1, .76, .72);
     papers(mesh, -3.95, .8, -2.26);
+    mesh.box(-3.35,.793,-2.13,.27,.027,.19,c('#ad723f'));
     chair(mesh, -3.62, 0, -1.31, Math.PI, [.77, .76, .71]);
     table(mesh, -.1, 0, 3.2, 3.34, 1.22, .74);
     for (const x of [-1.15, .12, 1.23]) {
@@ -427,7 +428,7 @@
     const h = short ? .86 : agent.id === 'gaige' ? 1.045 : 1;
     const jacket = c(agent.shirt);
     const hair = c(agent.hair);
-    const skin = c('#c69173');
+    const skin = c(agent.skin || '#c69173');
     const denim = c('#384653');
     const shoe = c('#3a3532');
     const torso = agent.style === 'long' || agent.style === 'bob' || short ? .195 : .215;

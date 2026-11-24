@@ -534,6 +534,9 @@
         if (title) {
           add(o.deskApproach,4.4,title,() => this.ui.desk(),-2.2);
         }
+        if (p.agent==='brother-malcolm') {
+          add(o.expenseFloat,1.9,'Check the expense envelope',() => this.ui.brotherCash());
+        }
         add(o.threshold,1.75,'Exit North Desk',() => {
           const outside = ND.toWorld(o,0,-o.d/2-3.44);
           this.transitionDoor(outside,o.yaw);

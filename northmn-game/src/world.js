@@ -162,6 +162,7 @@
         lot.lobby = toWorld(lot,0,-lot.d/2+2.45);
         lot.deskApproach = toWorld(lot,3.69,-2.88);
         lot.desk = { ...toWorld(lot,3.41,-2.17),y:lot.y,label:'Liz’s desk',markerHeight:1.56 };
+        lot.expenseFloat = toWorld(lot,-3.34,-1.36);
       }
       let park = toWorld(lot, site.w * .5 + 2.7, -site.d / 2 - 4.4);
       if (geo.nearest(park.x, park.z, 8)?.distance < 3.4 || geo.wet(park.x,park.z)) {
@@ -185,7 +186,7 @@
 
     makePeople() {
       const desk = [[-3.7,-1.08],[2.7,-3.24],[-5.9,2.3],[-5.8,-2.6],[1.2,3.67],
-        [-3.77,4.09],[4.19,-.75],[5.0,-2.72],[-1.52,-1.01],[5.9,-.54]];
+        [-3.77,4.09],[4.19,-.75],[5.0,-2.72],[-1.52,-1.01],[5.9,-.54],[-2.92,.18]];
       const walking = {
         liz:[[5.74,-.75],[5.74,-3.16],[5.74,-.75],[4.19,-.75]],
         scotty:[[-1.53,.34],[-.78,.26],[-.92,-1.72],[-1.52,-1.01]],

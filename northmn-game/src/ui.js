@@ -320,6 +320,7 @@
     }
 
     person(id, onPhone, advise = false) {
+      if (id==='brother-malcolm') return this.brotherCash(onPhone);
       const g = this.game;
       const career = g.career;
       const f = career.file;
@@ -339,6 +340,47 @@
       actions.push(button(onPhone ? 'Back to phone' : 'Back to work',() => onPhone ? this.phone(relevant ? 'deal' : 'team') : this.close()));
       const lines = ND.conversation(person,career,g.world.features[f.id]);
       this.dialog(person.name,[person.title,...(relevant?[f.guidance,lines[1]]:lines)],actions);
+    }
+
+    brotherCash(onPhone = false) {
+      const g=this.game;
+      const c=g.career;
+      const brother=ND.agents['brother-malcolm'];
+      const playingBrother=c.state.agent===brother.id;
+      const amount=playingBrother || onPhone ? 0 : c.takeOfficeCash();
+      if (amount<0) g.changed(money(-amount)+' missing from the expense float.');
+      const outstanding=c.outstandingOfficeTheft;
+      const copies=[brother.title+'.',brother.line];
+      const actions=[];
+      if (outstanding) {
+        const cash=money(Math.abs(outstanding.amount));
+        copies.push('Brother Malcolm pocketed '+cash+' from the office float. The ledger records the swipe.');
+        const returning=outstanding.amount>0;
+        if (!returning || c.state.cash>=outstanding.amount) {
+          actions.push(button(returning?'Put the cash back':'Ask Liz to recover it',() => {
+            const returned=c.returnOfficeCash();
+            if (!returned) return;
+            g.changed(cash+' returned to the float.');
+            this.brotherCash(onPhone);
+          },true));
+        }
+      } else if (c.officeTheft) {
+        copies.push('The expense envelope is back in order. Liz has it on her desk.');
+      } else if (playingBrother) {
+        const cash=money(brother.perk.floatCash);
+        copies.push('There’s '+cash+' in the expense envelope at the spare desk.');
+        actions.push(button('Pocket '+cash,() => {
+          const taken=c.takeOfficeCash();
+          if (!taken) return;
+          g.changed(money(taken)+' added to your ledger.');
+          this.brotherCash();
+        },true));
+      } else {
+        copies.push(onPhone ? 'You can find him near the spare desk at the Grand Rapids office.' :
+          'He looks at the empty envelope and puts it back on the desk.');
+      }
+      actions.push(button(onPhone?'Back to phone':'Back to work',() => onPhone ? this.phone('team') : this.close()));
+      this.dialog(brother.name,copies,actions);
     }
 
     refuel() {

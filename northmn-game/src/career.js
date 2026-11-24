@@ -426,6 +426,34 @@
       return cost;
     }
 
+    get officeTheft() {
+      return this.state.ledger.find((line)=>line.kind==='office-theft');
+    }
+
+    get outstandingOfficeTheft() {
+      if (this.state.ledger.some((line)=>line.kind==='office-theft-return')) return undefined;
+      return this.officeTheft;
+    }
+
+    takeOfficeCash() {
+      if (this.officeTheft) return 0;
+      const cap=ND.agents['brother-malcolm'].perk.floatCash;
+      const amount=this.perk.floatCash || -Math.min(cap,Math.max(0,this.state.cash));
+      if (!amount) return 0;
+      this.state.cash+=amount;
+      this.state.ledger.push({ label:'Brother Malcolm swiped office cash',amount,day:this.state.minute,kind:'office-theft' });
+      return amount;
+    }
+
+    returnOfficeCash() {
+      const theft=this.outstandingOfficeTheft;
+      if (!theft || this.state.cash<theft.amount) return 0;
+      const amount=-theft.amount;
+      this.state.cash+=amount;
+      this.state.ledger.push({ label:'Office cash returned',amount,day:this.state.minute,kind:'office-theft-return' });
+      return amount;
+    }
+
     goal(world) {
       const f = this.file;
       const r = this.record;
