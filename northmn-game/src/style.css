@@ -233,6 +233,77 @@ h1 em { padding-right: .10em; color: #ead4a8; font-weight: 400; }
 #fuel { display: block; padding-top: 4px; color: #f5deb4; }
 .touch-controls { display: none; }
 
+.tag-hud { position: absolute; inset: 0; pointer-events: none; }
+.tag-hud button { pointer-events: auto; }
+.tag-heading, .tag-score {
+  position: absolute;
+  top: max(20px, calc(env(safe-area-inset-top) + 11px));
+  display: grid;
+  gap: 4px;
+  text-shadow: 0 2px 10px #131021;
+}
+.tag-heading { left: max(22px, env(safe-area-inset-left)); }
+.tag-heading h2 { margin: 0; font: 500 clamp(1.2rem, 3vw, 1.85rem)/1.1 Georgia, serif; }
+.tag-heading span, .tag-score > span { font-size: .78rem; color: #ded2ec; }
+.tag-score {
+  right: max(22px, env(safe-area-inset-right));
+  justify-items: end;
+  padding: 7px 10px;
+  border: 1px solid #b9a9ef74;
+  border-radius: 4px;
+  background: #1e1a34dc;
+  font-variant-numeric: tabular-nums;
+}
+.tag-score strong { color: #aaf3e4; font-size: .93rem; }
+.tag-reticle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%,-50%);
+  border: 1px solid #c8f8eddb;
+  border-radius: 50%;
+  background: radial-gradient(circle, #d7fff7 1px, transparent 2px);
+  box-shadow: 0 0 8px #81f7e56a;
+}
+.tag-pulse .tag-reticle { border: 2px solid #ffd6ef; box-shadow: 0 0 16px #e796ffdc; }
+.tag-pulse .tag-reticle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(20vw, 280px);
+  height: 2px;
+  transform: rotate(29deg);
+  transform-origin: left center;
+  background: linear-gradient(90deg, #ffd6ef, #8efbdf);
+  box-shadow: 0 0 9px #dea6ff;
+}
+.tag-feedback {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 26px);
+  transform: translateX(-50%);
+  padding: 5px 9px;
+  border-radius: 3px;
+  color: #f0e8f9;
+  background: #1d1932c7;
+  font-size: .78rem;
+  text-align: center;
+}
+.tag-tools button, .tag-touch button { background: #22223ae8; border-color: #c4b5f488; }
+.tag-tools #tag-fire { background: #a0e6d7; border-color: #a0e6d7; color: #182a2b; min-width: 80px; }
+.tag-tools #tag-fire:hover { background: #c4fbef; }
+.tag-tools #tag-fire kbd { border-color: #1b403a80; }
+@media (pointer: coarse) {
+  .tag-tools kbd { display: none; }
+  .tag-tools #tag-fire { min-height: 44px; }
+}
+@media (max-width: 690px) and (orientation: portrait) {
+  .tag-pulse .tag-reticle::after { width: 29vw; transform: rotate(48deg); }
+}
+
 .overlay {
   position: absolute;
   z-index: 2;

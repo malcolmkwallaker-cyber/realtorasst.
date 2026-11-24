@@ -66,6 +66,22 @@
       tick.start(now,Math.random()*.8,.18);
     }
 
+    arcade(hit) {
+      const ctx = this.context;
+      if (!this.enabled || !ctx || ctx.state !== 'running') return;
+      const tone = ctx.createOscillator();
+      const volume = ctx.createGain();
+      const now = ctx.currentTime;
+      tone.type = 'sine';
+      tone.frequency.setValueAtTime(hit ? 580 : 380,now);
+      tone.frequency.exponentialRampToValueAtTime(hit ? 870 : 175,now+.13);
+      volume.gain.setValueAtTime(.17,now);
+      volume.gain.exponentialRampToValueAtTime(.001,now+.15);
+      tone.connect(volume).connect(this.master);
+      tone.start(now);
+      tone.stop(now+.16);
+    }
+
     update({ moving, driving, rain, stride, speed, indoors, paved }) {
       const ctx = this.context;
       if (!this.enabled || !ctx || ctx.state !== 'running') return;

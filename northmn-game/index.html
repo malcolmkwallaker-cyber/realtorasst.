@@ -52,6 +52,30 @@
       <button id="touch-view" type="button">Camera</button>
     </div>
   </div>
+  <section id="tag-hud" class="tag-hud" aria-label="Tanya’s laser tag" hidden>
+    <div class="tag-heading">
+      <h2>Tanya’s Laser Tag</h2>
+      <span>Tanya Sage</span>
+    </div>
+    <div class="tag-score">
+      <strong id="tag-score">0 / 5 tagged</strong>
+      <span><span id="tag-timer">45</span> seconds</span>
+    </div>
+    <span class="tag-reticle" aria-hidden="true"></span>
+    <div id="tag-feedback" class="tag-feedback" role="status">Tag all five opponents.</div>
+    <div class="touch-controls tag-touch" aria-label="Laser tag movement">
+      <div class="touch-pad">
+        <button data-hold="KeyW" type="button" aria-label="Move forward">▲</button>
+        <button data-hold="ArrowLeft" type="button" aria-label="Turn left">◀</button>
+        <button data-hold="KeyS" type="button" aria-label="Move backward">▼</button>
+        <button data-hold="ArrowRight" type="button" aria-label="Turn right">▶</button>
+      </div>
+    </div>
+    <nav class="hud-tools tag-tools" aria-label="Laser tag controls">
+      <button id="tag-fire" type="button"><kbd>F</kbd> Fire</button>
+      <button id="tag-exit" type="button"><kbd>Esc</kbd> Leave match</button>
+    </nav>
+  </section>
   <section id="title-screen" class="title-screen" aria-label="Start North Desk">
     <div class="title-content">
       <div class="title-location"><span></span> GRAND RAPIDS, MINNESOTA</div>
@@ -97,6 +121,7 @@
 <script defer src="src/career.js"></script>
 <script defer src="src/ui.js"></script>
 <script defer src="src/sound.js"></script>
+<script defer src="src/laser-tag.js"></script>
 <script defer src="src/main.js"></script>
 </body>
 </html>

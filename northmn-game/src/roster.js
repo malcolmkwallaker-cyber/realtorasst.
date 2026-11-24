@@ -40,6 +40,8 @@
       'Somebody needs exactly what this house offers. I start with the disclosure and the actual layout.'],
     ['tania', 'Tania Suonvieri', 'Iron Range market', '#c9ab73', '#754340', 'bob', 'range',
       'I know this block. If they’re comparing that place in Chisholm, remind them to look at the two condition reports.'],
+    ['tanya', 'Tanya Sage', 'Listing coordinator', '#794735', '#78917c', 'long', 'rapids',
+      'Come on in, honey. I’ve got the disclosures ready and a fresh pot of coffee. Tell me what would make your day a little easier.'],
   ].map(([id, name, title, hair, shirt, style, base, line]) => ({
     id, name, title, hair, shirt, style, base, line, short: id === 'bekkah' ? 'Bekkah' : name.split(' ')[0],
   }));

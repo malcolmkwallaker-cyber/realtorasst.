@@ -5,6 +5,7 @@
   const { byId, clamp, angle, time, money, button } = ND;
   const controls = new Set(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight',
     'ShiftLeft','ShiftRight','Space','KeyE','KeyC','KeyM','KeyP','Escape']);
+  const tagMovement = new Set(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight']);
   const distance = (a,b) => Math.hypot(a.x-b.x,a.z-b.z);
   const direction = (a,b) => Math.atan2(b.x-a.x,a.z-b.z);
   const mix = (a,b,t) => a+(b-a)*t;
@@ -31,6 +32,7 @@
       this.rain = 0;
       this.seconds = 0;
       this.transit = false;
+      this.tag = null;
       this.setupScene(this.choice);
       this.attach();
       this.canvas.addEventListener('webglcontextlost',(event) => {
@@ -128,6 +130,36 @@
       this.updateHUD(true);
     }
 
+    startTag() {
+      if (!this.started || this.transit || this.tag) return;
+      this.save();
+      this.ui.close(false);
+      this.keys.clear();
+      this.sound.update({ moving:false,driving:false,rain:0,stride:this.player.stride,speed:0,indoors:true,paved:true });
+      this.tag = new ND.LaserTag(this.renderer,this.sound);
+      byId('toast').hidden = true;
+      byId('rain').hidden = true;
+      byId('hud').hidden = true;
+      byId('tag-hud').hidden = false;
+      this.canvas.setAttribute('aria-label','Tanya’s 3D laser-tag arena');
+      this.canvas.focus({preventScroll:true});
+    }
+
+    endTag(showResult) {
+      if (!this.tag) return;
+      const { tagged, rivals } = this.tag;
+      this.tag.dispose();
+      this.tag = null;
+      this.keys.clear();
+      if (document.pointerLockElement === this.canvas) document.exitPointerLock();
+      byId('tag-hud').hidden = true;
+      byId('hud').hidden = false;
+      this.canvas.setAttribute('aria-label','North Desk 3D world');
+      this.canvas.focus({preventScroll:true});
+      this.updateHUD(true);
+      if (showResult) this.ui.tagResult(tagged,rivals.length);
+    }
+
     attach() {
       const canvas = this.canvas;
       byId('start-game').onclick = () => this.ui.newCareer();
@@ -138,6 +170,8 @@
       byId('open-menu').onclick = () => this.ui.pause();
       byId('interact').onclick = () => this.interact();
       byId('touch-view').onclick = () => this.toggleView();
+      byId('tag-fire').onclick = () => this.tag?.fire();
+      byId('tag-exit').onclick = () => this.endTag(false);
       for (const hold of document.querySelectorAll('[data-hold]')) {
         const code = hold.dataset.hold;
         hold.onpointerdown = (event) => {
@@ -152,7 +186,19 @@
         if (event.code === 'Escape') {
           if (event.repeat || this.transit) return;
           if (this.ui.panel) this.ui.close();
+          else if (this.tag) this.endTag(false);
           else if (this.started) this.ui.pause();
+          return;
+        }
+        if (this.tag) {
+          if (this.ui.panel || event.altKey || event.metaKey || event.ctrlKey) return;
+          if (tagMovement.has(event.code)) {
+            event.preventDefault();
+            this.keys.add(event.code);
+          } else if (event.code === 'KeyF' || (event.code === 'Space' && event.target.tagName !== 'BUTTON')) {
+            event.preventDefault();
+            if (!event.repeat) this.tag.fire();
+          }
           return;
         }
         if (!this.started || this.transit || event.altKey || event.metaKey || event.ctrlKey ||
@@ -186,8 +232,9 @@
       let drag = null;
       canvas.oncontextmenu = (event) => event.preventDefault();
       canvas.onpointerdown = (event) => {
-        if (!this.playing()) return;
+        if (!this.canLook()) return;
         canvas.focus({preventScroll:true});
+        if (this.tag && event.pointerType === 'mouse' && event.button === 0) this.tag.fire();
         if (document.pointerLockElement === canvas) return;
         if (event.pointerType === 'mouse' && event.button === 0 && canvas.requestPointerLock) {
           try {
@@ -199,21 +246,29 @@
         drag = {cx:event.clientX,cy:event.clientY};
       };
       canvas.onpointermove = (event) => {
-        if (document.pointerLockElement === canvas || !drag || !this.playing()) return;
+        if (document.pointerLockElement === canvas || !drag || !this.canLook()) return;
         this.look(event.clientX-drag.cx,event.clientY-drag.cy);
         drag = {cx:event.clientX,cy:event.clientY};
       };
       canvas.onpointercancel = canvas.onpointerup = canvas.onlostpointercapture = () => { drag = null; };
       document.addEventListener('mousemove',(event) => {
-        if (document.pointerLockElement === canvas && this.playing()) this.look(event.movementX,event.movementY);
+        if (document.pointerLockElement === canvas && this.canLook()) this.look(event.movementX,event.movementY);
       });
     }
 
     playing() {
-      return this.started && !this.ui.panel && !this.transit && !document.hidden;
+      return this.started && !this.ui.panel && !this.transit && !this.tag && !document.hidden;
+    }
+
+    canLook() {
+      return this.playing() || (this.tag && !this.ui.panel && !document.hidden);
     }
 
     look(dx,dy) {
+      if (this.tag) {
+        this.tag.look(dx,dy);
+        return;
+      }
       const p = this.player;
       if (this.driving) {
         this.carLook = clamp((this.carLook || 0) + dx*.0028,-.95,.95);
@@ -642,6 +697,13 @@
       this.last=timestamp;
       if (document.hidden) { requestAnimationFrame((t) => this.loop(t)); return; }
       this.seconds+=dt;
+      if (this.tag) {
+        if (!this.ui.panel) this.tag.tick(dt,this.keys);
+        this.tag.draw();
+        if (this.tag.finished && !this.ui.panel) this.endTag(true);
+        requestAnimationFrame((t) => this.loop(t));
+        return;
+      }
       const active = this.playing();
       if (active) {
         if (this.driving) this.moveCar(dt);

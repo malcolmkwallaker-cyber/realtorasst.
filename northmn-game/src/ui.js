@@ -315,6 +315,7 @@
       const person = ND.agents[real];
       const relevant = advise || id === f.advisor;
       const actions = [];
+      if (real === 'tanya' && !relevant) actions.push(button('Join Tanya’s laser tag',() => this.tagInvite(),true));
       if (relevant && !career.record.reviewed) {
         actions.push(button('Log file review',() => {
           career.record.reviewed = true;
@@ -349,7 +350,7 @@
       if (r.stage === 'lead') {
         const deskAgent = career.role('liz');
         const seller = f.side === 'seller';
-        const intro = seller ? f.client+' signed the listing agreement. '+deskAgent+' has the disclosure packet ready.' :
+        const intro = seller ? f.client+' signed the listing agreement. '+career.role('tanya')+' has the disclosure packet ready.' :
           deskAgent+' hands you the file. '+f.client+' signed the representation agreement. '+career.role('joel')+
           ' verified the lender’s approval up to '+money(f.limit)+'.';
         this.dialog(seller ? 'New listing file' : 'New buyer file',[intro,f.intake],[button('Accept file',() => {
@@ -437,6 +438,25 @@
       ]);
     }
 
+    tagInvite() {
+      const actions = [
+        button('Start match',() => this.game.startTag(),true),
+        button('Back to work',() => this.close()),
+      ];
+      this.dialog('Tanya’s Laser Tag',[
+        'Play as Tanya with her arcade gun. Tag all five opponents in 45 seconds.',
+        'Move with WASD. Aim with the mouse or arrow keys. Click or press F to fire. On touch screens, drag to aim and tap Fire.',
+      ],actions);
+    }
+
+    tagResult(count,total) {
+      this.dialog(count === total ? 'Tanya wins the match' : 'Match complete',
+        [count+' of '+total+' opponents tagged.'],[
+          button('Play again',() => this.game.startTag(),true),
+          button('Back to work',() => this.close()),
+        ]);
+    }
+
     pause() {
       const g = this.game;
       const actions = [
@@ -444,6 +464,7 @@
         button('Change camera',() => { g.toggleView(); this.close(); }),
         button(g.sound.enabled ? 'Mute sound' : 'Turn on sound',() => { g.sound.toggle(); this.pause(); }),
         button('Return to parked SUV',() => { this.close(); g.returnToCar(); }),
+        button('Tanya’s laser tag',() => this.tagInvite()),
         button('New career',() => this.newCareer()),
       ];
       if (g.driving) actions.splice(3,1);

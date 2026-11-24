@@ -1,6 +1,6 @@
 # North Desk
 
-North Desk is a 3D real estate career game set in Northern Minnesota. Start at the Pemberton office on South Pokegama Avenue in Grand Rapids, pick up a file, and work it from client intake or listing prep through the closing table. All 18 North Desk characters are playable and appear in the game as coworkers.
+North Desk is a 3D real estate career game set in Northern Minnesota. Start at the Pemberton office on South Pokegama Avenue in Grand Rapids, pick up a file, and work it from client intake or listing prep through the closing table. All 19 North Desk characters are playable and appear in the game as coworkers.
 
 Open `index.html` in a browser with WebGL 2. The game loads its assets locally and saves your career in the browser. No install or build is required.
 
@@ -20,6 +20,8 @@ Open `index.html` in a browser with WebGL 2. The game loads its assets locally a
 | Esc | Pause or close a window |
 
 Touch screens show movement, turning, camera, and interaction controls. Choose any town or property on the regional map to set a route. **Drive with GPS** advances your clock, mileage, and fuel for longer trips. You can also drive the roads yourself.
+
+Speak to Tanya Sage in the office or select **Tanya’s laser tag** from the pause menu to play her 45-second arcade match against five fictional opponents. Click, press **F**, or tap **Fire** to tag an opponent. Your real estate career pauses during the match.
 
 ## The Northland
 

@@ -399,6 +399,11 @@
       mesh.ellipsoid(side * (torso + .038), .795 * h, -.026, .048, .078 * h, .041, skin, -1, 8, 5);
     }
     mesh.ellipsoid(0, 1.067 * h, 0, torso, .313 * h, .131, jacket, -1, 12, 7);
+    if (agent.id === 'tanya') {
+      const scarf = c('#f1d9b7');
+      mesh.ellipsoid(0,1.302,-.036,.083,.067,.089,scarf,-1,10,5);
+      beam(mesh,[-.039,1.284,-.108],[.032,1.106,-.124],.042,scarf);
+    }
     mesh.round(0, 1.268 * h, -.008, .066, .059, .236 * h, skin, -1, 8);
     mesh.ellipsoid(0, 1.55 * h, -.005, .101, .139 * h, .112, skin, -1, 14, 8);
     mesh.ellipsoid(0, 1.555*h, -.112, .027, .037, .037, skin, -1, 8, 5);
