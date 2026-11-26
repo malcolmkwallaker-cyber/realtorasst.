@@ -314,8 +314,12 @@
       vec3 light = mix(vec3(.24,.31,.44), vec3(.42,.47,.54), uDay) + bounce;
       light += uSunTint * (shadow * sun * uDay * (1. - uRain * .68));
       if (indoors) {
-        float roomBounce = .85 + .19 * max(n.y,0.);
-        light = mix(light,vec3(.98,.91,.80)*roomBounce,.78);
+        vec2 delta=vPosition.xz-uRoomCenter.xz;
+        vec2 axis=vec2(-uRoomAxis.y,uRoomAxis.x);
+        float fromFront=dot(delta,axis)+uRoomHalfSize.y;
+        float daylight=uDay*(1.-uRain*.32)*exp(-max(0.,fromFront)*.23);
+        float bounce=.98+.14*max(n.y,0.);
+        light=mix(light,vec3(1.01,.97,.90)*bounce,.83)+vec3(.18,.21,.23)*daylight;
       }
       vec3 lit = paint * light;
       if (!indoors && uHeadlights && dist<73.) {

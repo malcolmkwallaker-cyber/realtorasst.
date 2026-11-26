@@ -41,10 +41,15 @@
     }
   }
 
-  function window(mesh, x, y, z, w, h, lit = false) {
-    mesh.box(x - .045, y - .06, z - .023, w + .09, h + .12, .09, ivory);
-    mesh.box(x + .045, y + .045, z - .032, w - .09, h - .09, .02,
-      lit ? c('#71664a') : glass, lit ? -1 : M.glass);
+  function window(mesh, x, y, z, w, h, lit = false, through = false) {
+    if (through) {
+      for (const edge of [x-.045,x+w-.025]) mesh.box(edge,y,z-.023,.07,h,.09,ivory);
+      for (const edge of [y-.06,y+h-.03]) mesh.box(x-.045,edge,z-.023,w+.09,.09,.09,ivory);
+    } else {
+      mesh.box(x - .045, y - .06, z - .023, w + .09, h + .12, .09, ivory);
+      mesh.box(x + .045, y + .045, z - .032, w - .09, h - .09, .02,
+        lit ? c('#71664a') : glass, lit ? -1 : M.glass);
+    }
     mesh.box(x + w / 2 - .023, y, z - .05, .046, h, .039, ivory);
     mesh.box(x, y + h / 2 - .018, z - .05, w, .036, .037, ivory);
     mesh.box(x - .10, y - .08, z - .09, w + .20, .07, .14, ivory);
@@ -249,7 +254,7 @@
       mesh.box(x-.015,.012,-d/2+.215,.075,.115,d-.43,trim,M.oak);
     }
     mesh.at(0,0,-d/2+.267,Math.PI,()=>{
-      for (const side of [-1,1]) window(mesh,side*w*.27-1.01,.92,0,2.02,1.02);
+      for (const side of [-1,1]) window(mesh,side*w*.27-1.01,.92,0,2.02,1.02,false,true);
       if (lot.id==='ramble') {
         mesh.box(w*.27-.52,.913,-.068,.71,.052,.013,c('#a2a899'));
         mesh.box(w*.27-.48,.932,-.074,.18,.025,.012,c('#7f8e80'));
@@ -257,6 +262,16 @@
     });
     mesh.box(-w / 2 + .24, 0, .6, w / 2 - .98, 2.47, .12, paint, mat);
     mesh.box(.84, 0, .6, w / 2 - 1.08, 2.47, .12, paint, mat);
+    // A framed Northland lake print faces the sofa.
+    mesh.at(-w*.28,1.22,.55,0,()=>{
+      mesh.box(-.77,-.045,0,1.54,.88,.046,wood,M.oak);
+      mesh.box(-.70,.025,-.012,1.4,.74,.018,c(cabin?'#ddb98d':'#a8c7c9'));
+      mesh.box(-.70,.025,-.020,1.4,.25,.010,c('#769697'));
+      for (const [x,y,width] of [[-.69,.59,.48],[-.33,.48,.59],[.14,.61,.53]]) {
+        mesh.triangle([x,.27,-.022],[x+width*.53,y,-.022],[x+width,.27,-.022],c('#58746c'));
+      }
+      mesh.box(-.6,.156,-.025,.67,.012,.009,ivory);
+    });
     mesh.box(-w / 2 + .25, .01, -d / 2 + .76, 2.63, .61, .81, [.78, .82, .76], M.cloth);
     mesh.box(-w / 2 + .25, .53, -d / 2 + .76, 2.63, .42, .27, [.78, .82, .76], M.cloth);
     mesh.box(-w / 2 + .25, .55, -d / 2 + 1.01, .23, .23, .55, [.80, .85, .81], M.cloth);
@@ -380,19 +395,25 @@
     for (const x of [-w / 2, w / 2 - wallDepth]) {
       mesh.box(x, 0, front, wallDepth, h, d, wall, material, 1.25);
     }
-    for (const x of [-w / 2, width / 2]) {
-      mesh.box(x, 0, front, (w - width) / 2, h, wallDepth, wall, material, 1.25);
+    const sill=office?.83:.92, windowW=office?3.88:2.02, lintel=sill+(office?1.39:1.02);
+    const facade=(x,y,span,rise)=>{
+      mesh.box(x,y,front,span,rise,wallDepth,wall,material,1.25);
+      mesh.box(x,y,front+.212,span,rise,.025,[.91,.88,.80],M.drywall);
+    };
+    for (const sign of [-1,1]) {
+      const left=sign===-1?-w/2:width/2, right=sign===-1?-width/2:w/2;
+      const pane=sign*w*.27-windowW/2;
+      facade(left,0,pane-left,h);
+      facade(pane,0,windowW,sill);
+      facade(pane,lintel,windowW,h-lintel);
+      facade(pane+windowW,0,right-pane-windowW,h);
     }
     mesh.box(-width / 2, 2.16, front, width, h - 2.16, wallDepth, wall, material, 1.25);
-    mesh.box(-w / 2 + .18, .08, front + .221, (w - width) / 2 - .18, h - .2, .027,
-      [.88,.84,.76], M.drywall);
-    mesh.box(width / 2, .08, front + .221, (w - width) / 2 - .18, h - .2, .027,
-      [.88,.84,.76], M.drywall);
     door(mesh, -width / 2, front + .038, width, cabin ? c('#715c46') : c('#556058'), office?'outside':true);
     if (!office) landing(mesh, width + .77, front, 0, 1.38);
     for (const s of [-1, 1]) {
       const windowWidth = office ? 3.88 : 2.02;
-      window(mesh, s * w * .27 - windowWidth / 2, office ? .83 : .92, front, windowWidth, office ? 1.39 : 1.02);
+      window(mesh, s * w * .27 - windowWidth / 2, office ? .83 : .92, front, windowWidth, office ? 1.39 : 1.02,false,true);
       if (type === 'brick') window(mesh, s * w * .27 - 1.0, 3.43, front, 2, 1.25);
       mesh.at(s * (w / 2 + .01), 0, .14, -s * Math.PI / 2, () => {
         window(mesh, -1.32, 1.06, 0, 2.64, 1.1);
