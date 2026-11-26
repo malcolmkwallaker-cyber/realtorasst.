@@ -94,7 +94,7 @@
       let parkingRecovered = false;
       if (saved && this.validPoint(saved.player) && this.validPoint(saved.car)) {
         Object.assign(this.player,{ x:saved.player.x,z:saved.player.z,
-          yaw:saved.player.yaw,pitch:clamp(saved.player.pitch??0,-.65,.66) });
+          yaw:saved.player.yaw,pitch:clamp(saved.player.pitch??0,-.50,.50) });
         this.car = { x:saved.car.x,z:saved.car.z,yaw:saved.car.yaw,speed:0 };
         this.driving = !!saved.driving;
         if (this.driving) {
@@ -146,6 +146,8 @@
       this.walkCamera = this.driveCamera = 0;
       this.snowContact = false;
       this.setupScene(this.career.state.agent);
+      const office = this.world.features.office;
+      Object.assign(this.player,office.lobby,{yaw:direction(office.lobby,office.desk),pitch:0});
       this.gps = null;
       if (destination) this.setGPS(destination);
       this.frameDirty = true;
@@ -434,10 +436,10 @@
       const p = this.player;
       if (this.driving) {
         this.carLook = clamp((this.carLook || 0) + dx*.0028,-.95,.95);
-        p.pitch = clamp(p.pitch - dy*.0013,-.36,.32);
+        p.pitch = clamp(p.pitch - dy*.00067,-.36,.32);
       } else {
         p.yaw += dx*.0028;
-        p.pitch = clamp(p.pitch - dy*.00132,-.65,.66);
+        p.pitch = clamp(p.pitch - dy*.00068,-.50,.50);
       }
     }
 
