@@ -764,16 +764,18 @@
       const inListing = inside===s;
       const stage = r.stage;
       const picks = [];
+      const objectives = [];
       const doorAt = (site) => ND.toWorld(site,0,-site.d/2-.16);
-      const add = (point,radius,label,play,visible=false) => {
+      const add = (point,radius,label,play,visible=false,choices=picks) => {
         const d = distance(point,p);
-        if (d<=radius && (!visible || this.world.canSee(p,point))) picks.push({label,play,d});
+        if (d<=radius && (!visible || this.world.canSee(p,point))) choices.push({label,play,d});
       };
+      const objective=(point,radius,label,play)=>add(point,radius,label,play,false,objectives);
       if (inOffice) {
         const title = { lead:c.file.side==='seller'?'Review the listing file':'Review the buyer file',
           title:'Review title and financing',sign:'Use the closing table' }[stage];
         if (title) {
-          add(o.deskApproach,4.25,title,() => this.ui.desk());
+          objective(o.deskApproach,4.25,title,() => this.ui.desk());
         }
         if (p.agent==='brother-malcolm') {
           add(o.expenseFloat,1.9,'Check the expense envelope',() => this.ui.brotherCash());
@@ -790,9 +792,9 @@
       if (prize) add(prize,1.5,'Open mystery block',() => this.collectPrize(prize));
       if (!inside) {
         if (stage==='booked' || (stage==='schedule' && !r.unlocked)) {
-          add(doorAt(s),3.45,stage==='booked'?'Open lockbox':'Check property lockbox',() => this.ui.lockbox());
+          objective(doorAt(s),3.45,stage==='booked'?'Open lockbox':'Check property lockbox',() => this.ui.lockbox());
         } else if (stage==='inspection') {
-          add(doorAt(s),3.45,r.inspectionWalk?'Enter for inspection':'Meet the inspector',() => this.ui.beginInspection());
+          objective(doorAt(s),3.45,r.inspectionWalk?'Enter for inspection':'Meet the inspector',() => this.ui.beginInspection());
         }
         for (const file of ND.files) {
           const lot = this.world.features[file.id];
@@ -809,17 +811,18 @@
         const remaining=c.file.notes.filter((note)=>!r.notes.includes(note[0]));
         for (const note of remaining) {
           if ((inListing && note[0]!=='roof') || (!inside && note[0]==='roof')) {
-            if (this.world.clearPath(p,points[note[0]])) add(points[note[0]],note[0]==='roof'?3.45:3.12,'Inspect '+note[1].toLowerCase(),() => this.ui.observation(note));
+            if (this.world.clearPath(p,points[note[0]])) objective(points[note[0]],note[0]==='roof'?3.45:3.12,'Inspect '+note[1].toLowerCase(),() => this.ui.observation(note));
           }
         }
       }
       if (stage==='inspection' && inListing && this.world.clearPath(p,this.inspectionPoint(s))) {
-        add(this.inspectionPoint(s),3.18,'Review the inspection',() => this.ui.inspection());
+        objective(this.inspectionPoint(s),3.18,'Review the inspection',() => this.ui.inspection());
       }
       if (!inside) {
         const [x,z] = ND.local(this.car,p.x,p.z);
         add(ND.toWorld(this.car,clamp(x,-.98,.98),clamp(z,-2.26,2.26)),1.86,'Enter SUV',() => this.enterCar(),true);
       }
+      if (objectives.length) return [...picks,...objectives].sort((a,b)=>a.d-b.d)[0];
       for (const person of this.world.people) {
         if (person.id === p.agent) continue;
         if (person.late) add(person,2.05,'Check for Bridger',() => g.ui.waitForBridger(),true);
