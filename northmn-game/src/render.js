@@ -445,6 +445,8 @@
       if (!this.gl) throw new Error('WebGL 2 is required to render North Desk.');
       const gl = this.gl;
       this.quality = preferredGraphics();
+      this.adaptiveGraphics=true;
+      try { this.adaptiveGraphics=!localStorage.getItem(graphicsKey); } catch {}
       this.software = softwareRenderer(gl);
       this.lighting = 'natural';
       try { if (localStorage.getItem(lightingKey)==='golden') this.lighting='golden'; } catch {}
@@ -466,10 +468,14 @@
       return this.quality[0].toUpperCase()+this.quality.slice(1);
     }
 
-    setQuality(mode) {
-      if (!['high','medium','low'].includes(mode) || this.quality === mode) return false;
+    setQuality(mode,automatic=false) {
+      if (!['high','medium','low'].includes(mode)) return false;
+      if (!automatic) {
+        this.adaptiveGraphics=false;
+        try { localStorage.setItem(graphicsKey,mode); } catch {}
+      }
+      if (this.quality===mode) return false;
       this.quality = mode;
-      try { localStorage.setItem(graphicsKey,mode); } catch {}
       return true;
     }
 
