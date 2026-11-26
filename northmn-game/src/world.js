@@ -169,6 +169,7 @@
       this.bridgerDesk = {x:this.bridger.x,z:this.bridger.z,yaw:this.bridger.yaw};
       this.townStops = Object.fromEntries(geo.towns.map((town) => [town.name, this.makeStop(town)]));
       this.fixedMeshes = this.makeFeatures();
+      this.referralBoard=this.makeReferralBoard();
       this.actorMeshes = new Map();
       this.suv = renderer.upload(Models.suv(color('#536c5d')));
       this.cockpit = renderer.upload(Models.cockpit());
@@ -229,6 +230,24 @@
         if (!this.geo.wet(x, z)) return { ...town, x, z, yaw: road.heading, label: town.name };
       }
       return { ...town, x:road.x, z:road.z, yaw:road.heading, label:town.name };
+    }
+
+    makeReferralBoard() {
+      const board=new Mesh(),office=this.features.office;
+      board.at(office.x,office.y,office.z,office.yaw,()=>{
+        board.at(-office.w/2+.30,1.08,-.35,Math.PI/2,()=>{
+          board.box(-.94,-.05,0,1.88,1.09,.049,color('#887358'),M.oak);
+          board.box(-.87,.02,-.018,1.74,.95,.025,color('#b7c9af'));
+          const towns=['Grand Rapids','Nashwauk','Hibbing','Tower','Duluth'].map(name=>this.townStops[name]);
+          const xs=towns.map(t=>t.x),zs=towns.map(t=>t.z);
+          const minX=Math.min(...xs),minZ=Math.min(...zs);
+          const pins=towns.map(t=>[-.76+1.45*(t.x-minX)/(Math.max(...xs)-minX),
+            .85-.73*(t.z-minZ)/(Math.max(...zs)-minZ),-.038]);
+          for (let i=1;i<pins.length;i++) Models.beam(board,pins[i-1],pins[i],.009,color('#728575'));
+          for (const [x,y,z] of pins) board.box(x-.022,y-.022,z-.012,.044,.044,.025,color('#a44e39'));
+        });
+      });
+      return this.renderer.upload(board);
     }
 
     makePeople() {
@@ -1163,6 +1182,7 @@
         if (Math.hypot(lot.x-camera.eye[0],lot.z-camera.eye[2]) < 830 &&
             visibleFrom(camera,lot.x,lot.z,lot.radius)) render.draw(lot.mesh);
       }
+      if (this.hasReferralBoard && Math.hypot(player.x-this.features.office.x,player.z-this.features.office.z)<25) render.draw(this.referralBoard);
       for (const { site,mesh } of this.doors) {
         if (!this.unlocked.has(site.id) && Math.hypot(site.x-player.x,site.z-player.z) < 240) render.draw(mesh);
       }

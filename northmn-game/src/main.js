@@ -184,6 +184,7 @@
     }
 
     syncDoors() {
+      this.world.hasReferralBoard=this.career.rankIndex>=1;
       for (const file of ND.files) {
         if (this.career.state.files[file.id].unlocked) this.world.unlocked.add(file.id);
         else this.world.unlocked.delete(file.id);
@@ -805,6 +806,7 @@
         if (title) {
           objective(o.deskApproach,4.25,title,() => this.ui.desk());
         }
+        if (this.world.hasReferralBoard) add(ND.toWorld(o,-o.w/2+.8,-.35),1.45,'Read regional referral board',()=>this.ui.phone('ledger'));
         if (p.agent==='brother-malcolm') {
           add(o.expenseFloat,1.9,'Check the expense envelope',() => this.ui.brotherCash());
         }
@@ -814,6 +816,11 @@
         });
       } else if (!inside) {
         add(doorAt(o),4.6,'Enter North Desk',() => this.enterBuilding(o));
+        for (const rank of ND.careerRanks.slice(1,c.rankIndex+1)) {
+          if (!rank.town) continue;
+          const title={lead:'Review file',title:'Clear title',sign:'Use closing desk'}[stage];
+          if (title) objective(this.world.townStops[rank.town],3.4,title+' · '+rank.town+' partner desk',()=>this.ui.desk());
+        }
         add(this.arcade.shackDoor,2.1,'Open the ice-fishing shack',() => this.ui.warpShack());
       }
       const prize = this.arcade.roomAt(p,c);

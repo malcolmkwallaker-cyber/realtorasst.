@@ -260,7 +260,14 @@
           const record = state.ledger.slice().reverse().map((line) => '<div class="row"><span class="row-text"><strong>'+
             escape(line.label)+'</strong><small>'+time(line.day,true)+'</small></span><span>'+
             (line.amount < 0 ? '−'+money(-line.amount) : '+'+money(line.amount))+'</span></div>').join('');
-          html = '<h3>'+money(state.cash)+'</h3><p>'+career.totalClosed+' closing'+(career.totalClosed===1?'':'s')+' · '+money(state.volume||0)+' sold · '+
+          const tier=career.rankIndex, rank=ND.careerRanks[tier], next=ND.careerRanks[tier+1];
+          const unlocked=ND.careerRanks.slice(1,tier+1);
+          html='<section class="day-brief" aria-label="Career progression"><strong>Career · '+escape(rank.title)+'</strong>'+
+            (next?'<p>Next · '+escape(next.title)+' at '+next.closings+' closings and '+money(next.volume)+' sold.</p><p>'+
+              escape(next.unlock)+'</p>':'<p>Broker · All office upgrades earned.</p>')+
+            (unlocked.length?'<p>Office upgrades</p><ul>'+unlocked.map(r=>'<li>'+escape(r.unlock)+'</li>').join('')+'</ul>':'')+'</section>';
+          for (const r of unlocked) if (r.town) actions.push(button('Route to '+r.town+' partner desk',()=>g.setGPS(r.town,true)));
+          html += '<h3>'+money(state.cash)+'</h3><p>'+career.totalClosed+' closing'+(career.totalClosed===1?'':'s')+' · '+money(state.volume||0)+' sold · '+
             state.mileage.toFixed(1)+' mi driven · '+Math.round(state.tank)+'% fuel</p>'+
             '<p class="detail">The Pemberton office started your ledger with a '+money(opening.amount)+' expense float for work on the road.</p>'+
             (record ? '<div class="rows">'+record+'</div>' : '<p class="detail">Earn your first fee by closing a transaction.</p>');
@@ -348,7 +355,10 @@
       const seller = f.side === 'seller';
       let extra = '';
       if (r.stage === 'lead') {
-        if (r.arcadeApproval) {
+        if (career.rankIndex>=3) {
+          extra='<p>Your preferred agent line has this file ready for intake.</p>';
+          actions.push(button('Review file by phone',()=>this.desk(),true));
+        } else if (r.arcadeApproval) {
           extra = '<p>'+escape(career.role('joel'))+' sent the lender’s pre-approval. You can accept the buyer file here.</p>';
           actions.push(button('Accept pre-approved buyer',() => this.acceptFile(),true));
         } else {
@@ -357,6 +367,12 @@
           actions.push(navigate('office','Route to office'));
         }
       }
+      if (career.canRequestPremium) actions.push(button('Request a premium referral',()=>{
+        this.dialog('Premium referral book',['Replace the unaccepted '+f.client+' inquiry with a new '+site.town+' client in the $650,000–$850,000 price band?'],[
+          button('Take premium referral',()=>{if (career.requestPremium()) g.changed('Premium referral received.');this.phone('deal');},true),
+          button('Keep current file',()=>this.phone('deal'))]);
+      }));
+      if (career.rankIndex>=4 && ['title','sign'].includes(r.stage)) actions.push(button('Open mobile closing desk',()=>this.desk()));
       if (r.stage === 'schedule') {
         const end=time(career.showingEnd);
         extra = '<p>'+ (seller ? escape(f.client)+' is available for a listing walkthrough' : 'The seller is taking appointments') +
@@ -561,6 +577,7 @@
       const actions = [button('Back to work',() => this.close(),true),button('See ledger',() => this.phone('ledger'))];
       const html = '<div class="celebrate"><canvas class="confetti" aria-hidden="true"></canvas>'+
         '<div class="sold-hero">'+photo+'<div class="sold-stamp">SOLD</div></div>'+
+        (s.promotions||[]).map(rank=>'<section class="day-brief"><strong>Promoted to '+escape(rank.title)+'</strong><p>Unlocked · '+escape(rank.unlock)+'</p></section>').join('')+
         '<h3>'+escape(site.name)+'</h3><p class="detail">'+escape(site.town)+' · '+(s.side==='seller' ? 'Listing sold' : 'Purchase closed')+'</p>'+
         '<div class="keys-handoff">'+keys+'<p>'+escape(s.client)+(s.side==='seller' ? ' hands over the keys.' : ' gets the keys.')+'</p></div>'+
         '<div class="cash-tick"><small>Your ledger</small><strong data-cash>'+money(reduce ? s.cashAfter : s.cashBefore)+'</strong>'+

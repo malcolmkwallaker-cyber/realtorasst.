@@ -250,7 +250,15 @@
       'I want this priced right the first time. Show me what you see.'],
   };
 
-  function makeDeal(id, gen, seed) {
+  const careerRanks=[
+    {title:'Rookie',closings:0,volume:0,unlock:'Grand Rapids main office'},
+    {title:'Associate',closings:1,volume:150000,unlock:'Regional referral board and the Nashwauk partner desk',town:'Nashwauk'},
+    {title:'Senior Agent',closings:3,volume:500000,unlock:'Premium referral book · $650,000–$850,000 leads in Coleraine and Duluth'},
+    {title:'Top Producer',closings:5,volume:1250000,unlock:'Preferred agent status · accept files by phone and work from the Tower partner desk',town:'Tower'},
+    {title:'Broker',closings:8,volume:2000000,unlock:'Mobile closing desk · clear title and sign from your phone'},
+  ];
+
+  function makeDeal(id, gen, seed, premium=false) {
     const base = baseFiles.find((file) => file.id === id);
     const host = baseVisitors[id];
     let state = (seed ^ Math.imul(gen+7,0x9e3779b9) ^ Math.imul(id.charCodeAt(0)*131+id.length,0x85ebca6b))|0;
@@ -264,7 +272,7 @@
     const range = (a,b) => a+(b-a)*roll();
     const step = (value,size=500) => Math.round(value/size)*size;
     const seller = roll()<.32;
-    const list = step(base.list*(1+.035*Math.min(gen,8))*range(.92,1.1));
+    const list = premium ? step(range(650000,850000)) : step(base.list*(1+.035*Math.min(gen,8))*range(.92,1.1));
     const low = step(list*range(.925,.96));
     const high = step(list*range(1.012,1.035));
     const reserve = step(list*(seller?range(.965,.982):range(.955,.985)),250);
@@ -303,6 +311,7 @@
         'Recent closes cluster near '+money(mid)+'. Keep the inspection contingency, and don’t show the seller your client’s full approval.',
       gen,
     };
+    if (premium) file.contact+=' · premium referral';
     if (seller) file.side = 'seller';
     else delete file.side;
     const visitor = {
@@ -420,6 +429,25 @@
 
     get totalClosed() {
       return this.state.totalClosed || 0;
+    }
+
+    get rankIndex() {
+      return careerRanks.findLastIndex(rank=>this.totalClosed>=rank.closings && (this.state.volume||0)>=rank.volume);
+    }
+
+    get canRequestPremium() {
+      return this.rankIndex>=2 && ['cabin','duluth'].includes(this.file.id) &&
+        this.record.stage==='lead' && !this.file.contact.endsWith(' · premium referral');
+    }
+
+    requestPremium() {
+      if (!this.canRequestPremium) return false;
+      const id=this.file.id,gen=(this.state.deals[id]?.gen||0)+1;
+      const deal=makeDeal(id,gen,this.state.seed,true);
+      this.state.deals[id]=deal;
+      applyDeal(id,deal);
+      this.state.files[id]={stage:'lead',notes:[],attempt:0,reviewed:false,trust:50};
+      return true;
     }
 
     get file() {
@@ -995,6 +1023,7 @@
     close() {
       const r = this.record;
       if (r.stage!=='sign' || !r.closingReviewed || !Number.isFinite(r.closeAt) || this.state.minute<r.closeAt) return null;
+      const beforeRank=this.rankIndex;
       this.addTime(45);
       const { commission,bonus } = this.payout();
       const earned = commission+bonus;
@@ -1010,7 +1039,7 @@
       const f = this.file;
       return { id:f.id,client:f.client,side:f.side,photo:f.photo,price:r.price,list:f.list,credit:r.credit,commission,bonus,
         earned,trust:r.trust,cashBefore,cashAfter:this.state.cash,totalClosed:this.state.totalClosed,
-        volume:this.state.volume,nextAt:r.nextAt };
+        volume:this.state.volume,nextAt:r.nextAt,promotions:careerRanks.slice(beforeRank+1,this.rankIndex+1) };
     }
 
     drive(meters, assisted = false) {
@@ -1097,5 +1126,5 @@
     }
   }
 
-  Object.assign(ND, { files, visitors, Career, status, restore, persist, money, time });
+  Object.assign(ND, { careerRanks,files, visitors, Career, status, restore, persist, money, time });
 })();
