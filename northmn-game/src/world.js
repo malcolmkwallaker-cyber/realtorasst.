@@ -164,11 +164,17 @@
         mesh.at(at.x,this.grade(at.x,at.z),at.z,site.yaw,() => Models.yardSign(mesh));
         return { site, mesh:renderer.upload(mesh) };
       });
+      this.fixedMeshes = this.makeFeatures();
       this.people = this.makePeople();
+      const placed=[];
+      for (const person of this.people) {
+        const spot=this.standingSpot(person,placed);
+        if (spot) Object.assign(person,spot,{y:this.height(spot.x,spot.z)});
+        placed.push(person);
+      }
       this.bridger = this.people.find((person) => person.id==='bridger');
       this.bridgerDesk = {x:this.bridger.x,z:this.bridger.z,yaw:this.bridger.yaw};
       this.townStops = Object.fromEntries(geo.towns.map((town) => [town.name, this.makeStop(town)]));
-      this.fixedMeshes = this.makeFeatures();
       this.referralBoard=this.makeReferralBoard();
       this.actorMeshes = new Map();
       this.suv = renderer.upload(Models.suv(color('#536c5d')));
@@ -300,6 +306,9 @@
         else this.obstacle(lot, nearDoor / 2 - .026, -lot.d / 2 + nearDoor * .46, .055, nearDoor * .92);
         if (lot.type === 'office') {
           this.obstacle(lot, 3.72, -1.93, 2.50, .93);
+          for (const [x,z] of [[3.75,-1.15],[-3.62,-1.31],...[-1.15,.12,1.23].flatMap(x=>[[x,2.29],[x,4.11]])]) {
+            this.obstacle(lot,x,z,.50,.50);
+          }
           this.obstacle(lot, -.1, 3.2, 3.34, 1.22);
           this.obstacle(lot, -3.6, -2.05, 2.1, .76);
           const {z,end} = lot.porch;
@@ -926,6 +935,46 @@
       };
     }
 
+    standingSpot(center,others,minimum=0,canReach=null) {
+      const room=this.interiorAt(center.x,center.z);
+      for (const radius of [0,1.18,1.60,2.15,2.75,3.40]) {
+        if (radius<minimum) continue;
+        for (let i=0;i<(radius?12:1);i++) {
+          const a=i*Math.PI/6;
+          const p={x:center.x+radius*Math.cos(a),z:center.z+radius*Math.sin(a)};
+          if (this.interiorAt(p.x,p.z)!==room || !this.allowed(p.x,p.z,.28,false)) continue;
+          if (others.some(o=>Math.hypot(o.x-p.x,o.z-p.z)<.92) || (canReach && !canReach(p))) continue;
+          return p;
+        }
+      }
+      return null;
+    }
+
+    clearMarkerSpace(markers,player,dt) {
+      const nearby=markers.filter(p=>Math.hypot(p.x-player.x,p.z-player.z)<4.3);
+      const people=this.visitor?[...this.people,this.visitor]:this.people;
+      for (const person of people) {
+        if (person.late || person.id===player.agent) continue;
+        if (!person.yieldTo && nearby.length) {
+          const marker=nearby.find(p=>Math.hypot(p.x-person.x,p.z-person.z)<.84);
+          if (marker) {
+            const others=[player,...people.filter(o=>o!==person && !o.late && o.id!==player.agent)];
+            person.yieldTo=this.standingSpot(marker,others,1,p=>this.clearPath(person,p,.23) &&
+              nearby.every(q=>Math.hypot(q.x-p.x,q.z-p.z)>.98));
+          }
+        }
+        if (!person.yieldTo) continue;
+        const dx=person.yieldTo.x-person.x,dz=person.yieldTo.z-person.z;
+        const span=Math.hypot(dx,dz),step=Math.min(span,dt*2);
+        if (span>.001) {
+          person.x+=dx*step/span;person.z+=dz*step/span;
+          person.y=this.height(person.x,person.z);
+          person.yaw=Math.atan2(dx,-dz);person.steps=(person.steps||0)+step*5;person.walking=true;
+        }
+        if (step>=span) {person.yieldTo=null;person.station=null;}
+      }
+    }
+
     walkingRoute(lot,from,target,reach) {
       const step = .40;
       const start = local(lot,from.x,from.z);
@@ -977,13 +1026,18 @@
       }
       const visitor = this.visitor;
       visitor.walking = false;
-      if (!dt) return;
-      if (stage==='tour') {
-        const next = file.notes.find((note)=>!career.record.notes.includes(note[0]));
+      if (!dt || visitor.yieldTo) return;
+      if (stage==='tour' || (stage==='inspection' && career.record.inspectionWalk && indoor)) {
+        const points=this.walkPoints(lot);
+        const next=stage==='tour' ? file.notes.find(n=>!career.record.notes.includes(n[0])) :
+          file.notes.find(n=>n[3] && n[0]!=='roof') || ['rear'];
         if (!next) return;
         if (visitor.station!==next[0]) {
-          visitor.station = next[0];
-          visitor.route = this.walkingRoute(lot,visitor,this.walkPoints(lot)[next[0]],1.05);
+          visitor.station=next[0];
+          const marker=points[next[0]];
+          const side=this.standingSpot(marker,[player,...this.people.filter(o=>!o.late && o.id!==player.agent)],1,
+            p=>this.clearPath(marker,p,.16));
+          visitor.route=side ? this.walkingRoute(lot,visitor,side,.30) : [];
         }
         const point = visitor.route[0];
         if (!point) return;
@@ -1034,8 +1088,9 @@
         const lot = this.features[visit.site];
         const point = visit.site==='office' ? this.bridgerDesk :
           { ...toWorld(lot,3.25,-lot.d/2-2.4), yaw:lot.yaw };
-        Object.assign(bridger,point,{
-          site:visit.site,town:lot.town,y:this.height(point.x,point.z),
+        const spot=this.standingSpot(point,this.people.filter(o=>o!==bridger && !o.late));
+        Object.assign(bridger,point,spot,{
+          site:visit.site,town:lot.town,y:this.height((spot||point).x,(spot||point).z),yieldTo:null,
         });
       }
       bridger.late = visit.late;
@@ -1047,7 +1102,7 @@
         person.walking=false;
         const separation=Math.hypot(player.x-person.x,player.z-person.z);
         const gene=person.id==='gene';
-        if (!person.path || player.agent===person.id || (!gene && separation<2.65) || separation>38) continue;
+        if (!person.path || person.yieldTo || player.agent===person.id || (!gene && separation<2.65) || separation>38) continue;
         person.dwell-=dt;
         if (person.dwell>0) continue;
         const point=person.path[person.leg];
@@ -1062,7 +1117,9 @@
           continue;
         }
         const pace=Math.min(1,dt*(gene?(person.leg===0?2.65:1.18):.84)/distance);
-        if (this.collides(person.x+dx*pace,person.z+dz*pace,.23)) {
+        const ahead={x:person.x+dx*pace,z:person.z+dz*pace};
+        if (this.collides(ahead.x,ahead.z,.23) || this.people.some(other=>other!==person && !other.late &&
+          other.id!==player.agent && Math.hypot(ahead.x-other.x,ahead.z-other.z)<.83)) {
           person.leg=(person.leg+1)%person.path.length;
           person.dwell=3;
           continue;

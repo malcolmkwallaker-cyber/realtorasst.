@@ -771,6 +771,21 @@
       return attended;
     }
 
+    clearObjectiveSpace(dt) {
+      if (this.driving) return;
+      const c=this.career,site=this.world.features[c.file.id],office=this.world.features.office;
+      const markers=[];
+      if (['lead','title','sign'].includes(c.record.stage) && distance(this.player,office)<14) markers.push(office.deskApproach);
+      if (distance(this.player,site)<site.d+10) {
+        if (c.record.stage==='tour') {
+          const points=this.walkPoints(site);
+          for (const note of c.file.notes) if (!c.record.notes.includes(note[0])) markers.push(points[note[0]]);
+        } else if (c.record.stage==='inspection' && c.record.inspectionWalk) markers.push(this.inspectionPoint(site));
+        else if (['inspection','booked'].includes(c.record.stage)) markers.push(site.threshold);
+      }
+      this.world.clearMarkerSpace(markers,this.player,dt);
+    }
+
     walkPoints(lot) {
       return this.world.walkPoints(lot);
     }
@@ -1198,7 +1213,10 @@
       clientTag.hidden = true;
       if (this.ui.panel || !this.started || this.transit) return;
       const visitor = this.world.visitor;
-      for (const person of visitor ? [...this.world.people,visitor] : this.world.people) {
+      const width=this.canvas.clientWidth,height=this.canvas.clientHeight,placed=[];
+      const people=this.world.people.slice().sort((a,b)=>distance(this.player,a)-distance(this.player,b));
+      if (visitor) people.unshift(visitor);
+      for (const person of people) {
         if (person.late || person.id===this.player.agent || distance(this.player,person)>105) continue;
         const pos = ND.project(camera,[person.x,person.y+(person.style==='small'?1.68:1.96),person.z]);
         if (!pos || pos.some((v)=>v<.02 || v>.98) || !this.world.canSee(this.player,person)) continue;
@@ -1210,10 +1228,23 @@
           this.nameTags.set(person.id,tag);
         }
         const label = person.name+(person===visitor?' · '+person.title:'');
-        if (tag.textContent!==label) tag.textContent = label;
-        tag.style.left = pos[0]*100+'%';
-        tag.style.top = pos[1]*100+'%';
-        tag.hidden = false;
+        tag.hidden=false;
+        if (tag.textContent!==label || tag.measuredAt!==width) {
+          tag.textContent=label;
+          tag.tagWidth=tag.offsetWidth;tag.tagHeight=tag.offsetHeight;tag.measuredAt=width;
+        }
+        const half=tag.tagWidth/2,h=tag.tagHeight;
+        const x=clamp(pos[0]*width,half+2,width-half-2);
+        const anchor=clamp(pos[1]*height,h+2,height-2);
+        let y=anchor;
+        for (let row=0;row<=placed.length*2+2;row++) {
+          y=anchor+(row%2?-1:1)*Math.ceil(row/2)*(h+3);
+          if (y<h+2 || y>height-2) continue;
+          if (!placed.some(b=>Math.abs(b.x-x)<b.half+half+3 && y>b.top-2 && y-h<b.bottom+2)) break;
+        }
+        tag.style.left=x+'px';
+        tag.style.top=y+'px';
+        placed.push({x,half,top:y-h,bottom:y});
       }
     }
 
@@ -1317,6 +1348,7 @@
         }
         this.world.updateWildlife(this.car,dt,this.driving);
         this.world.updateVisitor(this.career,this.player,this.driving,dt);
+        this.clearObjectiveSpace(dt);
         this.showingReminders();
         if (this.gps && distance(this.player,this.routeAt)>130) {
           const route = this.geo.route(this.player,this.gps.target);
