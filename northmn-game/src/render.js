@@ -285,6 +285,21 @@
         if (vMaterial == 9) uv += vec2(uTime * .027, uTime * .013);
         vec3 tex = texture(uMaterials, vec3(uv, float(vMaterial))).rgb;
         paint *= tex;
+        if (vMaterial == 6 || vMaterial == 14) {
+          float bend=noise(vec2(uv.x*.9,uv.y*2.7));
+          float phase=uv.y*92.+bend*7.0+sin(uv.x*3.3);
+          float detail=1.-smoothstep(.35,2.5,fwidth(phase));
+          paint *= 1.+.048*detail*sin(phase);
+        } else if (vMaterial == 4) {
+          vec2 row=uv*vec2(3.,6.);
+          row.x+=mod(floor(row.y),2.)*.5;
+          vec2 cell=fract(row);
+          float edge=min(cell.x,cell.y);
+          float visible=1.-smoothstep(.05,.27,max(fwidth(uv.x)*3.,fwidth(uv.y)*6.));
+          paint *= 1.+visible*(.044*(noise(floor(row))-.5)-.057*(1.-smoothstep(.012,.09,edge)));
+        } else if (vMaterial == 1 && uLow) {
+          paint *= .94+.12*noise(vPosition.xz*.13);
+        }
       }
       if (vMaterial == -4) paint = texture(uSign,vUV).rgb;
       if (vMaterial == -7) paint = texture(uPlate,vUV).rgb;
