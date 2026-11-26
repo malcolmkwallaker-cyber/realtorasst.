@@ -6,7 +6,7 @@ Open `index.html` in a browser with WebGL 2. The game loads its assets locally a
 
 **Choose agent** on the title screen or in Pause shows all 21 agents and their perks and plays a voice preview when you pick one. Each coworker speaks in their own gibberish during conversations. Use **Replay voice** to hear them again and **Pause → Mute sound** to mute the game.
 
-Graphics starts on **High** for new players and remembers your selection. High adds sun-cast shadows, detailed water reflections, and damp road surfaces. **Low** reduces resolution and scenery detail for lighter hardware. **Natural lighting** follows the workday. **Golden hour** gives you warm late-afternoon light without moving appointments.
+Graphics starts on **High** for new players and remembers your selection. High adds sun-cast shadows, detailed water reflections, and damp road surfaces. If active play stays below 24 frames per second, North Desk switches to **Medium** and tells you once. Medium keeps the shadows and lowers rendering resolution. You can choose any of the three settings in Graphics. **Low** reduces resolution and scenery detail for lighter hardware. **Natural lighting** follows the workday. **Golden hour** gives you warm late-afternoon light without moving appointments.
 
 ## Controls
 

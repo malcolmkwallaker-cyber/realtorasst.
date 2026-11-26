@@ -11,7 +11,7 @@
   function preferredGraphics() {
     try {
       const saved = localStorage.getItem(graphicsKey);
-      if (saved === 'low' || saved === 'high') return saved;
+      if (['low','medium','high'].includes(saved)) return saved;
     } catch {}
     return 'high';
   }
@@ -458,8 +458,12 @@
       return this.quality === 'low';
     }
 
+    get qualityLabel() {
+      return this.quality[0].toUpperCase()+this.quality.slice(1);
+    }
+
     setQuality(mode) {
-      if ((mode !== 'high' && mode !== 'low') || this.quality === mode) return false;
+      if (!['high','medium','low'].includes(mode) || this.quality === mode) return false;
       this.quality = mode;
       try { localStorage.setItem(graphicsKey,mode); } catch {}
       return true;
@@ -626,6 +630,7 @@
     resize() {
       const canvas = this.canvas;
       const scale = this.low ? Math.min(.72,800/(canvas.clientWidth||1),500/(canvas.clientHeight||1)) :
+        this.quality==='medium' ? Math.min(.86,960/(canvas.clientWidth||1),600/(canvas.clientHeight||1)) :
         this.software ? Math.min(1,1080/(canvas.clientWidth||1),675/(canvas.clientHeight||1)) :
           Math.min(devicePixelRatio||1,1.5,1920/(canvas.clientWidth||1));
       const width = Math.max(1, Math.round(canvas.clientWidth * scale));
@@ -654,7 +659,7 @@
       gl.uniform1f(u.uDay, atmosphere.day);
       gl.uniform1f(u.uRain, atmosphere.rain);
       gl.uniform1f(u.uTime, time);
-      gl.uniform1i(u.uLow, this.low ? 1 : 0);
+      gl.uniform1i(u.uLow,Number(this.low || (this.quality==='medium' && current===this.sky)));
     }
 
     createShadowMap() {
@@ -688,7 +693,8 @@
       const map = this.shadowMap;
       if (!map) return null;
       const center = camera.eye.map((v,i) => v + (i===1?-1.6:camera.forward[i]*23));
-      if (seconds-map.at<(this.software?.139:.075) && Math.hypot(...center.map((v,i)=>v-map.center[i]))<4 &&
+      const interval=this.quality==='medium'?.22:this.software?.139:.075;
+      if (seconds-map.at<interval && Math.hypot(...center.map((v,i)=>v-map.center[i]))<4 &&
           dot(sun,map.sun)>.9999) return map;
 
       const span = 82;

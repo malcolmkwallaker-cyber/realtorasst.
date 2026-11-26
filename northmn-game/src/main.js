@@ -246,15 +246,43 @@
     }
 
     graphicsLabel() {
-      byId('title-graphics').querySelector('strong').textContent = this.renderer.low ? 'Low' : 'High';
+      byId('title-graphics').querySelector('strong').textContent = this.renderer.qualityLabel;
     }
 
     setGraphics(mode) {
+      const wasLow=this.renderer.low;
       if (this.renderer.setQuality(mode)) {
-        this.world.refreshQuality(this.player.x,this.player.z);
+        this.graphicsSample=null;
+        if (wasLow!==this.renderer.low) this.world.refreshQuality(this.player.x,this.player.z);
         this.frameDirty = true;
       }
       this.graphicsLabel();
+    }
+
+    measureGraphics(timestamp,draw,playing) {
+      if (!playing || this.renderer.quality!=='high' || this.graphicsAdjusted) {
+        this.graphicsSample=null;
+        return;
+      }
+      if (!draw) return;
+      const sample=this.graphicsSample;
+      if (!sample || timestamp-sample.last>5000) {
+        this.graphicsSample={start:timestamp+1200,last:timestamp,frames:0,slow:0};
+        return;
+      }
+      sample.last=timestamp;
+      if (timestamp<sample.start) return;
+      sample.frames++;
+      const elapsed=timestamp-sample.start;
+      if (elapsed<3000) return;
+      const fps=sample.frames*1000/elapsed;
+      sample.slow=fps<24 ? sample.slow+1 : 0;
+      sample.start=timestamp;
+      sample.frames=0;
+      if (sample.slow<2) return;
+      this.graphicsAdjusted=true;
+      this.setGraphics('medium');
+      this.ui.notice('Switched to Medium graphics to keep the game moving. You can change this in Graphics.');
     }
 
     setLighting(mode) {
@@ -1203,7 +1231,7 @@
     loop(timestamp) {
       const dt = Math.min(.15,Math.max(.001,(timestamp-(this.last || timestamp))/1000));
       this.last=timestamp;
-      if (document.hidden) { requestAnimationFrame((t) => this.loop(t)); return; }
+      if (document.hidden) { this.graphicsSample=null; requestAnimationFrame((t) => this.loop(t)); return; }
       this.seconds+=dt;
       const draw = this.frameDirty || (!this.ui.panel && timestamp>=this.nextDraw);
       const frameDt = Math.min(.15,(timestamp-(this.lastDraw||timestamp))/1000);
@@ -1214,6 +1242,8 @@
         this.lastDraw = timestamp;
         this.nextDraw = timestamp+(1000/rate-1.5);
       }
+      const active=this.playing();
+      this.measureGraphics(timestamp,draw,active);
       if (this.tag) {
         if (!this.ui.panel) this.tag.tick(dt,this.keys);
         if (draw) this.tag.draw();
@@ -1221,7 +1251,6 @@
         requestAnimationFrame((t) => this.loop(t));
         return;
       }
-      const active = this.playing();
       if (active) {
         this.career.tickArcade(dt);
         const steps = Math.ceil(dt/(this.driving && Math.abs(this.car.speed)>35 ? .022 : .038));

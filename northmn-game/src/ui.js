@@ -1003,14 +1003,16 @@
 
     graphics() {
       const g = this.game;
-      const low = g.renderer.low;
+      const mode=g.renderer.quality;
       const golden = g.renderer.lighting==='golden';
       this.dialog('Graphics',[
-        'High adds sun-cast shadows, wave detail, and wet pavement reflections. Low is available for lighter hardware.',
+        'High uses detailed shadows, waves, and wet-road reflections. Medium keeps shadows at a lighter resolution. Low reduces scenery and turns off sun-cast shadows.',
         'Natural lighting follows the game clock. Golden hour gives you a warm late-afternoon look while the workday clock keeps its own time.',
       ],[
-        button(low?'Low · Active':'Low',() => { g.setGraphics('low'); this.graphics(); },low),
-        button(low?'High':'High · Active',() => { g.setGraphics('high'); this.graphics(); },!low),
+        ...['high','medium','low'].map(value=>{
+          const label=value[0].toUpperCase()+value.slice(1);
+          return button(label+(value===mode?' · Active':''),()=>{g.setGraphics(value);this.graphics();},value===mode);
+        }),
         button(golden?'Natural lighting':'Natural lighting · Active',() => { g.setLighting('natural'); this.graphics(); }),
         button(golden?'Golden hour · Active':'Golden hour',() => { g.setLighting('golden'); this.graphics(); }),
         button('Done',() => this.close()),
@@ -1070,7 +1072,7 @@
         button(g.sound.musicEnabled ? 'Turn off music' : 'Turn on music',() => { g.sound.toggleMusic(); this.pause(); }),
         button('Return to parked SUV',() => { this.close(); g.returnToCar(); }),
         button('Tanya’s laser tag',() => this.tagInvite()),
-        button('Graphics · '+(g.renderer.low?'Low':'High'),() => this.graphics()),
+        button('Graphics · '+g.renderer.qualityLabel,() => this.graphics()),
         button('Choose agent',() => this.choose()),
         button('First-day tutorial',() => this.tutorial()),
         button('End workday',() => this.endWorkday()),
