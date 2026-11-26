@@ -238,7 +238,7 @@
             const site = g.world.features[f.id];
             const r = career.state.files[f.id];
             const showing = career.showing(f);
-            const stage = showing?.state==='missed' ? 'Missed · Rebook' : showing?.state==='late' ? 'Showing late' :
+            const stage = showing?.state==='attended'?'Checked in':showing?.state==='missed' ? 'Missed · Rebook' : showing?.state==='late' ? 'Showing late' :
               showing?.state==='covered' ? career.role(r.coveredBy)+' covering' :
               r.stage==='lead' && r.arcadeApproval ? 'Pre-approved' : status[r.stage];
             return this.row(f.id,site.name,f.contact+' · '+site.town,stage);
@@ -370,7 +370,8 @@
         const showing = career.showing();
         extra = '<p>Showing booked for '+time(r.showAt,true)+'. The lockbox is at the front door.</p>'+
           (showing?.state==='late' ? '<p>Running late. The showing window closes at '+time(showing.closes)+'.</p>' : '');
-        if (r.coveredBy) {
+        if (showing?.state==='attended') extra+='<p>You’re checked in. Your appointment is held while you get the door open.</p>';
+        else if (r.coveredBy) {
           extra += '<p>'+escape(career.role(r.coveredBy))+' is covering. Their notes will be in the file after the showing.</p>';
         } else if (career.state.minute<r.showAt && !career.showingConflict(r.showAt,career.coveringAgent)) {
           actions.push(button('Ask '+career.role(career.coveringAgent)+' to cover',() => this.delegate()));
@@ -830,6 +831,7 @@
         ]);
         return;
       }
+      g.atShowing();
       if (c.state.minute<r.showAt) {
         const actions = [button('Back to work',() => this.close())];
         if (c.canWait(r.showAt)) actions.unshift(this.appointmentWait(r.showAt,() => this.lockbox()));

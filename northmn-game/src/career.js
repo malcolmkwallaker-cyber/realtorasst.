@@ -12,6 +12,9 @@
   const BRIDGER_DELAY = 15;
   const SHOWING_REMINDER = 15;
   const LATE_SHOWING_TRUST = 3;
+  // Continue the existing saved showingAlert sequence (reminder, late, missed).
+  const CHECKED_IN_ON_TIME=4, CHECKED_IN_IN_GRACE=5;
+  const checkedIn=r=>r.showingAlert===CHECKED_IN_ON_TIME || r.showingAlert===CHECKED_IN_IN_GRACE;
   const events = [
     { id:'steady', title:'Clear roads', detail:'Normal showing windows and light traffic in the morning.' },
     { id:'snow', title:'Morning flurries', detail:'Snow crossings and shaded pavement stay slick into late morning.' },
@@ -474,6 +477,15 @@
       return 50+(this.perk.grace??0);
     }
 
+    checkIn(file=this.file) {
+      const r=this.state.files[file.id], now=Math.floor(this.state.minute);
+      if (r.stage!=='booked' || r.coveredBy || checkedIn(r) || !Number.isFinite(r.showAt) ||
+          Math.floor(now/DAY)!==Math.floor(r.showAt/DAY) || now>r.showAt+this.showingGrace) return false;
+      this.checkShowings(now);
+      r.showingAlert=now<=r.showAt+8 ? CHECKED_IN_ON_TIME : CHECKED_IN_IN_GRACE;
+      return true;
+    }
+
     showing(file = this.file) {
       const r = this.state.files[file.id];
       if (r.stage==='schedule' && Number.isFinite(r.missedAt)) {
@@ -481,7 +493,7 @@
       }
       if (r.stage!=='booked' || !Number.isFinite(r.showAt)) return null;
       const left = r.showAt-Math.floor(this.state.minute);
-      return { state:r.coveredBy?'covered':left<0?'late':left===0?'due':left<=SHOWING_REMINDER?'soon':'booked',
+      return { state:r.coveredBy?'covered':checkedIn(r)?'attended':left<0?'late':left===0?'due':left<=SHOWING_REMINDER?'soon':'booked',
         file,at:r.showAt,left,closes:r.showAt+this.showingGrace };
     }
 
@@ -507,6 +519,7 @@
           }
           continue;
         }
+        if (checkedIn(r)) continue;
         const left = r.showAt-Math.floor(minute);
         const level = left < -this.showingGrace ? 3 : left < 0 ? 2 : left <= SHOWING_REMINDER ? 1 : 0;
         if (level <= (r.showingAlert || 0)) continue;
@@ -709,7 +722,7 @@
     delegateShowing() {
       const r = this.record;
       const agent = this.coveringAgent;
-      if (r.stage!=='booked' || r.coveredBy || this.state.minute>=r.showAt || this.showingConflict(r.showAt,agent)) return false;
+      if (r.stage!=='booked' || checkedIn(r) || r.coveredBy || this.state.minute>=r.showAt || this.showingConflict(r.showAt,agent)) return false;
       r.coveredBy = agent;
       this.addTime(3);
       return true;
@@ -736,7 +749,7 @@
       r.stage = 'tour';
       r.unlocked = true;
       this.day.showings++;
-      if (this.state.minute<=r.showAt+8) this.trust(7,'You met the client on time.');
+      if (r.showingAlert===CHECKED_IN_ON_TIME || (!checkedIn(r) && this.state.minute<=r.showAt+8)) this.trust(7,'You met the client on time.');
       return true;
     }
 

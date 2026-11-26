@@ -752,6 +752,24 @@
       }
     }
 
+    atShowing() {
+      let attended=false;
+      for (const file of ND.files) {
+        const r=this.career.state.files[file.id];
+        if (r.coveredBy || (r.stage!=='booked' && r.stage!=='tour')) continue;
+        const lot=this.world.features[file.id];
+        const [x,z]=ND.local(lot,this.player.x,this.player.z);
+        const atDoor=Math.abs(x)<=lot.w/2+1.5 && z>=-lot.d/2-3.8 && z<=lot.d/2+1.5;
+        if ((!atDoor && distance(this.player,lot.parking)>4.8) || (this.driving && Math.abs(this.car.speed)>1.9)) continue;
+        if (this.career.checkIn(file)) {
+          this.ui.notice('Checked in · '+file.client+' at '+lot.name);
+          this.save();
+        }
+        attended ||= r.stage==='tour' || this.career.showing(file)?.state==='attended';
+      }
+      return attended;
+    }
+
     walkPoints(lot) {
       return this.world.walkPoints(lot);
     }
@@ -1010,6 +1028,7 @@
         const site = this.world.features[target.id];
         this.exitCar(false,site?.entry);
         if (site && !this.driving) this.player.yaw = direction(this.player,site.entry);
+        this.atShowing();
         if (keepRoute && destination && destination!==target.name) this.setGPS(destination);
         this.changed('Arrived · '+target.label+'.');
         this.canvas.focus({preventScroll:true});
@@ -1107,7 +1126,7 @@
       appointment.hidden = !showing;
       if (showing) {
         const {state,file,left,at} = showing;
-        const when = state==='covered' ? 'Teammate covering' : state==='missed' ? 'Showing missed · Rebook' : state==='due' ? 'Showing due now' :
+        const when = state==='attended' ? (left>0?'Checked in · Showing in '+left+' min':'Checked in · Open lockbox') : state==='covered' ? 'Teammate covering' : state==='missed' ? 'Showing missed · Rebook' : state==='due' ? 'Showing due now' :
           state==='late' ? 'Showing late' : 'Showing in '+left+' min';
         appointment.dataset.state = state;
         if (byId('showing-when').textContent!==when) byId('showing-when').textContent = when;
@@ -1281,7 +1300,7 @@
           if (this.driving) this.moveCar(dt/steps);
           else this.moveFoot(dt/steps);
         }
-        this.career.addTime(dt*(this.driving ? .21 : .37));
+        this.career.addTime(dt*(this.driving ? .21 : .37)*(this.atShowing() ? .25 : 1));
         this.world.updateTraffic(this.player,dt);
         const wallBump = this.world.updatePeople(this.player,dt);
         if (wallBump && this.seconds>=this.geneTalkAt) {
