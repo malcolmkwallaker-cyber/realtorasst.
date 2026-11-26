@@ -292,6 +292,11 @@
           this.obstacle(lot, lot.w / 2 - 1.49, -lot.d / 2 + .5, 2.61, .64);
           this.obstacle(lot, lot.w / 2 - 2.38, -1.11, 1.37, .84);
           this.obstacle(lot,lot.w/2-.63,-lot.d/2+1.58,.54,.54);
+          const bathX=lot.w/2-2.38, bathZ=lot.d/2-2.32;
+          this.obstacle(lot,bathX+.05,bathZ+1.035,.10,2.07);
+          this.obstacle(lot,bathX+1.67,bathZ+.05,.96,.10);
+          this.obstacle(lot,bathX+.65,bathZ+1.77,.91,.51);
+          this.obstacle(lot,bathX+1.60,bathZ+1.66,.53,.71);
         }
         const asphalt = lot.type === 'cabin' ? M.gravel : M.asphalt;
         this.driveway(mesh, lot, asphalt);

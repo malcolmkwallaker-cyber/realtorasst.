@@ -208,6 +208,33 @@
     }
   }
 
+  function bathroom(mesh,w,d,trim) {
+    const x=w/2-2.38, z=d/2-2.32;
+    const tile=c('#b7c5c0'), porcelain=c('#f5f2e4'), wall=c('#c8d3c9');
+    mesh.floor(x,.019,z,2.15,2.06,tile,M.concrete);
+    for (let i=1;i<=5;i++) mesh.floor(x+i*.38,.023,z,.014,2.06,c('#86938d'));
+    for (let i=1;i<=5;i++) mesh.floor(x,.023,z+i*.38,2.15,.014,c('#86938d'));
+    mesh.box(x,0,z,.10,2.48,2.07,wall,M.drywall);
+    mesh.box(x+.10,.02,z,.05,.11,2.07,trim,M.oak);
+    mesh.box(x+1.19,0,z,.96,2.48,.10,wall,M.drywall);
+    for (const post of [.09,1.15]) mesh.box(x+post,0,z-.03,.075,2.08,.17,trim,M.oak);
+    mesh.box(x+.09,2.06,z-.03,1.14,.09,.17,trim,M.oak);
+    mesh.box(x+.10,2.15,z,1.09,.33,.10,wall,M.drywall);
+    mesh.box(x+.23,.05,z+1.56,.83,.75,.46,c('#858f80'),M.oak);
+    mesh.box(x+.19,.80,z+1.51,.91,.07,.51,porcelain);
+    mesh.round(x+.65,.865,z+1.76,.205,.165,.018,c('#b2c5bd'),-1,14);
+    mesh.box(x+.62,.87,z+1.94,.045,.13,.05,steel);
+    mesh.box(x+.62,.986,z+1.85,.045,.026,.14,steel);
+    mesh.box(x+.25,1.09,z+2.00,.77,.81,.04,trim);
+    mesh.box(x+.29,1.13,z+1.982,.69,.73,.025,c('#94a9ab'),M.glass);
+    mesh.box(x+.34,2.02,z+1.93,.59,.09,.12,c('#ffebc4'),M.lamp);
+    mesh.round(x+1.60,.045,z+1.48,.14,.23,.33,porcelain,-1,14);
+    mesh.round(x+1.60,.35,z+1.45,.235,.257,.09,porcelain,-1,16);
+    mesh.round(x+1.60,.44,z+1.45,.17,.17,.009,c('#b4c3bc'),-1,16);
+    mesh.box(x+1.35,.40,z+1.75,.49,.41,.25,porcelain);
+    mesh.box(x+1.32,.81,z+1.72,.55,.045,.30,porcelain);
+  }
+
   function homeInterior(mesh, lot) {
     const { w,d } = lot;
     const cabin = lot.type === 'cabin';
@@ -254,7 +281,7 @@
     mesh.round(w/2-2.38,2.26,-1.11,.021,.024,.231,steel,-1,8);
     mesh.round(w/2-2.38,2.099,-1.11,.28,.09,.182,c('#c5ac8d'),M.oak,12);
     mesh.round(w/2-2.38,2.105,-1.11,.238,.239,.015,c('#f9e9c7'),M.lamp,12);
-    plant(mesh, w / 2 - .58, 0, d / 2 - .74, 1.25);
+    bathroom(mesh,w,d,trim);
     mesh.box(-w / 2 + .41, .05, d / 2 - 2.20, 1.62, .37, 1.87, wood, M.oak);
     mesh.box(-w / 2 + .42, .41, d / 2 - 2.19, 1.60, .20, 1.84, c('#b3b7a8'), M.cloth);
     mesh.box(-w / 2 + .51, .61, d / 2 - 2.03, .62, .12, .37, ivory, M.drywall);
