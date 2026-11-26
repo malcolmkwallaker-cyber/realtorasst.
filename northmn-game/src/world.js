@@ -250,7 +250,9 @@
         }
         if (lot) {
           const place = toWorld(lot, agent.id === 'matt' ? 4.2 : -2.65, -lot.d / 2 - 3.2);
-          return { ...agent, ...place, y:this.geo.height(place.x,place.z), yaw:lot.yaw, town:lot.town };
+          const end=toWorld(lot,agent.id==='matt'?2.1:-4.25,-lot.d/2-3.44);
+          return { ...agent, ...place, y:this.geo.height(place.x,place.z), yaw:lot.yaw, town:lot.town,
+            path:[end,place],leg:0,steps:0,dwell:6 };
         }
         const townName = { nashwauk:'Nashwauk', tower:'Tower' }[agent.base];
         const town = this.geo.towns.find((town) => town.name === townName);
@@ -987,6 +989,7 @@
         person.x+=dx*pace;
         person.z+=dz*pace;
         person.yaw=Math.atan2(dx,-dz);
+        if (person.base!=='rapids') person.y=this.height(person.x,person.z);
         person.steps+=dt*(gene?10:5.6);
         person.walking=true;
       }
@@ -1134,7 +1137,8 @@
         const facing = !person.walking && d<4.5 && !(person.id==='gene' && person.leg===1) ?
           Math.atan2(player.x-person.x,person.z-player.z) : person.yaw;
         const pose=person.walking ? [0,1,0,-1][Math.floor(person.steps)%4] : 0;
-        render.draw(this.actor(person.id,pose,person),person.x,person.y+Math.sin(seconds*1.9+person.x)*.007,person.z,facing);
+        const lift=person.walking ? .024*Math.abs(Math.sin(person.steps*Math.PI/2)) : Math.sin(seconds*1.9+person.x)*.007;
+        render.draw(this.actor(person.id,pose,person),person.x,person.y+lift,person.z,facing);
       }
       for (const other of this.traffic) {
         if (!visible(other.x,other.z,other.truck?7:3)) continue;

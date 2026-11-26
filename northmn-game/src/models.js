@@ -654,7 +654,20 @@
     if (!carryingTV) {
       const collar = c(agent.id==='mara'?'#d0b8a1':'#b1ac97');
       mesh.triangle([-.067,1.32*h,-.070],[.068,1.32*h,-.070],[.009,1.194*h,-.129],collar,M.cloth);
-      mesh.box(-.005,.915*h,-.133,.011,.281*h,.012,c('#474c44'));
+      const depth=heavy?.246:.131;
+      const seam=jacket.map(v=>v*.68);
+      const flap=jacket.map(v=>Math.min(1,v*1.14));
+      for (const side of [-1,1]) {
+        mesh.triangle([side*.054,1.313*h,-depth*.58],[side*.121,1.258*h,-depth*.70],
+          [side*.028,1.13*h,-depth*1.02],flap,M.cloth);
+      }
+      mesh.box(-.005,.915*h,-depth-.006,.011,.256*h,.012,seam);
+      mesh.box(torso*.32,1.057*h,-depth*.92,torso*.38,.056*h,.013,seam,M.cloth);
+      mesh.box(torso*.31,1.103*h,-depth*.94,torso*.40,.019*h,.017,flap,M.cloth);
+      if (agent.id==='mara') {
+        mesh.ellipsoid(0,1.294*h,-.043,.092,.063,.089,c('#c98654'),M.cloth,10,5);
+        beam(mesh,[.032,1.284*h,-.116],[.063,1.151*h,-.139],.053,c('#c98654'),M.cloth);
+      }
     }
     if (carryingTV) {
       mesh.box(-.305,1.029,-.325,.610,.346,.088,charcoal);
