@@ -10,7 +10,7 @@
   const button = (label, handler, primary = false) => ({ label, handler, primary });
   const tutorial = [
     ['Find your footing',[
-      'Use WASD to walk. Click the scene to capture the mouse, or use the arrow keys to look. On a touch screen, drag the scene to look.',
+      'Use WASD to walk. Click the scene for mouse look and press Escape to release. If your browser blocks capture or you use touch, drag across the scene to turn. Arrow keys also turn.',
       'Press E to use the closest object named on screen. Press C to change camera.',
     ]],
     ['Start with a buyer',[
@@ -210,10 +210,7 @@
 
     tutorial(step = 0) {
       const [title,copies] = tutorial[step];
-      const finish = () => {
-        this.close();
-        this.game.captureLook();
-      };
+      const finish = () => this.close();
       const actions = step===tutorial.length-1 ?
         [button('Start workday',finish,true)] :
         [button('Next',() => this.tutorial(step+1),true),button('Skip tutorial',finish)];

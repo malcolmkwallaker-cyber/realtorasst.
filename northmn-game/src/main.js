@@ -128,8 +128,7 @@
       this.updateHUD(true);
       this.showingReminders();
       if (parkingRecovered) this.ui.notice('Your SUV was moved to a clear parking spot. You can exit once stopped.');
-      if (resume) this.captureLook();
-      else this.ui.tutorial();
+      if (!resume) this.ui.tutorial();
     }
 
     validPoint(point) {
@@ -350,6 +349,7 @@
         this.ui.trap(event);
         if (event.code === 'Escape') {
           if (event.repeat || this.transit || this.crossing) return;
+          if (document.pointerLockElement===canvas) { document.exitPointerLock(); return; }
           if (this.ui.panel) this.ui.close();
           else if (this.tag) this.endTag(false);
           else if (this.started) this.ui.pause();
@@ -395,22 +395,29 @@
         this.save();
       });
       let drag = null;
+      let dragged=false;
       canvas.oncontextmenu = (event) => event.preventDefault();
       canvas.onpointerdown = (event) => {
-        if (!this.canLook()) return;
+        if (!this.canLook() || !event.isPrimary || event.button!==0) return;
+        dragged=false;
         canvas.focus({preventScroll:true});
         if (this.tag && event.pointerType === 'mouse' && event.button === 0) this.tag.fire();
         if (document.pointerLockElement === canvas) return;
-        if (event.pointerType==='mouse' && event.button===0) this.captureLook();
         canvas.setPointerCapture(event.pointerId);
-        drag = {cx:event.clientX,cy:event.clientY};
+        drag = {cx:event.clientX,cy:event.clientY,x:event.clientX,y:event.clientY,id:event.pointerId};
       };
       canvas.onpointermove = (event) => {
-        if (document.pointerLockElement === canvas || !drag || !this.canLook()) return;
-        this.look(event.clientX-drag.cx,event.clientY-drag.cy);
-        drag = {cx:event.clientX,cy:event.clientY};
+        if (document.pointerLockElement===canvas || !drag || event.pointerId!==drag.id || !this.canLook()) return;
+        const dx=event.clientX-drag.cx,dy=event.clientY-drag.cy;
+        dragged ||= Math.hypot(event.clientX-drag.x,event.clientY-drag.y)>4;
+        this.look(dx,dy,Math.PI/Math.max(1,canvas.clientWidth));
+        drag.cx=event.clientX;
+        drag.cy=event.clientY;
       };
       canvas.onpointercancel = canvas.onpointerup = canvas.onlostpointercapture = () => { drag = null; };
+      canvas.onclick=(event)=>{
+        if (!dragged && event.pointerType!=='touch' && event.pointerType!=='pen') this.captureLook();
+      };
       document.addEventListener('pointerlockchange',() => {
         drag = null;
         if (document.pointerLockElement===canvas) this.lockUnavailable = false;
@@ -431,8 +438,7 @@
     }
 
     captureLook() {
-      if (!this.canLook() || document.pointerLockElement===this.canvas ||
-          !matchMedia('(pointer: fine)').matches) return;
+      if (!this.canLook() || document.pointerLockElement===this.canvas) return;
       this.canvas.focus({preventScroll:true});
       if (!this.canvas.requestPointerLock) { this.mouseLockFallback(); return; }
       try {
@@ -458,17 +464,17 @@
       }
     }
 
-    look(dx,dy) {
+    look(dx,dy,yawPerPixel=.0028) {
       if (this.tag) {
         this.tag.look(dx,dy);
         return;
       }
       const p = this.player;
       if (this.driving) {
-        this.carLook = clamp((this.carLook || 0) + dx*.0028,-.95,.95);
+        this.carLook = clamp((this.carLook || 0) + dx*yawPerPixel,-.95,.95);
         p.pitch = clamp(p.pitch - dy*.00067,-.36,.32);
       } else {
-        p.yaw += dx*.0028;
+        p.yaw += dx*yawPerPixel;
         p.pitch = clamp(p.pitch - dy*.00068,-.50,.50);
       }
     }
