@@ -219,7 +219,7 @@
         this.save();
       }
       const alerts = this.career.showingAlerts;
-      if (!alerts.length) return;
+      if (!alerts.length) { this.ui.trustFeedback(); return; }
       const reminders = alerts.splice(0);
       const messages = reminders.map(({file,level,left,lost,closes,coveredBy}) => {
         const penalty = lost ? ' · −'+lost+' trust for arriving late' : '';
@@ -230,6 +230,7 @@
       });
       this.sound.phoneBuzz();
       this.ui.notice(messages.join(' / '),6500);
+      this.ui.trustFeedback();
       this.save();
     }
 

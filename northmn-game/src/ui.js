@@ -94,10 +94,25 @@
 
     notice(message, duration = 3900) {
       const toast = byId('toast');
+      this.noticeText = message;
       toast.textContent = message;
+      if (this.trustBanner?.career===this.game.career && this.trustBanner.until>performance.now()) {
+        for (const line of this.trustBanner.lines) {
+          const row=document.createElement('div');
+          row.textContent=line;
+          toast.append(row);
+        }
+      }
       toast.hidden = false;
       clearTimeout(this.toastTimer);
       this.toastTimer = setTimeout(() => { toast.hidden = true; },duration);
+    }
+
+    trustFeedback() {
+      const c = this.game.career;
+      if (!c.trustUpdates.length) return;
+      this.trustBanner={career:c,lines:c.trustUpdates.splice(0),until:performance.now()+6000};
+      this.notice(byId('toast').hidden?'':this.noticeText||'',6000);
     }
 
     visitorLine(person, line) {
@@ -429,7 +444,7 @@
         '</h3><p>'+escape(site.town+' · '+site.road.segment.name+' · '+f.beds)+'</p>'+photo+
         '<p>'+escape(f.intake)+'</p></div>'+
         '<dl class="details">'+details.map(([key,val])=>'<div><dt>'+escape(key)+'</dt><dd>'+escape(val)+'</dd></div>').join('')+
-        '</dl>'+extra+this.actions(actions);
+        '</dl>'+(career.recentTrust.has(r)?'<p class="detail">'+escape(career.recentTrust.get(r))+'</p>':'')+extra+this.actions(actions);
       return { html, actions };
     }
 
@@ -843,7 +858,7 @@
         const scoring = result.matched ? '' : result.important ?
           ' Missing it cost you trust.' : ' Over-flagging a routine item cost a little trust.';
         const bonus = result.bonus ? ' Includes an agent-perk bonus.' : '';
-        g.changed((result.gained<0?'−':'+')+Math.abs(result.gained)+' trust · '+reason+scoring+bonus);
+        g.changed(reason+scoring+bonus);
         this.visitorLine(visitor,visitor.reactions?.[note[0]] ??
           (result.important ? 'Thanks for pointing that out. I want the inspector to look at it.' :
             'Thanks. That helps me understand the condition.'));

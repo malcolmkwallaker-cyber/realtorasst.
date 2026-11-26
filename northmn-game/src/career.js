@@ -355,6 +355,8 @@
     constructor(agent, saved) {
       this.state = saved || fresh(agent);
       this.showingAlerts = [];
+      this.trustUpdates = [];
+      this.recentTrust = new WeakMap();
       const s = this.state;
       if (!Number.isInteger(s.seed)) s.seed = Math.floor(Math.random()*4294967296);
       if (!s.ledger.some((line)=>line.kind==='opening')) s.ledger.unshift(openingEntry());
@@ -500,7 +502,7 @@
             r.flags=[];
             this.day.showings++;
             this.day.delegated++;
-            this.trust(9,r);
+            this.trust(9,'A teammate completed the showing.',r);
             this.showingAlerts.push({level:4,file,coveredBy:r.coveredBy});
           }
           continue;
@@ -508,7 +510,7 @@
         const left = r.showAt-Math.floor(minute);
         const level = left < -this.showingGrace ? 3 : left < 0 ? 2 : left <= SHOWING_REMINDER ? 1 : 0;
         if (level <= (r.showingAlert || 0)) continue;
-        const lost = level>=2 && (r.showingAlert||0)<2 ? -this.trust(-LATE_SHOWING_TRUST,r) : 0;
+        const lost = level>=2 && (r.showingAlert||0)<2 ? -this.trust(-LATE_SHOWING_TRUST,'The showing started before you arrived.',r) : 0;
         r.showingAlert = level;
         if (level===3) {
           r.missedAt = r.showAt;
@@ -590,11 +592,18 @@
       return { label:'Clear',intensity:0 };
     }
 
-    trust(points, record = this.record) {
+    trust(points, reason, record = this.record) {
       const before = record.trust;
       record.trust = ND.clamp(before+points,0,100);
-      this.day.trust += record.trust-before;
-      return record.trust-before;
+      const change = record.trust-before;
+      this.day.trust += change;
+      if (change) {
+        const file = files.find((item)=>this.state.files[item.id]===record);
+        const line = (change>0?'+':'−')+Math.abs(change)+' trust · '+reason;
+        this.trustUpdates.push(file.client+' · '+line);
+        this.recentTrust.set(record,line);
+      }
+      return change;
     }
 
     hasPrize(id) {
@@ -657,7 +666,7 @@
     review() {
       if (this.record.reviewed) return;
       this.record.reviewed=true;
-      this.trust(4);
+      this.trust(4,'An advisor reviewed the file.');
       this.addTime(7);
     }
 
@@ -665,7 +674,7 @@
       if (this.record.stage !== 'lead') return;
       this.record.stage = 'schedule';
       this.day.files++;
-      this.trust(this.perk.leadTrust??0);
+      this.trust(this.perk.leadTrust??0,'Your buyer-care perk helped at intake.');
       this.addTime(this.perk.intake??9);
     }
 
@@ -715,7 +724,7 @@
       const delay = showingDelays[Math.floor(roll()*showingDelays.length)];
       r.rivalVisit = r.showAt;
       this.day.showingDelays++;
-      this.trust(delay.trust);
+      this.trust(delay.trust,delay.title+' delayed the showing.');
       this.addTime(delay.minutes);
       return delay;
     }
@@ -727,7 +736,7 @@
       r.stage = 'tour';
       r.unlocked = true;
       this.day.showings++;
-      if (this.state.minute<=r.showAt+8) this.trust(7);
+      if (this.state.minute<=r.showAt+8) this.trust(7,'You met the client on time.');
       return true;
     }
 
@@ -737,7 +746,10 @@
       const matched = Boolean(note[3])===flag;
       const regional = this.perk.markets?.includes(this.file.id) ? this.perk.marketTrust : 0;
       const structural = ['rear','roof'].includes(item) ? (this.perk.structuralTrust??0) : 0;
-      const gained = this.trust(matched ? (note[3]?14:9)+regional+structural : (note[3] ? -5 : -2));
+      const reason = note[3] ? (flag?'You flagged a defect for inspection.':'A significant defect went unflagged.') :
+        (flag?'The client expected this routine wear.':'You correctly identified a routine condition.');
+      const gained = this.trust(matched ? (note[3]?14:9)+regional+structural : (note[3] ? -5 : -2),
+        reason+(matched && regional+structural?' Your agent specialty helped.':''));
       this.record.flags ||= [];
       if (flag) this.record.flags.push(item);
       this.record.notes.push(item);
@@ -764,7 +776,7 @@
       if (price>f.high) {
         market='high';
         expectedDelay=6*60;
-        this.trust(-5);
+        this.trust(-5,'The asking price exceeded the local comps.');
         r.incoming=Math.min(f.limit,step(f.limit-3000+competition+bump));
       } else if (price<f.low) {
         market='low';
@@ -852,7 +864,7 @@
     loseDeal(reason, points = 0) {
       const r = this.record;
       if (!['offer','counter','inspection','sign'].includes(r.stage)) return null;
-      const lost = -this.trust(points);
+      const lost = -this.trust(points,reason);
       this.day.lost++;
       r.stage = 'lost';
       r.outcome = reason;
@@ -885,7 +897,7 @@
       const net = price-credit;
       const gap = f.side==='seller' ? f.limit-net : net-this.reserve();
       const points = gap<=1000 ? 6 : gap<=3000 ? 2 : -Math.min(15,Math.round((gap-3000)/700));
-      const delta = this.trust(points);
+      const delta = this.trust(points,points>0?'The agreed price worked in your client’s favor.':'The negotiated price left value on the table.');
       r.dealScore = { delta };
       return { delta };
     }
@@ -904,7 +916,7 @@
       r.inspectionBriefed = true;
       r.inspectionPrepared = Boolean(note[3]);
       this.addTime(9);
-      if (r.inspectionPrepared) this.trust(3);
+      if (r.inspectionPrepared) this.trust(3,'You briefed Riley on a significant concern.');
       return { prepared:r.inspectionPrepared, reason:note[4] };
     }
 
@@ -917,14 +929,15 @@
       if (decision==='full' && credit && !this.creditSupported) {
         r.inspectionOffer = Math.max(1,Math.round(credit*.5));
         this.addTime(12);
-        this.trust(-3);
+        this.trust(-3,'The request lacked evidence for the full credit.');
         return { counter:r.inspectionOffer };
       }
       const agreed = decision==='full' ? credit : decision==='counter' ? r.inspectionOffer : 0;
       this.addTime(Math.max(7,(this.perk.inspectionTime??28)-(this.event.id==='contractor'?9:0)));
       r.credit += agreed;
       r.inspection = agreed ? 'Seller credit confirmed in writing' : 'Buyer accepted condition after review';
-      this.trust(agreed ? 5 : credit && this.file.side!=='seller' ? -3 : 3);
+      this.trust(agreed ? 5 : credit && this.file.side!=='seller' ? -3 : 3,
+        agreed ? 'You secured a documented repair credit.' : credit && this.file.side!=='seller' ? 'The buyer took on the repair cost.' : 'You resolved the inspection terms.');
       this.day.inspections++;
       r.stage = 'title';
       return { agreed };
