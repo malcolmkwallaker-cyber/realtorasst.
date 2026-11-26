@@ -344,7 +344,7 @@
       const post = toWorld(lot,lot.type==='office'?-3.75:-2.22,roadside);
       if (!this.geo.wet(post.x,post.z)) {
         mesh.at(post.x,this.grade(post.x,post.z),post.z,lot.yaw,()=>{
-          if (lot.type==='office' || lot.type==='brick') Models.streetMarker(mesh);
+          if (lot.type==='office' || lot.type==='brick') Models.streetMarker(mesh,lot.road.segment.name || lot.street);
           else Models.mailbox(mesh);
         });
         this.obstacle(lot,lot.type==='office'?-3.75:-2.22,roadside,.20,.20);
@@ -646,12 +646,29 @@
 
     drawRoads(mesh, segments, x0, z0, urban, boxes) {
       const poleSlots = new Set();
+      const signed=new Set();
       for (const s of segments) {
         const range = clip(s.a.x,s.a.z,s.b.x,s.b.z,x0,z0,x0+CHUNK,z0+CHUNK);
         if (!range) continue;
         const [start,end] = range.map((fraction) => fraction * s.length);
         const width = s.width / 2;
         const avenue = s.type < 2;
+        if (urban && s.name) {
+          for (const corner of [s.a,s.b]) {
+            if (corner.x<x0 || corner.z<z0 || corner.x>=x0+CHUNK || corner.z>=z0+CHUNK ||
+                signed.has(corner) || corner.edges.length<3) continue;
+            const along=corner===s.a?1:-1, ux=s.dx/s.length*along, uz=s.dz/s.length*along;
+            const cross=corner.edges.find(e=>e.name && e.name!==s.name &&
+              Math.abs(ux*(e.node.x-corner.x)+uz*(e.node.z-corner.z))<e.length*.65);
+            if (!cross) continue;
+            const vx=(cross.node.x-corner.x)/cross.length,vz=(cross.node.z-corner.z)/cross.length;
+            const x=corner.x+ux*(width+3)+vx*(width+3),z=corner.z+uz*(width+3)+vz*(width+3);
+            if (this.geo.wet(x,z) || this.exclusion(x,z,1)) continue;
+            mesh.at(x,this.geo.height(x,z),z,s.heading-Math.PI/2,()=>Models.streetMarker(mesh,s.name,cross.name));
+            boxes.push({x,z,yaw:s.heading-Math.PI/2,w:.12,d:.12,kind:'street sign',name:s.name,cross:cross.name});
+            signed.add(corner);
+          }
+        }
         const asphalt = s.type === 3 ? M.gravel : M.asphalt;
         for (let p = start; p < end; p += 7) {
           const q = Math.min(p+7, end);
@@ -701,6 +718,44 @@
         contains(lot,x,z,pad) || Math.hypot(x-lot.parking.x,z-lot.parking.z) < pad + 3.4);
     }
 
+    residentialYard(mesh,boxes,house,road,low) {
+      const side=house.w*.5+1.46;
+      const start=-house.d*.5+1.0, end=-road.distance+road.segment.width/2+.12;
+      if (start<end+1.4) return;
+      for (const depth of [start,(start+end)/2,end]) {
+        const p=toWorld(house,side,depth);
+        if (this.exclusion(p.x,p.z,1.9) || this.geo.wet(p.x,p.z)) return;
+      }
+      const row=z=>[-1.29,1.29].map(offset=>{
+        const p=toWorld(house,side+offset,z);
+        return [p.x,this.grade(p.x,p.z)+.16,p.z];
+      });
+      let prev=row(start);
+      const pieces=Math.ceil((start-end)/3);
+      for (let i=1;i<=pieces;i++) {
+        const next=row(start+(end-start)*i/pieces);
+        mesh.quad(prev[0],prev[1],next[1],next[0],[.88,.87,.84],M.asphalt,1.5,(start-end)/pieces/1.8);
+        prev=next;
+      }
+      const mail=toWorld(house,side+1.63,end+2.95);
+      mesh.at(mail.x,this.geo.height(mail.x,mail.z),mail.z,house.yaw,()=>Models.mailbox(mesh));
+      boxes.push({...mail,w:.19,d:.21,yaw:house.yaw,kind:'mailbox'});
+      const shrub=toWorld(house,-house.w*.31,-house.d/2-.60);
+      mesh.at(shrub.x,this.geo.height(shrub.x,shrub.z),shrub.z,house.yaw,()=>Models.shrub(mesh,low));
+      if (Math.floor(house.x+house.z)%3!==0) return;
+      const wood=color('#aa9477');
+      const posts=[-.9,.8,2.5].map(depth=>{
+        const p=toWorld(house,-house.w/2-.83,depth),y=this.geo.height(p.x,p.z);
+        mesh.at(p.x,y,p.z,house.yaw,()=>mesh.box(-.055,0,-.055,.11,.88,.11,wood,M.oak));
+        return [p.x,y,p.z];
+      });
+      for (let i=1;i<posts.length;i++) for (const h of [.35,.69]) {
+        const at=p=>[p[0],p[1]+h,p[2]];
+        Models.beam(mesh,at(posts[i-1]),at(posts[i]),.072,wood);
+      }
+      boxes.push({...toWorld(house,-house.w/2-.83,.8),w:.13,d:3.52,yaw:house.yaw,kind:'fence'});
+    }
+
     buildTile(ix, iz) {
       const id = ix + ',' + iz;
       if (this.tiles.has(id)) return this.tiles.get(id);
@@ -729,6 +784,7 @@
             let shape;
             mesh.at(x,this.geo.height(x,z),z,yaw,() => { shape = Models.house(mesh,random,dense,low); });
             boxes.push({ x,z,yaw,...shape });
+            this.residentialYard(mesh,boxes,{x,z,yaw,...shape},road,low);
           }
         }
       }

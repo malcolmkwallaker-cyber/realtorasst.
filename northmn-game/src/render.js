@@ -25,7 +25,7 @@
   const SURFACE = Object.freeze({
     asphalt: 0, grass: 1, concrete: 2, siding: 3, shingles: 4, brick: 5,
     oak: 6, bark: 7, gravel: 8, water: 9, needles: 10, cedar: 11, drywall: 12,
-    granite: 13, boards: 14, cloth: 15, glass: -2, lamp: -3, sign: -4, shade: -5, paint: -6, plate: -7,
+    granite: 13, boards: 14, cloth: 15, glass: -2, lamp: -3, sign: -4, shade: -5, paint: -6, plate: -7, streetLetter: -8,
   });
 
   function color(hex) {
@@ -237,7 +237,7 @@
     flat in int vMaterial;
     uniform sampler2DArray uMaterials;
     uniform sampler2D uSign;
-    uniform sampler2D uPlate;
+    uniform sampler2D uPlate, uStreetLetters;
     uniform sampler2D uShadow;
     uniform vec3 uEye, uShadowCenter;
     uniform vec3 uHeadlight, uBeam;
@@ -288,6 +288,7 @@
       }
       if (vMaterial == -4) paint = texture(uSign,vUV).rgb;
       if (vMaterial == -7) paint = texture(uPlate,vUV).rgb;
+      if (vMaterial == -8) paint = texture(uStreetLetters,vUV).rgb;
       if (!indoors && uSnow>.02 && (vMaterial==1 || vMaterial==4 || vMaterial==10)) {
         float cover = uSnow*(.31+.69*noise(vPosition.xz*.42))*smoothstep(.12,.66,n.y);
         paint = mix(paint,vec3(.81,.87,.89),cover*(vMaterial==10?.43:.88));
@@ -435,6 +436,7 @@
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       this.createSign();
       this.createPlate();
+      this.createStreetLetters();
     }
 
     get low() {
@@ -514,6 +516,24 @@
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, canvas);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.generateMipmap(gl.TEXTURE_2D);
+    }
+
+    createStreetLetters() {
+      const canvas=document.createElement('canvas');
+      canvas.width=512; canvas.height=256;
+      const ink=canvas.getContext('2d');
+      ink.fillStyle='#32624e'; ink.fillRect(0,0,512,256);
+      ink.font='bold 25px monospace'; ink.fillStyle='#f5f5de';
+      ink.textAlign='center'; ink.textBaseline='middle';
+      for (let i=0;i<95;i++) ink.fillText(String.fromCharCode(i+32),(i%16)*32+16,Math.floor(i/16)*32+16);
+      const gl=this.gl;
+      gl.activeTexture(gl.TEXTURE4);
+      gl.bindTexture(gl.TEXTURE_2D,gl.createTexture());
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,canvas);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
       gl.generateMipmap(gl.TEXTURE_2D);
     }
 
@@ -722,6 +742,7 @@
       gl.uniform1i(u.uMaterials,0);
       gl.uniform1i(u.uSign,1);
       gl.uniform1i(u.uPlate,3);
+      gl.uniform1i(u.uStreetLetters,4);
       gl.uniform1f(u.uSnow,snow);
       gl.uniform1f(u.uMist,mist);
       gl.uniform1i(u.uRoom,Number(Boolean(room)));

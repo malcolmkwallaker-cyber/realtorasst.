@@ -198,8 +198,8 @@
           const length = Math.hypot(dx, dz);
           if (length <= 0) continue;
           const width = widths[type];
-          a.edges.push({ node: b, length, type });
-          b.edges.push({ node: a, length, type });
+          a.edges.push({ node: b, length, type, name });
+          b.edges.push({ node: a, length, type, name });
           const segment = {
             a, b, dx, dz, length, type, width, name,
             heading: Math.atan2(dx, -dz),

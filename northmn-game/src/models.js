@@ -473,16 +473,19 @@
   }
 
   function pine(mesh, h, r, low = false) {
-    const width = h * (.17 + r() * .059);
-    const spreading = width/h>.205;
+    const sample=r();
+    // Tall open-trunk red pine, narrow black spruce, and a full balsam fir skirt.
+    const [spread,base,spacing,taper,tip]=sample<.33 ? [.24,.50,.075,.115,.76] :
+      sample<.67 ? [.16,.30,.135,.163,.63] : [.245,.12,.165,.168,.51];
+    const width=h*spread;
     mesh.round(0, -.21, 0, h * .034, h * .009, h * .91, [.80,.80,.72], M.bark, 6);
     const shades = [[.87,1.10,.80], [.93,1.20,.89], [.94,1.13,.80]];
     const offset = r() * 6.28;
     const tiers = low ? [0,2,4] : [0,1,2,3,4];
     for (const tier of tiers) {
-      const y = h * ((spreading?.26:.40) + tier * (spreading?.124:.097));
-      const rad = width * (1 - tier * (spreading?.136:.167));
-      const top = h * ((spreading?.62:.73) + tier * (spreading?.093:.068));
+      const y = h*(base+tier*spacing);
+      const rad = width*(1-tier*taper);
+      const top = h*(tip+tier*(1-tip)/4);
       const n = low ? 6 : 8;
       for (let i = 0; i < n; i++) {
         const a = offset + (i + tier / 3) * Math.PI * 2 / n;
@@ -621,14 +624,35 @@
     mesh.box(.209,1.149,-.106,.028,.057,.101,c('#974a34'));
   }
 
-  function streetMarker(mesh) {
+  function streetMarker(mesh,name,crossStreet) {
     mesh.round(0,-.045,0,.041,.037,2.45,steel,-1,7);
-    mesh.box(-.51,2.14,-.051,1.02,.24,.076,c('#386253'));
-    mesh.box(-.45,2.217,-.055,.89,.023,.006,c('#a2baa0'));
-    mesh.box(-.052,2.375,-.34,.082,.23,.69,c('#406b59'));
+    const blade=(name,y,rotation)=>{
+      const letters=Array.from(name);
+      const pitch=Math.min(.107,2.14/letters.length), width=letters.length*pitch+.12;
+      mesh.at(0,y,0,rotation,()=>{
+        mesh.box(-width/2,0,-.037,width,.225,.074,c('#32624e'));
+        for (const angle of [0,Math.PI]) mesh.at(0,0,0,angle,()=>{
+          for (const [i,letter] of letters.entries()) {
+            const n=Math.max(0,Math.min(94,letter.charCodeAt(0)-32));
+            const u=(n%16+.22)/16,v=1-(Math.floor(n/16)+1)/8;
+            const u2=u+.56/16,v2=v+1/8;
+            const x=-width/2+.06+i*pitch;
+            const a=[x,.014,.039], b=[x+pitch,.014,.039], d=[x,.21,.039], e=[x+pitch,.21,.039];
+            mesh.triangle(a,b,e,ivory,M.streetLetter,[[u,v],[u2,v],[u2,v2]]);
+            mesh.triangle(a,e,d,ivory,M.streetLetter,[[u,v],[u2,v2],[u,v2]]);
+          }
+        });
+      });
+    };
+    blade(name,2.13,0);
+    if (crossStreet) blade(crossStreet,2.38,Math.PI/2);
   }
 
-  function shrub(mesh) {
+  function shrub(mesh,low=false) {
+    if (low) {
+      mesh.ellipsoid(0,.27,0,.43,.28,.34,c('#758767'),M.needles,6,3);
+      return;
+    }
     for (const [x,y,z,w] of [[0,.21,0,.27],[-.21,.26,.08,.21],[.23,.28,-.06,.24],[.03,.41,.07,.23]]) {
       mesh.ellipsoid(x,y,z,w,w*.77,w*.90,c('#758767'),M.needles,7,4);
     }
