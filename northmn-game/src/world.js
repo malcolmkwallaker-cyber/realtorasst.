@@ -821,6 +821,41 @@
       return this.actorMeshes.get(key);
     }
 
+    walkPoints(lot) {
+      return {
+        living: ND.toWorld(lot,-lot.w*.27,-lot.d/2+2.03),
+        kitchen: ND.toWorld(lot,lot.w*.26,-2.1),
+        rear: ND.toWorld(lot,-.30,lot.d/2-1.72),
+        roof: ND.toWorld(lot,-1.28,-lot.d/2-3.78),
+      };
+    }
+
+    walkingRoute(lot,from,target,reach) {
+      const step = .40;
+      const start = local(lot,from.x,from.z);
+      const queue = [{point:from,i:0,j:0,parent:null}];
+      const seen = new Set(['0,0']);
+      for (let at=0;at<queue.length;at++) {
+        const node = queue[at];
+        if (Math.hypot(node.point.x-target.x,node.point.z-target.z)<=reach && this.canSee(node.point,target)) {
+          const path = [];
+          for (let leg=node;leg.parent;leg=leg.parent) path.push(leg.point);
+          return path.reverse();
+        }
+        for (const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+          const i=node.i+di,j=node.j+dj,key=i+','+j;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const x=start[0]+i*step,z=start[1]+j*step;
+          if (Math.abs(x)>lot.w/2+2 || z < -lot.d/2-4.8 || z>lot.d/2+1) continue;
+          const point=toWorld(lot,x,z);
+          if (this.collides(point.x,point.z,.24)) continue;
+          queue.push({point,i,j,parent:node});
+        }
+      }
+      return [];
+    }
+
     updateVisitor(career, player, driving, dt = 0) {
       const file = career.file;
       const lot = this.features[file.id];
@@ -846,7 +881,31 @@
       }
       const visitor = this.visitor;
       visitor.walking = false;
-      if (!visitor.indoor || !dt) return;
+      if (!dt) return;
+      if (stage==='tour') {
+        const next = file.notes.find((note)=>!career.record.notes.includes(note[0]));
+        if (!next) return;
+        if (visitor.station!==next[0]) {
+          visitor.station = next[0];
+          visitor.route = this.walkingRoute(lot,visitor,this.walkPoints(lot)[next[0]],1.05);
+        }
+        const point = visitor.route[0];
+        if (!point) return;
+        const dx=point.x-visitor.x,dz=point.z-visitor.z;
+        const distance=Math.hypot(dx,dz);
+        const step=Math.min(dt*1.9,distance);
+        if (distance>.001) {
+          visitor.x+=dx*step/distance;
+          visitor.z+=dz*step/distance;
+          visitor.yaw=Math.atan2(dx,-dz);
+          visitor.steps+=step*4.7;
+          visitor.y=this.height(visitor.x,visitor.z);
+          visitor.walking=true;
+        }
+        if (step>=distance) visitor.route.shift();
+        return;
+      }
+      if (!visitor.indoor) return;
       const trail = visitor.trail;
       const latest = trail.at(-1);
       if (!latest || Math.hypot(player.x-latest.x,player.z-latest.z)>.48) {

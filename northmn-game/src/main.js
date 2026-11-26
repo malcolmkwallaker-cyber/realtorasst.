@@ -19,6 +19,7 @@
       this.geo = geo;
       this.renderer = renderer;
       this.world = new ND.World(geo,renderer);
+      this.nameTags = new Map();
       this.arcade = new ND.Arcade(this.world);
       this.maps = new ND.MapPainter(geo);
       this.sound = new ND.Soundscape();
@@ -710,12 +711,7 @@
     }
 
     walkPoints(lot) {
-      return {
-        living: ND.toWorld(lot,-lot.w*.27,-lot.d/2+2.03),
-        kitchen: ND.toWorld(lot,lot.w*.26,-2.1),
-        rear: ND.toWorld(lot,-.30,lot.d/2-1.72),
-        roof: ND.toWorld(lot,-1.28,-lot.d/2-3.78),
-      };
+      return this.world.walkPoints(lot);
     }
 
     inspectionPoint(lot) {
@@ -1091,16 +1087,28 @@
     }
 
     visitorTag(camera) {
-      const person = this.world.visitor;
-      const tag = byId('visitor-tag');
-      tag.hidden = true;
-      if (!person || this.ui.panel || distance(this.player,person)>8 || !this.world.canSee(this.player,person)) return;
-      const pos = ND.project(camera,[person.x,person.y+1.93,person.z]);
-      if (!pos || pos.some((v)=>v<.05 || v>.95)) return;
-      tag.textContent = person.name+' · '+person.title;
-      tag.style.left = pos[0]*100+'%';
-      tag.style.top = pos[1]*100+'%';
-      tag.hidden = false;
+      for (const tag of this.nameTags.values()) tag.hidden = true;
+      const clientTag = byId('visitor-tag');
+      clientTag.hidden = true;
+      if (this.ui.panel || !this.started || this.transit) return;
+      const visitor = this.world.visitor;
+      for (const person of visitor ? [...this.world.people,visitor] : this.world.people) {
+        if (person.late || person.id===this.player.agent || distance(this.player,person)>105) continue;
+        const pos = ND.project(camera,[person.x,person.y+(person.style==='small'?1.68:1.96),person.z]);
+        if (!pos || pos.some((v)=>v<.02 || v>.98) || !this.world.canSee(this.player,person)) continue;
+        let tag = person===visitor ? clientTag : this.nameTags.get(person.id);
+        if (!tag) {
+          tag = document.createElement('div');
+          tag.className = 'visitor-tag';
+          clientTag.parentNode.append(tag);
+          this.nameTags.set(person.id,tag);
+        }
+        const label = person.name+(person===visitor?' · '+person.title:'');
+        if (tag.textContent!==label) tag.textContent = label;
+        tag.style.left = pos[0]*100+'%';
+        tag.style.top = pos[1]*100+'%';
+        tag.hidden = false;
+      }
     }
 
     weatherOverlay() {

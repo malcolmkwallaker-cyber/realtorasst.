@@ -128,7 +128,7 @@
       greeting:'Hi, I’m Mara. Can we take a look at the basement before we talk numbers?',
       reactions:{ living:'I can see the condensation on the sash. Let’s ask how often that happens.',
         kitchen:'That cabinet looks dry. I’d still like to see the water heater’s service date.',
-        rear:'That water mark worries me. Can we ask the inspector where the water is coming from?' } },
+        rear:'Good catch on that water mark. Let’s have the inspector trace where the water is coming from.' } },
     cabin: { id:'nora',name:'Nora Ortiz',title:'Buyer',hair:'#3e2c26',shirt:'#77634b',skin:'#b97d5c',style:'long',
       greeting:'Ben asked me to check the well and septic before we make a decision.' },
     range: { id:'rowan',name:'Rowan Fields',title:'Buyer',hair:'#6d493d',shirt:'#406064',skin:'#d3a783',style:'short',
