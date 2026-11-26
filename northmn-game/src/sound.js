@@ -1,9 +1,34 @@
 'use strict';
 
 (() => {
+  function fieldMusic(context) {
+    const chords = [[48,55,64,59],[45,52,60,55],[41,48,57,52],[43,50,62,57]];
+    const pattern = [[0,0],[.5,2],[1,1],[1.75,3],[2.5,2],[3.25,1]];
+    const beat = .74;
+    const rate = context.sampleRate;
+    const buffer = context.createBuffer(1,Math.ceil(chords.length*4*beat*rate),rate);
+    const samples = buffer.getChannelData(0);
+    for (const [bar,chord] of chords.entries()) {
+      for (const [offset,note] of pattern) {
+        const start = Math.round((bar*4+offset)*beat*rate);
+        const period = 2*Math.PI*440*2**((chord[note]-69)/12)/rate;
+        const length = Math.round(rate*(note===0?1.48:1.04));
+        for (let i=0;i<length;i++) {
+          const t = i/rate;
+          const envelope = Math.min(1,t*64,(length-i)/(rate*.10))*Math.exp(-t*(note===0?2.9:4.7));
+          const phase = period*i;
+          samples[(start+i)%samples.length] += (Math.sin(phase)+.19*Math.sin(phase*2))*envelope*.38;
+        }
+      }
+    }
+    return buffer;
+  }
+
   class Soundscape {
     constructor() {
       this.enabled = true;
+      try { this.musicEnabled = localStorage.getItem('north-desk-music')!=='off'; }
+      catch { this.musicEnabled = true; }
       this.lastStep = 0;
       this.voices = new Map();
     }
@@ -22,6 +47,12 @@
         return node;
       };
       this.master = makeGain(.34);
+      this.music = makeGain(this.musicEnabled?.16:0,this.master);
+      const score = ctx.createBufferSource();
+      score.buffer = fieldMusic(ctx);
+      score.loop = true;
+      score.connect(this.music);
+      score.start();
       this.rustle = makeGain(.004,this.master);
       this.weather = ctx.createBiquadFilter();
       this.weather.type = 'lowpass';
@@ -52,6 +83,17 @@
         this.stopVoice();
         this.context?.suspend().catch(() => {});
       }
+    }
+
+    toggleMusic() {
+      this.musicEnabled = !this.musicEnabled;
+      try { localStorage.setItem('north-desk-music',this.musicEnabled?'on':'off'); }
+      catch {}
+      this.setMusicVolume(.16);
+    }
+
+    setMusicVolume(volume) {
+      if (this.music) this.music.gain.setTargetAtTime(this.musicEnabled?volume:0,this.context.currentTime,.23);
     }
 
     speak(id) {
@@ -148,6 +190,7 @@
       const now = this.context.currentTime;
       this.engine.gain.setTargetAtTime(0,now,.12);
       this.rustle.gain.setTargetAtTime(.004,now,.20);
+      this.setMusicVolume(.085);
     }
 
     progress(kind) {
@@ -165,6 +208,25 @@
         tone.connect(gain).connect(this.master);
         tone.start(start);
         tone.stop(start+.22);
+      }
+    }
+
+    celebrate() {
+      const ctx = this.context;
+      if (!this.enabled || !ctx || ctx.state !== 'running') return;
+      const notes = [[523,0],[659,.12],[784,.24],[1047,.38],[784,.58],[1047,.7]];
+      for (const [freq,offset] of notes) {
+        const start = ctx.currentTime+offset;
+        const tone = ctx.createOscillator();
+        const gain = ctx.createGain();
+        tone.type = 'triangle';
+        tone.frequency.value = freq;
+        gain.gain.setValueAtTime(.001,start);
+        gain.gain.exponentialRampToValueAtTime(.15,start+.02);
+        gain.gain.exponentialRampToValueAtTime(.001,start+(offset>.6?.75:.28));
+        tone.connect(gain).connect(this.master);
+        tone.start(start);
+        tone.stop(start+.8);
       }
     }
 
@@ -208,6 +270,7 @@
       if (!this.enabled || !ctx || ctx.state !== 'running') return;
       const now = ctx.currentTime;
       const movementSpeed = Math.abs(speed);
+      this.setMusicVolume(this.currentVoice || this.utterance ? .07 : driving ? .27 : .19);
       this.motor.frequency.setTargetAtTime(47+movementSpeed*2.6,now,.14);
       this.engine.gain.setTargetAtTime(moving && driving ? .095 + movementSpeed*.0017 : 0,now,.17);
       this.weather.frequency.setTargetAtTime(240 + rain*2800 + (driving?movementSpeed*24:0),now,.21);

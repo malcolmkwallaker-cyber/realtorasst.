@@ -155,6 +155,15 @@
       this.doors = Object.values(this.features).filter((site) => site.type !== 'office').map((site) => ({
         site, mesh:renderer.upload(Models.lockedDoor(site)),
       }));
+      this.sold = new Set();
+      this.soldSigns = Object.values(this.features).filter((site) => site.type !== 'office').map((site) => {
+        const depth = -site.d/2-Math.max(2.6,Math.min(4.4,site.setback-2.2));
+        const side = site.parking && local(site,site.parking.x,site.parking.z)[0]>0 ? -1 : 1;
+        const at = toWorld(site,side*site.w*.34,depth);
+        const mesh = new Mesh();
+        mesh.at(at.x,this.grade(at.x,at.z),at.z,site.yaw,() => Models.yardSign(mesh));
+        return { site, mesh:renderer.upload(mesh) };
+      });
       this.people = this.makePeople();
       this.bridger = this.people.find((person) => person.id==='bridger');
       this.bridgerDesk = {x:this.bridger.x,z:this.bridger.z,yaw:this.bridger.yaw};
@@ -279,6 +288,7 @@
           this.obstacle(lot,-5.70,-lot.d/2-1.0,3.20,1.40);
         } else {
           this.obstacle(lot, -lot.w / 2 + 1.57, -lot.d / 2 + 1.18, 2.63, .82);
+          this.obstacle(lot,-lot.w/2+.43,-lot.d/2+1.89,.32,.32);
           this.obstacle(lot, lot.w / 2 - 1.49, -lot.d / 2 + .5, 2.61, .64);
           this.obstacle(lot, lot.w / 2 - 2.38, -1.11, 1.37, .84);
           if (['ramble','hoyt','duluth'].includes(lot.id)) {
@@ -466,8 +476,12 @@
       return box;
     }
 
+    interiorAt(x,z) {
+      return Object.values(this.features).find((lot) => contains(lot,x,z,-.06));
+    }
+
     inside(x,z) {
-      return Object.values(this.features).some((lot) => contains(lot,x,z,-.06));
+      return Boolean(this.interiorAt(x,z));
     }
 
     officeDeck(x,z) {
@@ -1015,6 +1029,9 @@
       for (const { site,mesh } of this.doors) {
         if (!this.unlocked.has(site.id) && Math.hypot(site.x-player.x,site.z-player.z) < 240) render.draw(mesh);
       }
+      for (const { site,mesh } of this.soldSigns) {
+        if (this.sold.has(site.id) && Math.hypot(site.x-player.x,site.z-player.z) < 320) render.draw(mesh);
+      }
       this.drawPeopleAndVehicles(player,car,seconds,showPlayer,carView,
         (x,z,radius) => visibleFrom(camera,x,z,radius));
     }
@@ -1028,6 +1045,9 @@
       for (const lot of this.fixedMeshes) if (near(lot.x,lot.z,lot.radius)) render.draw(lot.mesh);
       for (const { site,mesh } of this.doors) {
         if (!this.unlocked.has(site.id) && near(site.x,site.z,9)) render.draw(mesh);
+      }
+      for (const { site,mesh } of this.soldSigns) {
+        if (this.sold.has(site.id) && near(site.x,site.z,12)) render.draw(mesh);
       }
       this.drawPeopleAndVehicles(player,car,seconds,showPlayer,false,near);
     }

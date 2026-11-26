@@ -234,12 +234,26 @@
     mesh.box(-w / 2 + .25, .53, -d / 2 + .76, 2.63, .42, .27, [.78, .82, .76], M.cloth);
     mesh.box(-w / 2 + .25, .55, -d / 2 + 1.01, .23, .23, .55, [.80, .85, .81], M.cloth);
     mesh.box(-w / 2 + 2.65, .55, -d / 2 + 1.01, .23, .23, .55, [.80, .85, .81], M.cloth);
+    for (const [offset,tint] of [[.62,'#a77853'],[1.38,'#667d72'],[2.04,'#cab29b']]) {
+      mesh.box(-w/2+offset,.61,-d/2+1.01,.36,.28,.17,c(tint),M.cloth);
+    }
+    const lampX = -w/2+.43;
+    const lampZ = -d/2+1.89;
+    mesh.round(lampX,.014,lampZ,.17,.15,.03,steel,-1,10);
+    mesh.round(lampX,.041,lampZ,.024,.024,1.42,steel,-1,8);
+    mesh.round(lampX,1.43,lampZ,.195,.122,.25,c('#ecd7b2'),M.cloth,12);
+    mesh.round(lampX,1.447,lampZ,.155,.155,.025,c('#ffecd0'),M.lamp,12);
     table(mesh, -w / 2 + 2.3, 0, -.88, 1.28, .62, .44);
+    mesh.box(-w/2+2.05,.444,-1.04,.29,.039,.19,c('#6e7e75'),M.cloth);
+    mesh.box(-w/2+2.055,.453,-1.03,.277,.021,.176,c('#e1d5ba'));
     mesh.floor(-w / 2 + .55, .021, -2.12, 3.12, 1.85, c('#b79574'), M.cloth);
     kitchen(mesh,w,d);
     table(mesh, w / 2 - 2.38, 0, -1.11, 1.37, .84);
     chair(mesh, w / 2 - 2.4, 0, -.39, 0, [.94, .86, .76]);
     papers(mesh, w / 2 - 2.69, .826, -1.13);
+    mesh.round(w/2-2.38,2.26,-1.11,.021,.024,.231,steel,-1,8);
+    mesh.round(w/2-2.38,2.099,-1.11,.28,.09,.182,c('#c5ac8d'),M.oak,12);
+    mesh.round(w/2-2.38,2.105,-1.11,.238,.239,.015,c('#f9e9c7'),M.lamp,12);
     plant(mesh, w / 2 - .58, 0, d / 2 - .74, 1.25);
     mesh.box(-w / 2 + .41, .05, d / 2 - 2.20, 1.62, .37, 1.87, wood, M.oak);
     mesh.box(-w / 2 + .42, .41, d / 2 - 2.19, 1.60, .20, 1.84, c('#b3b7a8'), M.cloth);
@@ -247,6 +261,7 @@
     if (lot.id === 'ramble') {
       window(mesh,-.64,1.06,rear-.045,1.28,.64);
       waterMark(mesh,rear-.049);
+      mesh.floor(-1.20,.009,d/2-2.05,2.33,1.79,c('#b8b0a0'),M.concrete);
       mesh.box(-.64,.012,d/2-1.61,1.34,.039,1.28,c('#635746'),M.oak);
       mesh.box(.37,.094,d/2-1.45,.18,.039,.11,steel);
       waterHeater(mesh,w/2-.63,-d/2+1.58);
@@ -303,7 +318,7 @@
     beam(mesh,[-3.62,2.24,signZ],[0,3.57,signZ],.14,fascia);
     beam(mesh,[3.62,2.24,signZ],[0,3.57,signZ],.14,fascia);
     mesh.quad([2.03,2.30,signZ],[-2.03,2.30,signZ],[-2.03,2.96,signZ],[2.03,2.96,signZ],
-      ivory,M.sign);
+      ivory,M.sign,1,.5);
     mesh.quad([3.32,0,z+.28],[end,-.58,z+.28],[end,-.58,z+1.73],[3.32,0,z+1.73],planks,M.cedar,3,1);
     for (const k of [z+.29,z+1.72]) {
       beam(mesh,[3.35,.93,k],[end,.35,k],.105,painted);
@@ -668,6 +683,18 @@
     return mesh;
   }
 
+  function yardSign(mesh) {
+    const post = c('#efece2');
+    mesh.box(-.62,0,-.05,.09,1.62,.09,post,M.oak);
+    mesh.box(-.62,1.53,-.05,1.36,.08,.09,post,M.oak);
+    for (const x of [-.44,.56]) mesh.box(x,1.25,-.02,.025,.29,.025,steel);
+    mesh.box(-.5,.66,-.02,1.18,.6,.05,c('#8f1f19'));
+    const z = -.035, x0 = -.47, x1 = .65, y0 = .69, y1 = 1.23;
+    mesh.triangle([x1,y0,z],[x0,y0,z],[x0,y1,z],ivory,M.sign,[[0,.5],[1,.5],[1,1]]);
+    mesh.triangle([x1,y0,z],[x0,y1,z],[x1,y1,z],ivory,M.sign,[[0,.5],[1,1],[0,1]]);
+    return mesh;
+  }
+
   function lockedDoor(lot) {
     const mesh = new Mesh();
     mesh.at(lot.x,lot.y,lot.z,lot.yaw,() => {
@@ -730,6 +757,6 @@
     return mesh;
   }
 
-  Object.assign(ND, { Models: { beam, featured, house, pine, birch, pole, suv, person, lockedDoor, loggingTruck, deer,
+  Object.assign(ND, { Models: { beam, featured, house, pine, birch, pole, suv, person, lockedDoor, yardSign, loggingTruck, deer,
     officePorchLayout,cockpit,mailbox,streetMarker,shrub } });
 })();

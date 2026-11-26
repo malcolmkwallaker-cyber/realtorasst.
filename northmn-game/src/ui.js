@@ -23,6 +23,7 @@
     ]],
     ['Take a break',[
       'Phone and menus pause the field clock. End workday returns you to the office in the morning and shows your daily recap.',
+      'The Inbox lists your upcoming appointments. If showings overlap, ask the office to cover one. You can wait at an appointment on its scheduled day.',
       'Tanya’s Laser Tag is an optional 45-second arcade match. Find it in Pause or talk to Tanya at North Desk.',
     ]],
   ];
@@ -54,6 +55,7 @@
       this.panel = kind;
       this.overlay.classList.toggle('phone',kind === 'phone');
       this.window.classList.toggle('map-window',kind === 'map');
+      this.window.classList.toggle('celebrate-window',kind === 'celebrate');
       byId('window-title').textContent = title;
       this.content.innerHTML = html;
       this.content.scrollTop = 0;
@@ -202,11 +204,13 @@
       switch (tab) {
         case 'inbox':
           html = '<div class="day-brief"><strong>'+escape(career.event.title)+'</strong><p>'+escape(career.event.detail)+'</p></div>'+
+            this.agenda()+
             '<div class="rows">'+ND.files.map((f) => {
             const site = g.world.features[f.id];
             const r = career.state.files[f.id];
             const showing = career.showing(f);
             const stage = showing?.state==='missed' ? 'Missed · Rebook' : showing?.state==='late' ? 'Showing late' :
+              showing?.state==='covered' ? career.role(r.coveredBy)+' covering' :
               r.stage==='lead' && r.arcadeApproval ? 'Pre-approved' : status[r.stage];
             return this.row(f.id,site.name,f.contact+' · '+site.town,stage);
           }).join('')+'</div>';
@@ -227,12 +231,12 @@
           const record = state.ledger.slice().reverse().map((line) => '<div class="row"><span class="row-text"><strong>'+
             escape(line.label)+'</strong><small>'+time(line.day,true)+'</small></span><span>'+
             (line.amount < 0 ? '−'+money(-line.amount) : '+'+money(line.amount))+'</span></div>').join('');
-          html = '<h3>'+money(state.cash)+'</h3><p>'+career.closed+' of '+ND.files.length+' closings · '+
+          html = '<h3>'+money(state.cash)+'</h3><p>'+career.totalClosed+' closing'+(career.totalClosed===1?'':'s')+' · '+money(state.volume||0)+' sold · '+
             state.mileage.toFixed(1)+' mi driven · '+Math.round(state.tank)+'% fuel</p>'+
             '<p class="detail">The Pemberton office started your ledger with a '+money(opening.amount)+' expense float for work on the road.</p>'+
             (record ? '<div class="rows">'+record+'</div>' : '<p class="detail">Earn your first fee by closing a transaction.</p>');
           if (state.tank < 99) actions.push(button('Arrange fuel delivery',() => this.refuel()));
-          if (state.recaps.length) actions.push(button('Latest day recap',() => this.dailyReport(state.recaps.at(-1),false)));
+          if (state.recaps.length) actions.push(button('Daily recaps',() => this.dailyReport(career.lastWorkingRecap,false)));
           html += this.actions(actions);
           break;
         }
@@ -260,9 +264,45 @@
           error.hidden = false;
           return;
         }
-        g.changed('The listing is live. A buyer sent an offer.');
+        const market = career.record.market;
+        g.changed((market==='high' ? 'Listed above the comps · −5 trust. ' : 'The listing is live. ')+
+          'Check for offers '+time(career.record.offerAt,true)+'.');
         this.phone('deal');
       };
+      const sellerForm = this.content.querySelector('#seller-counter-form');
+      if (sellerForm) sellerForm.onsubmit = (event) => {
+        event.preventDefault();
+        const result = career.sellerCounter(Number(new FormData(sellerForm).get('price')));
+        if (['invalid','ownerDeclined'].includes(result.result)) {
+          const error = sellerForm.querySelector('.form-error');
+          error.textContent = result.result==='ownerDeclined' ? 'Your seller declined to sign a counter at that price.' :
+            'Enter a price within the range shown in the field.';
+          error.hidden = false;
+          return;
+        }
+        g.changed({
+          accepted: () => 'The buyer accepted '+money(result.price)+'. '+this.dealLine(true,result.delta)+' Inspection scheduled.',
+          countered: () => 'The buyer came back at '+money(result.incoming)+'.',
+          walked: () => result.reason+(result.lost ? ' · −'+result.lost+' trust' : ''),
+        }[result.result](),result.result==='accepted'?'booking':undefined);
+        this.phone('deal');
+      };
+    }
+
+    agenda() {
+      const c = this.game.career;
+      const labels = {booked:'Showing',inspection:'Inspection',sign:'Closing'};
+      const dates = {booked:'showAt',inspection:'inspectAt',sign:'closeAt'};
+      const visits = ND.files.flatMap((file) => {
+        const r = c.state.files[file.id];
+        const at = r[dates[r.stage]];
+        if (!Number.isFinite(at)) return [];
+        return [{at,client:file.client,label:labels[r.stage],covered:r.coveredBy}];
+      }).sort((a,b)=>a.at-b.at);
+      if (!visits.length) return '';
+      return '<section class="agenda" aria-label="Appointments"><h3>Appointments</h3><ul>'+
+        visits.map(({at,client,label,covered}) => '<li><strong>'+escape(label+' · '+client)+'</strong><span>'+
+          escape(time(at,true)+(covered?' · '+c.role(covered)+' covering':''))+'</span></li>').join('')+'</ul></section>';
     }
 
     deal() {
@@ -289,16 +329,22 @@
       }
       if (r.stage === 'schedule') {
         const end=time(career.showingEnd);
-        extra = '<p>'+ (seller ? 'Avery is available for a listing walkthrough' : 'The seller is taking appointments') +
+        extra = '<p>'+ (seller ? escape(f.client)+' is available for a listing walkthrough' : 'The seller is taking appointments') +
           ' from 9 AM to '+end+'.</p>';
         if (Number.isFinite(r.missedAt)) extra = '<p>You missed the showing at '+time(r.missedAt,true)+'. Book a new time with the client.</p>'+extra;
         if (career.event.id==='hesitant') extra+='<p class="detail">'+escape(career.event.detail)+'</p>';
-        actions.push(button(seller ? 'Book first listing visit' : 'Book earliest showing',() => g.book(false),true),button('Book tomorrow at 9 AM',() => g.book(true)));
+        actions.push(button(seller ? 'Book first listing visit' : 'Book earliest showing',() => g.book(false),true),
+          button('Book tomorrow at 9 AM',() => g.book(true)));
       }
       if (r.stage === 'booked') {
         const showing = career.showing();
         extra = '<p>Showing booked for '+time(r.showAt,true)+'. The lockbox is at the front door.</p>'+
           (showing?.state==='late' ? '<p>Running late. The showing window closes at '+time(showing.closes)+'.</p>' : '');
+        if (r.coveredBy) {
+          extra += '<p>'+escape(career.role(r.coveredBy))+' is covering. Their notes will be in the file after the showing.</p>';
+        } else if (career.state.minute<r.showAt && !career.showingConflict(r.showAt,career.coveringAgent)) {
+          actions.push(button('Ask '+career.role(career.coveringAgent)+' to cover',() => this.delegate()));
+        }
         actions.push(navigate(f.id,'Route to showing'));
       }
       if (r.stage === 'tour') {
@@ -308,44 +354,55 @@
       if (r.stage === 'offer' && seller) {
         extra = '<p>Prepare the disclosure and set an asking price from the comparable sales.</p>'+
           '<form id="listing-form" class="offer-form"><label>Asking price ($)<input name="price" type="number" min="'+
-          (f.low-10000)+'" max="'+(f.high+20000)+'" value="'+(r.ask||f.list)+'" step="100" required></label>'+
+          (f.low-10000)+'" max="'+(f.high+20000)+'" step="1" inputmode="numeric" required></label>'+
           '<p class="form-error" role="status" hidden></p><div class="actions"><button class="primary" type="submit">Publish listing</button></div></form>';
       }
       if (r.stage === 'offer' && !seller) {
-        const defaultPrice = Math.min(f.limit, Math.round((f.low + f.high) / 1000) * 500);
-        extra = '<p>'+escape(career.role(f.advisor))+' can review the inspection notes and the comps. The buyer authorized an inspection contingency.</p>'+
+        const covered = r.coveredBy ? '<p class="detail">'+escape(career.role(r.coveredBy))+
+          ' sent a walkthrough summary. Brief Riley yourself if you want evidence for a repair request.</p>' : '';
+        extra = covered+'<p>Choose a price and how much to ask the seller to pay toward closing costs. Those costs reduce what the seller receives. Your buyer wants an inspection contingency.</p>'+
           '<form id="offer-form" class="offer-form"><label>Offer price ($)<input name="price" type="number" min="'+(f.low-40000)+
-          '" max="'+f.limit+'" value="'+(r.lastOffer||defaultPrice)+'" step="100" required></label>'+
+          '" max="'+f.limit+'" step="1" inputmode="numeric" required></label>'+
           '<label>Seller paid costs<select name="credit"><option value="0">$0</option><option value="1500">$1,500</option>'+
           '<option value="3000">$3,000</option></select></label>'+
           '<p class="form-error" role="status" hidden></p><div class="actions"><button class="primary" type="submit">Submit offer</button></div></form>';
         if (career.event.id==='bidding') extra='<p class="detail">'+escape(career.event.detail)+'</p>'+extra;
+        if (r.round) {
+          extra += '<p class="detail">Round '+(Math.min(r.round,3)+(r.final?0:1))+' of 3. The seller is at '+money(r.counter)+
+            (r.final?' and says that is final.':'.')+'</p>'+this.negotiationLog(r);
+        }
+      }
+      if (r.stage === 'market') {
+        extra = '<p>Listed at '+money(r.ask)+'. Your first offer review is '+time(r.offerAt,true)+'.</p>'+
+          '<p class="detail">You can work another file while the listing is live.</p>';
       }
       if (r.stage === 'counter' && seller) {
         const net = r.incoming-r.buyerCosts;
-        extra = '<p>A buyer offered '+money(r.incoming)+' with '+money(r.buyerCosts)+' in closing costs and an inspection contingency.</p>'+
-          '<p>Offer after credit '+money(net)+'. Seller’s minimum '+money(f.reserve)+'.</p>';
-        if (net >= f.reserve) actions.push(button('Accept buyer’s offer',() => {
-          career.contract(r.incoming,r.buyerCosts);
-          g.changed('Offer accepted. Inspection scheduled.');
-          this.phone('deal');
-        },true));
-        actions.push(button('Counter within seller’s terms',() => {
-          career.sellerCounter();
-          g.changed('Buyer accepted the counteroffer.');
-          this.phone('deal');
-        },net<f.reserve),button('Revise list price',() => { r.stage='offer'; g.changed(); this.phone('deal'); }));
+        const market = { high:'The above-market price held up the first offer. '+escape(f.client)+' wants to see some movement.',
+          low:'Pricing under the comps drew a bidding war, but the best offer is capped by where you started.' }[r.market];
+        extra = (market ? '<p class="detail">'+market+'</p>' : '')+
+          '<p>A buyer offered '+money(r.incoming)+' and asked for '+money(r.buyerCosts)+' toward closing costs.</p>'+
+          '<p>Offer after credit '+money(net)+'.</p>'+this.negotiationLog(r)+
+          (r.rejectedIncoming ? '<p class="detail">Your seller declined to accept the offer at that amount.</p>' : '')+
+          '<form id="seller-counter-form" class="offer-form"><label>Counter price, no seller-paid costs ($)<input name="price" type="number" min="'+
+          (f.low-10000)+'" max="'+(f.high+20000)+'" step="1" inputmode="numeric" required></label>'+
+          '<p class="detail">The buyer will take '+(r.patience===1?'one more counter':'about two counters')+' before they walk.</p>'+
+          '<p class="form-error" role="status" hidden></p><div class="actions"><button type="submit">Send counter</button></div></form>';
+        if (!r.rejectedIncoming) actions.push(button('Present '+money(r.incoming)+' to seller',() => this.acceptCounter(),true));
+        actions.push(button('Revise list price',() => { r.stage='offer'; g.changed(); this.phone('deal'); }));
       }
       if (r.stage === 'counter' && !seller) {
-        extra = '<p>The seller countered at '+money(r.counter)+' with no cost credit. The inspection contingency stays in the agreement.</p>';
-        actions.push(button('Accept '+money(r.counter),() => {
-          career.contract(r.counter,0);
-          g.changed('Offer accepted. Inspection scheduled.');
-          this.phone('deal');
-        },true),button('Revise offer',() => { r.stage = 'offer'; g.changed(); this.phone('deal'); }));
+        extra = '<p>'+(r.final ? 'The seller says '+money(r.counter)+' is their final number.' :
+          'The seller countered at '+money(r.counter)+' with no cost credit.')+' The inspection contingency stays in the agreement.</p>'+
+          this.negotiationLog(r)+'<p class="detail">'+(r.final ? 'A lower counter can end the deal.' :
+          'Round '+Math.min(r.round,3)+' of 3. The seller may walk if you push too far.')+'</p>';
+        actions.push(button('Accept '+money(r.counter),() => this.acceptCounter(),true),
+          button(r.final ? 'Counter anyway' : 'Counter back',() => { r.stage = 'offer'; g.changed(); this.phone('deal'); }));
       }
+      if (['offer','counter'].includes(r.stage)) actions.push(button('Walk away',() => this.withdrawDeal()));
       if (r.stage === 'inspection') {
         extra = '<p>Contract at '+money(r.price)+'. Meet the inspector at the property '+time(r.inspectAt,true)+'.</p>';
+        if (!r.inspectionBriefed) actions.push(button('Brief the inspector',() => this.briefInspector()));
         actions.push(navigate(f.id,'Route to inspection'));
       }
       if (r.stage === 'title') {
@@ -358,13 +415,16 @@
           '<p class="detail">Projected payout '+money(commission+bonus)+(bonus?' including a '+money(bonus)+' client-trust bonus.':'.')+'</p>';
         actions.push(navigate('office','Route to closing'));
       }
-      if (r.stage === 'closed') extra = '<p>'+money(r.price)+' closed · '+money(r.credit)+' seller credit.</p>';
-      if (r.stage !== 'lead' && r.stage !== 'closed') {
+      if (r.stage === 'closed') extra = '<p>'+money(r.price)+' closed · '+money(r.credit)+' seller credit.</p>'+
+        (Number.isFinite(r.nextAt) ? '<p class="detail">The SOLD sign is up. A new lead comes in at this address '+time(r.nextAt,true)+'.</p>' : '');
+      if (r.stage === 'lost') extra = '<p>'+escape(r.outcome)+'</p><p class="detail">A new inquiry comes in '+time(r.nextAt,true)+'.</p>'+
+        this.negotiationLog(r);
+      if (!['lead','closed','lost'].includes(r.stage)) {
         actions.push(button('Call '+career.role(f.advisor),() => this.person(f.advisor,true,true)));
       }
-      const details = [[ 'List price', money(f.list) ],['Comparable sales',money(f.low)+'–'+money(f.high)],
-        [seller?'Seller minimum':'Buyer approval',money(seller?f.reserve:f.limit)],['Stage',status[r.stage]],
-        [seller?'Seller trust':'Buyer trust',r.trust+' / 100']];
+      const details = [[ 'List price', money(seller?(r.ask||f.list):f.list) ],['Comparable sales',money(f.low)+'–'+money(f.high)]];
+      if (!seller) details.push(['Buyer approval',money(f.limit)]);
+      details.push(['Stage',status[r.stage]],[seller?'Seller trust':'Buyer trust',r.trust+' / 100']);
       const html = '<div class="message"><span class="contact">'+escape(f.contact)+'</span><h3>'+escape(site.name)+
         '</h3><p>'+escape(site.town+' · '+site.road.segment.name+' · '+f.beds)+'</p>'+photo+
         '<p>'+escape(f.intake)+'</p></div>'+
@@ -384,9 +444,152 @@
         error.hidden = false;
         return;
       }
-      g.career.record.lastOffer = Number(data.get('price'));
-      g.changed(result.result === 'accepted' ? 'Offer accepted. Inspection scheduled.' : 'The seller sent a counteroffer.');
+      const message = {
+        accepted: () => 'Offer accepted. '+this.dealLine(false,result.delta)+' Inspection scheduled.',
+        counter: () => 'The seller countered at '+money(result.counter)+(result.final ? ' and says it is final.' : '.'),
+        firm: () => 'The seller is holding at '+money(result.counter)+'. Another low offer could end negotiations.',
+        walked: () => result.reason+(result.lost ? ' · −'+result.lost+' trust' : ''),
+      }[result.result]();
+      g.changed(message,result.result==='accepted'?'booking':undefined);
       this.phone('deal');
+    }
+
+    dealLine(seller, delta) {
+      const mood = delta>=6 ? (seller ? 'Your client is pleased with the sale price.' : 'Your buyer is pleased with the price.') :
+        delta>0 ? 'Solid price.' : seller ? 'Your client left money on the table.' : 'Your client paid more than they needed to.';
+      return mood+(delta ? ' '+(delta>0?'+':'−')+Math.abs(delta)+' trust.' : '');
+    }
+
+    acceptCounter() {
+      const g = this.game;
+      const result = g.career.acceptCounter();
+      if (result) g.changed('Offer accepted. '+this.dealLine(g.career.file.side==='seller',result.delta)+' Inspection scheduled.','booking');
+      else g.changed('Your seller declined to accept at that amount.');
+      this.phone('deal');
+    }
+
+    withdrawDeal(fromInspection = false) {
+      const g = this.game;
+      this.dialog('Close this file?',[
+        fromInspection ? 'Your buyer can use the inspection contingency to end the contract.' :
+          'You’ll end this negotiation and move on to another client.',
+        'You’ll earn no commission on this deal.',
+      ],[
+        button('Close file',() => {
+          const reason = fromInspection ? 'The buyer withdrew under the inspection contingency.' : 'You closed this file during negotiations.';
+          g.career.loseDeal(reason);
+          g.clearRoute();
+          g.changed(reason);
+          this.phone('deal');
+        },true),
+        button('Keep working the deal',() => fromInspection ? this.inspection() : this.phone('deal')),
+      ]);
+    }
+
+    delegate() {
+      const g = this.game;
+      const c = g.career;
+      const agent = c.role(c.coveringAgent);
+      this.dialog('Cover this showing?',[
+        agent+' can meet '+c.file.client+' at '+time(c.record.showAt,true)+' and send notes 25 minutes later.',
+        'You’ll have time for another client. A teammate’s walkthrough earns less trust than a good walkthrough you lead.',
+      ],[
+        button('Hand off the showing',() => {
+          const handedOff = c.delegateShowing();
+          if (handedOff) g.clearRoute();
+          g.changed(handedOff ? agent+' is covering the showing.' : agent+' is booked during that window.');
+          this.phone('deal');
+        },true),
+        button('Keep the showing',() => this.phone('deal')),
+      ]);
+    }
+
+    negotiationLog(r) {
+      if (!Array.isArray(r.log) || !r.log.length) return '';
+      const who = { you:'You', seller:'Seller', buyer:'Buyer' };
+      const label = (entry) => who[entry.by]+({ list:' listed at', hold:' held at', final:' final', accept:' accepted', new:' (new buyer)' }[entry.kind]||'');
+      return '<ol class="nego-log" aria-label="Negotiation">'+r.log.slice(-6).map((entry) => '<li class="'+escape(entry.by)+'"><span>'+
+        escape(label(entry))+'</span><strong>'+money(entry.amount)+(entry.credit ? ' · '+money(entry.credit)+' costs' : '')+
+        '</strong></li>').join('')+'</ol>';
+    }
+
+    celebrate(s) {
+      const g = this.game;
+      const site = g.world.features[s.id];
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const photo = Number.isInteger(s.photo) ? '<div class="case-photo" data-photo="'+s.photo+'"></div>' : '<div class="case-photo"></div>';
+      const keys = '<svg class="keys-svg" viewBox="0 0 240 100" aria-hidden="true">'+
+        '<rect x="0" y="52" width="44" height="24" rx="7" fill="#43574a"/><ellipse cx="56" cy="62" rx="17" ry="12" fill="#cc9a77"/>'+
+        '<rect x="196" y="48" width="44" height="24" rx="7" fill="#6c5a7a"/><ellipse cx="184" cy="58" rx="17" ry="12" fill="#b97d5c"/>'+
+        '<g class="key"><circle cx="0" cy="0" r="11" fill="none" stroke="#f1ca88" stroke-width="5"/>'+
+        '<rect x="9" y="-3.5" width="40" height="7" rx="2" fill="#f1ca88"/><rect x="38" y="2" width="6" height="9" fill="#f1ca88"/>'+
+        '<rect x="28" y="2" width="5" height="7" fill="#f1ca88"/><path d="M-8 8 L-8 24 L8 24 L8 8 L0 1 Z" fill="#e3725f"/></g></svg>';
+      const stats = [['Sale price',money(s.price)],['Commission',money(s.commission)],
+        ['Trust bonus',s.bonus ? money(s.bonus) : 'None this time'],['Client trust',s.trust+' / 100'],
+        ['Career closings',String(s.totalClosed)],['Career volume',money(s.volume)]];
+      const actions = [button('Back to work',() => this.close(),true),button('See ledger',() => this.phone('ledger'))];
+      const html = '<div class="celebrate"><canvas class="confetti" aria-hidden="true"></canvas>'+
+        '<div class="sold-hero">'+photo+'<div class="sold-stamp">SOLD</div></div>'+
+        '<h3>'+escape(site.name)+'</h3><p class="detail">'+escape(site.town)+' · '+(s.side==='seller' ? 'Listing sold' : 'Purchase closed')+'</p>'+
+        '<div class="keys-handoff">'+keys+'<p>'+escape(s.client)+(s.side==='seller' ? ' hands over the keys.' : ' gets the keys.')+'</p></div>'+
+        '<div class="cash-tick"><small>Your ledger</small><strong data-cash>'+money(reduce ? s.cashAfter : s.cashBefore)+'</strong>'+
+        '<span>+'+money(s.earned)+(s.bonus ? ' with trust bonus' : '')+'</span></div>'+
+        '<dl class="details">'+stats.map(([key,val])=>'<div><dt>'+escape(key)+'</dt><dd>'+escape(val)+'</dd></div>').join('')+'</dl>'+
+        '<p class="detail">The SOLD sign goes up out front. A new lead comes in here '+time(s.nextAt,true)+'.</p>'+
+        this.actions(actions)+'</div>';
+      clearTimeout(this.toastTimer);
+      byId('toast').hidden = true;
+      this.show('Closed!','celebrate',html);
+      this.listen(actions);
+      g.sound.celebrate?.();
+      if (reduce) return;
+      const cash = this.content.querySelector('[data-cash]');
+      const begin = performance.now();
+      const tick = (now) => {
+        if (!cash.isConnected) return;
+        const t = Math.min(1,(now-begin-500)/1500);
+        const eased = t<=0 ? 0 : 1-Math.pow(1-t,3);
+        cash.textContent = money(Math.round(s.cashBefore+(s.cashAfter-s.cashBefore)*eased));
+        if (t<1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+      const canvas = this.content.querySelector('.confetti');
+      const box = canvas.getBoundingClientRect();
+      const ratio = Math.min(2,devicePixelRatio||1);
+      canvas.width = Math.max(1,Math.round(box.width*ratio));
+      canvas.height = Math.max(1,Math.round(box.height*ratio));
+      const ink = canvas.getContext('2d');
+      const colors = ['#f1ca88','#b3cdc0','#e3725f','#f4f0e4','#8fb3d9'];
+      const bits = Array.from({length:110},(_,i) => ({
+        x:canvas.width*(.5+(Math.random()-.5)*.3), y:canvas.height*.42,
+        vx:(Math.random()-.5)*canvas.width*.9, vy:-(.35+Math.random()*.75)*canvas.height*1.4,
+        spin:Math.random()*6, size:(4+Math.random()*5)*ratio, color:colors[i%colors.length],
+      }));
+      let previous = performance.now();
+      const fall = (now) => {
+        if (!canvas.isConnected) return;
+        const dt = Math.min(.05,(now-previous)/1000);
+        previous = now;
+        const age = (now-begin)/1000;
+        ink.clearRect(0,0,canvas.width,canvas.height);
+        ink.globalAlpha = Math.max(0,Math.min(1,(3.4-age)/.8));
+        for (const bit of bits) {
+          bit.vy += canvas.height*2.2*dt;
+          bit.vx *= 1-.9*dt;
+          bit.x += bit.vx*dt;
+          bit.y += bit.vy*dt;
+          bit.spin += dt*9;
+          ink.fillStyle = bit.color;
+          ink.save();
+          ink.translate(bit.x,bit.y);
+          ink.rotate(bit.spin);
+          ink.fillRect(-bit.size/2,-bit.size/4,bit.size,bit.size/2);
+          ink.restore();
+        }
+        if (age<3.4) requestAnimationFrame(fall);
+        else ink.clearRect(0,0,canvas.width,canvas.height);
+      };
+      requestAnimationFrame(fall);
     }
 
     person(id, onPhone, advise = false) {
@@ -440,37 +643,32 @@
       const c=g.career;
       const brother=ND.agents['brother-malcolm'];
       const playingBrother=c.state.agent===brother.id;
-      const amount=playingBrother || onPhone ? 0 : c.takeOfficeCash();
-      if (amount<0) g.changed(money(-amount)+' missing from the expense float.');
-      const outstanding=c.outstandingOfficeTheft;
+      const outstanding=c.floatAdjustment;
       const copies=[brother.title+'.',brother.line];
       const actions=[];
       if (outstanding) {
         const cash=money(Math.abs(outstanding.amount));
-        copies.push('Brother Malcolm pocketed '+cash+' from the office float. The ledger records the swipe.');
-        const returning=outstanding.amount>0;
-        if (!returning || c.state.cash>=outstanding.amount) {
-          actions.push(button(returning?'Put the cash back':'Ask Liz to recover it',() => {
-            const returned=c.returnOfficeCash();
-            if (!returned) return;
-            g.changed(cash+' returned to the float.');
+        copies.push('The ledger has a '+cash+' expense adjustment awaiting reconciliation.');
+        if (c.state.cash>=outstanding.amount) {
+          actions.push(button('Reconcile with Liz',() => {
+            const reconciled=c.reconcileFloat();
+            if (!reconciled) return;
+            g.changed('Expense float reconciled.');
             this.brotherCash(onPhone);
           },true));
         }
-      } else if (c.officeTheft) {
-        copies.push('The expense envelope is back in order. Liz has it on her desk.');
-      } else if (playingBrother) {
-        const cash=money(brother.perk.floatCash);
-        copies.push('There’s '+cash+' in the expense envelope at the spare desk.');
-        actions.push(button('Pocket '+cash,() => {
-          const taken=c.takeOfficeCash();
-          if (!taken) return;
-          g.changed(money(taken)+' added to your ledger.');
+      } else if (playingBrother && c.availableAllowance) {
+        const cash=money(c.availableAllowance);
+        copies.push('Liz approved a '+cash+' allowance for field expenses. The authorization is in the envelope.');
+        actions.push(button('Record allowance',() => {
+          const amount=c.expenseAllowance();
+          if (!amount) return;
+          g.changed(money(amount)+' approved for field expenses.');
           this.brotherCash();
         },true));
       } else {
         copies.push(onPhone ? 'You can find him near the spare desk at the Grand Rapids office.' :
-          'He looks at the empty envelope and puts it back on the desk.');
+          'He has the TV tuned to the local weather for everyone heading out to a showing.');
       }
       actions.push(button(onPhone?'Back to phone':'Back to work',() => onPhone ? this.phone('team') : this.close()));
       this.dialog(brother.name,copies,actions,brother.id);
@@ -522,18 +720,71 @@
           this.phone('deal');
         },true),button('Back to work',() => this.close())],speaker);
       } else if (r.stage === 'sign') {
-        this.dialog('Closing table', [
-          f.client+' has the final statement and completed the last walkthrough. Funds are ready for disbursement.',
-          'Closing appointment '+time(r.closeAt,true)+'.',
-        ],[button('Sign and record closing',() => {
-          const earned = career.close();
-          g.clearRoute();
-          g.changed('Closed · '+money(earned)+' to your ledger.');
-          this.phone('ledger');
-        },true),button('Back to work',() => this.close())],speaker);
+        this.closingTable(speaker);
       } else {
         this.phone('deal');
       }
+    }
+
+    appointmentWait(at, reopen) {
+      const g = this.game;
+      return button('Wait here until '+time(at),() => {
+        if (g.career.waitFor(at)) g.changed();
+        reopen();
+      });
+    }
+
+    closingTable(speaker) {
+      const g = this.game;
+      const c = g.career;
+      const r = c.record;
+      const client = c.file.client;
+      const ready = c.state.minute>=r.closeAt;
+      const copies = ['Closing appointment '+time(r.closeAt,true)+'.'];
+      const actions = [];
+      if (!r.closingReviewed) {
+        copies.push('Check the final statement against the signed contract and inspection addendum.');
+        actions.push(button('Review settlement statement',() => this.closingStatement(speaker),true));
+      } else if (ready) {
+        copies.push(client+' has signed. The closing agent confirms the funds and deed. It’s time to hand over the keys.');
+        actions.push(button('Record the sale and hand over the keys',() => {
+          const summary = c.close();
+          if (!summary) return;
+          g.clearRoute();
+          g.changed();
+          this.celebrate(summary);
+        },true));
+      } else {
+        copies.push('The statement is ready. '+client+' will meet you here at the appointment.');
+      }
+      if (c.canWait(r.closeAt)) actions.push(this.appointmentWait(r.closeAt,() => this.closingTable(speaker)));
+      actions.push(button('Back to work',() => this.close()));
+      this.dialog('Closing table',copies,actions,speaker);
+    }
+
+    closingStatement(speaker) {
+      const g = this.game;
+      const r = g.career.record;
+      const actions = [button('Back to closing table',() => this.closingTable(speaker))];
+      this.show('Settlement statement','dialog','<p>Contract price '+money(r.price)+'. The signed paperwork shows '+
+        money(r.credit)+' in total seller credits. Enter that amount to check the closing statement.</p>'+
+        '<form id="closing-statement" class="offer-form"><label>Total seller credit ($)'+
+        '<input type="number" name="credit" min="0" max="'+r.price+'" inputmode="numeric" required></label>'+
+        '<p class="form-error" role="status" hidden></p><div class="actions"><button type="submit" class="primary">Verify statement</button></div></form>'+
+        this.actions(actions));
+      this.listen(actions);
+      const form = this.content.querySelector('#closing-statement');
+      form.onsubmit = (event) => {
+        event.preventDefault();
+        const checksOut = g.career.reviewClosing(Number(new FormData(form).get('credit')));
+        g.changed(checksOut ? 'Settlement statement verified.' : '');
+        if (checksOut) this.closingTable(speaker);
+        else {
+          const error = form.querySelector('.form-error');
+          error.textContent = 'The credit differs from the signed paperwork. Check the total.';
+          error.hidden = false;
+        }
+      };
     }
 
     lockbox() {
@@ -549,17 +800,16 @@
         ]);
         return;
       }
-      const rival = c.rivalAtShowing();
-      if (rival) {
+      if (c.state.minute<r.showAt) {
+        const actions = [button('Back to work',() => this.close())];
+        if (c.canWait(r.showAt)) actions.unshift(this.appointmentWait(r.showAt,() => this.lockbox()));
+        this.dialog(site.name,[c.file.client+' will meet you here '+time(r.showAt,true)+'.'],actions);
+        return;
+      }
+      const delay = c.showingDelay();
+      if (delay) {
         g.changed();
-        if (rival.impact && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-          g.canvas.animate([
-            { transform:'translateX(0)' },{ transform:'translateX(-9px) scale(1.025)' },
-            { transform:'translateX(6px) scale(1.015)' },{ transform:'none' },
-          ],{duration:320});
-          g.sound.arcade(false);
-        }
-        this.dialog(rival.title,[rival.crew+rival.line,rival.minutes+' minutes lost on this showing.'],[
+        this.dialog(delay.title,[delay.line,delay.minutes+' minutes lost on this showing.'],[
           button('Continue to the showing',() => this.lockbox(),true),
           button('Return to parked SUV',() => { this.close(); g.returnToCar(); }),
         ]);
@@ -570,9 +820,9 @@
         copies.push('Bridger is joining the walkthrough and will be fifteen minutes late.');
       }
       this.dialog(site.name,copies,[
-        button(c.state.minute < r.showAt ? 'Wait and open lockbox' : 'Open lockbox',() => {
+        button('Open lockbox',() => {
+          if (!c.openShowing()) return;
           this.close();
-          c.openShowing();
           g.changed(c.file.side === 'seller' ? 'Lockbox open. Review the home for the listing.' : 'Lockbox open. Walk the house with the buyer.');
           g.enterBuilding(site);
           const visitor = ND.visitors[c.file.id];
@@ -591,9 +841,9 @@
         const reason = note[4] || (result.important ? 'This condition can affect the inspection or repair estimate.' :
           'This is a routine condition to document for the client.');
         const scoring = result.matched ? '' : result.important ?
-          ' Flagging it would have earned more trust.' : ' Escalating it earned partial credit.';
+          ' Missing it cost you trust.' : ' Over-flagging a routine item cost a little trust.';
         const bonus = result.bonus ? ' Includes an agent-perk bonus.' : '';
-        g.changed('+'+result.gained+' trust · '+reason+scoring+bonus);
+        g.changed((result.gained<0?'−':'+')+Math.abs(result.gained)+' trust · '+reason+scoring+bonus);
         this.visitorLine(visitor,visitor.reactions?.[note[0]] ??
           (result.important ? 'Thanks for pointing that out. I want the inspector to look at it.' :
             'Thanks. That helps me understand the condition.'));
@@ -605,59 +855,89 @@
       ]);
     }
 
+    briefInspector(fromProperty = false) {
+      const g = this.game;
+      const c = g.career;
+      this.dialog('Brief Riley',[
+        'Which observation should Riley start with? A specific concern gives you evidence if you ask for a repair credit.',
+      ],[
+        ...c.file.notes.map((note)=>button(note[1],() => {
+          const result = c.prepareInspection(note[0]);
+          if (result) {
+            g.changed();
+            this.dialog('Riley’s reply',[result.reason || (result.prepared ? 'I’ll document that first.' : 'I’ll check it during the walkthrough.')],[
+              button('Back to appointment',() => fromProperty ? this.beginInspection() : this.phone('deal'),true),
+            ]);
+          }
+        })),
+        button('Back',() => fromProperty ? this.beginInspection() : this.phone('deal')),
+      ]);
+    }
+
     beginInspection() {
       const g = this.game;
       const c = g.career;
       const site = g.world.features[c.file.id];
-      if (c.record.inspectionWalk) {
+      const r = c.record;
+      if (r.stage!=='inspection') return;
+      if (r.inspectionWalk && c.state.minute>=r.inspectAt) {
         g.enterBuilding(site);
         return;
       }
       const inspector = ND.visitors.inspector;
-      this.dialog('Meet '+inspector.name,[
-        'Inspection appointment '+time(c.record.inspectAt,true)+'.',
-        'Walk inside with the inspector and head to the marked finding to review the estimate.',
-      ],[
-        button(c.state.minute<c.record.inspectAt?'Wait for the inspector':'Walk the inspection',() => {
+      const copies = ['Inspection appointment '+time(r.inspectAt,true)+'.'];
+      const actions = [];
+      if (c.state.minute>=r.inspectAt) {
+        copies.push('Head inside with the inspector and review the marked finding.');
+        actions.push(button('Walk the inspection',() => {
+          if (!c.startInspection()) return;
           this.close();
-          c.startInspection();
           g.changed();
           g.enterBuilding(site);
           this.visitorLine(inspector,inspector.greeting);
-        },true),
-        button('Back to the property',() => this.close()),
-      ]);
+        },true));
+      } else {
+        copies.push('The inspector is due at the appointment. You can send Riley your main concern while you wait.');
+        if (!r.inspectionBriefed) actions.push(button('Brief the inspector',() => this.briefInspector(true),true));
+        if (c.canWait(r.inspectAt)) actions.push(this.appointmentWait(r.inspectAt,() => this.beginInspection()));
+      }
+      actions.push(button('Back to the property',() => this.close()));
+      this.dialog('Meet '+inspector.name,copies,actions);
     }
 
     inspection() {
       const g = this.game;
-      const r = g.career.record;
-      const f = g.career.file;
-      if (!r.inspectionWalk) {
-        g.career.startInspection();
-        g.changed();
-      }
-      const credit=g.career.repairCredit;
-      const actions=[
-        button('Proceed at contract terms',() => {
-          g.career.inspection(false);
-          g.changed('Inspection complete. Bring the file to the office.');
-          this.close();
-        },!credit),
-      ];
-      if (credit) {
-        actions.unshift(button((f.side==='seller'?'Authorize ':'Request ')+money(credit)+' credit',() => {
-          g.career.inspection(true);
-          g.changed('Credit documented. Bring the addendum to the office.');
-          this.close();
-        },true));
-      }
+      const c = g.career;
+      const r = c.record;
+      const f = c.file;
+      if (!r.inspectionWalk || c.state.minute<r.inspectAt) return this.beginInspection();
+      const credit=c.repairCredit;
+      const resolve = (decision) => {
+        const result = c.inspection(decision);
+        if (!result) return;
+        if (result.counter) {
+          g.changed('The seller offered '+money(result.counter)+' toward the repair.');
+          this.inspection();
+          return;
+        }
+        g.changed((result.agreed ? money(result.agreed)+' credit documented.' : 'Inspection complete.')+' Bring the file to the office.');
+        this.close();
+      };
+      const actions = [button('Proceed at contract terms',() => resolve('as-is'),!credit)];
+      if (r.inspectionOffer) actions.unshift(button('Accept '+money(r.inspectionOffer)+' credit',() => resolve('counter'),true));
+      else if (credit) actions.unshift(button((f.side==='seller'?'Authorize ':'Request ')+money(credit)+' credit',() => resolve('full'),true));
+      if (f.side!=='seller') actions.push(button('Use the inspection contingency',() => this.withdrawDeal(true)));
       const copies=[f.report,'Inspection appointment '+time(r.inspectAt,true)+'.'];
       if (f.advisor==='bridger' && g.career.state.agent!=='bridger') {
         copies.push('Bridger will arrive fifteen minutes after the inspection begins.');
       }
       if (r.arcadeSeptic) copies.push('The contractor confirmed the failed septic report and included the work in the estimate.');
-      if (f.side==='seller' && credit<f.repair) copies.push('The seller’s minimum leaves '+money(credit)+' for a repair credit.');
+      if (f.side==='seller' && credit<f.repair) copies.push('Your seller has authorized up to '+money(credit)+' for this repair.');
+      if (f.side!=='seller' && credit) {
+        copies.push(r.inspectionOffer ? 'The seller will cover '+money(r.inspectionOffer)+'. Your buyer can accept, proceed without the credit, or withdraw.' :
+          c.creditSupported ? 'Riley documented the concern you raised. You have evidence for the full credit.' :
+          'The finding came up late. The seller may share the cost if you ask for a credit.');
+      }
       this.dialog('Inspection with '+ND.visitors.inspector.name,copies,actions);
     }
 
@@ -675,7 +955,7 @@
       ];
       this.dialog('Tanya’s Laser Tag',[
         'Take an optional 45-second arcade break. Your real estate workday pauses during the match.',
-        'Good Lord, that scoreboard makes me fit to stab somebody. Step up here, sugar, and tag all five opponents in 45 seconds.',
+        'Good Lord, that scoreboard owes me a rematch. Step up here, sugar, and tag all five opponents in 45 seconds.',
         'Move with WASD. Aim with the mouse or arrow keys. Click or press F to fire. On touch screens, drag to aim and tap Fire.',
       ],actions,'tanya');
     }
@@ -706,20 +986,46 @@
 
     dailyReport(report,next) {
       const g = this.game;
+      const c = g.career;
       const weather = g.career.recapEvent(report);
       const marks = [['Files accepted',report.files],['Showings',report.showings],['Offers',report.offers],
-        ['Closings',report.closings],['Miles driven',report.miles.toFixed(1)],['Net earnings',money(report.net)],
+        ['Inspections',report.inspections||0],['Title files cleared',report.titles||0],['Closings',report.closings],
+        ['Miles driven',report.miles.toFixed(1)],['Net cash change',money(report.net)],
         ['Trust change',(report.trust>0?'+':'')+report.trust],['Road delays',report.roadNotes]];
       if (report.missed) marks.push(['Missed showings',report.missed]);
-      if (report.rivals) marks.push(['Rival run-ins',report.rivals]);
+      if (report.delegated) marks.push(['Showings covered by the team',report.delegated]);
+      if (report.lost) marks.push(['Files closed without sale',report.lost]);
+      if (report.rivals || report.showingDelays) marks.push(['Showing delays',(report.rivals||0)+(report.showingDelays||0)]);
       const actions = [next ? button('Start next workday',() => {
         this.close();
         this.notice(g.career.event.title+' · '+g.career.event.detail);
       },true) : button('Back to ledger',() => this.phone('ledger'),true)];
+      if (!next) {
+        const index = c.state.recaps.indexOf(report);
+        if (index>0) actions.push(button('Previous day',() => this.dailyReport(c.state.recaps[index-1],false)));
+        if (index<c.state.recaps.length-1) actions.push(button('Next day',() => this.dailyReport(c.state.recaps[index+1],false)));
+      }
+      const stats = report.worked===false ? '<p>No fieldwork was logged for this day.</p>' :
+        '<dl class="details">'+marks.map(([label,value])=>'<div><dt>'+escape(label)+'</dt><dd>'+escape(value)+'</dd></div>').join('')+'</dl>';
       this.show('Day '+(report.index+1)+' recap','recap','<p>'+escape(weather.title)+' · '+escape(weather.detail)+'</p>'+
-        '<dl class="details">'+marks.map(([label,value])=>'<div><dt>'+escape(label)+'</dt><dd>'+escape(value)+'</dd></div>').join('')+
-        '</dl>'+(next?'<p class="detail">Tomorrow · '+escape(g.career.event.title)+'</p>':'')+this.actions(actions));
+        stats+(next ? '<p class="detail">Next workday · '+time(c.state.minute,true)+' · '+escape(c.event.title)+'</p>'+this.agenda() : '')+
+        this.actions(actions));
       this.listen(actions);
+    }
+
+    endWorkday() {
+      const g = this.game;
+      const c = g.career;
+      const pending = ND.files.filter((file) => {
+        const r = c.state.files[file.id];
+        return r.stage==='booked' && !r.coveredBy && r.showAt+c.showingGrace<c.nextWorkday;
+      });
+      const copies = ['Wrap up at the office and resume '+time(c.nextWorkday,true)+'.'];
+      if (pending.length) copies.push('Any uncovered showings that expire before then will be missed. '+pending.map((file)=>file.client).join(', ')+'.');
+      this.dialog('End workday',copies,[
+        button('Finish today',() => this.dailyReport(g.endWorkday(),true),true),
+        button('Keep working',() => this.pause()),
+      ]);
     }
 
     pause() {
@@ -728,12 +1034,13 @@
         button('Back to work',() => this.close(),true),
         button('Change camera',() => { g.toggleView(); this.close(); }),
         button(g.sound.enabled ? 'Mute sound' : 'Turn on sound',() => { g.sound.toggle(); this.pause(); }),
+        button(g.sound.musicEnabled ? 'Turn off music' : 'Turn on music',() => { g.sound.toggleMusic(); this.pause(); }),
         button('Return to parked SUV',() => { this.close(); g.returnToCar(); }),
         button('Tanya’s laser tag',() => this.tagInvite()),
         button('Graphics · '+(g.renderer.low?'Low':'High'),() => this.graphics()),
         button('Choose agent',() => this.choose()),
         button('First-day tutorial',() => this.tutorial()),
-        button('End workday',() => this.dailyReport(g.endWorkday(),true)),
+        button('End workday',() => this.endWorkday()),
         button('New career',() => this.newCareer()),
       ];
       if (g.driving) actions.splice(3,1);

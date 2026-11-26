@@ -25,17 +25,19 @@ Graphics starts on **High** for new players and remembers your selection. High a
 
 Touch screens show movement, turning, camera, and interaction controls. **Route to showing** puts driving directions on the map. **Fast Travel** parks you at the destination and advances your clock, mileage, and fuel use. Press **C** in the SUV to see the cockpit.
 
-Watch the showing countdown for a 15-minute reminder and a buzz when you run late. If the showing window closes, you lose up to four trust and can rebook from your phone. Phone and menus pause the field clock. The first-day tutorial is available from Pause.
+Watch the showing countdown for a 15-minute reminder and a buzz when you run late. If the showing window closes, you lose up to four trust and can rebook from your phone. The Inbox keeps a calendar of booked showings, inspections, and closings. If two showings overlap, ask an available teammate to cover one and read their notes in Deal afterward. Phone and menus pause the field clock. The first-day tutorial is available from Pause.
 
-When driving yourself, follow the GPS arrow and watch your speed, fuel, and notices for deer, logging trucks, and slick pavement. The SUV tops out at 120 mph on highways. During a showing, the client follows your tour and reacts to your observations. At inspection, walk with Riley to the marked finding to review the estimate and credit. Fictional rival crews sometimes disrupt a showing or surprise you with a scuffle, costing time and trust.
+When driving yourself, follow the GPS arrow and watch your speed, fuel, and notices for deer, logging trucks, and slick pavement. The SUV tops out at 120 mph on highways. During a showing, the client follows your tour and reacts to your observations. Access mix-ups sometimes cost time and trust.
 
-The Pemberton office seeds your ledger with a fictional $1,650 expense float. Check **Phone → Inbox** for the day's conditions. **Pause → End workday** shows the daily recap and starts the next morning at North Desk. The phone ledger keeps the latest completed day.
+Write your own offer using the comparable sales and the buyer’s approval. Repeated low offers can end negotiations. Bring Riley a specific concern to strengthen a repair-credit request. You can wait at a property or the closing table on the scheduled day. Verify the settlement statement at North Desk, then record the sale and hand over the keys at the appointment.
+
+The office seeds your ledger with a fictional $1,650 expense float. Check **Phone → Inbox** for the day's conditions. **Pause → End workday** shows the daily recap and starts the next morning at North Desk. Review earlier days from **Phone → Ledger → Daily recaps**. Pause also has a separate music control.
 
 Speak to Tanya Sage in the office or select **Tanya’s laser tag** from the pause menu to play her 45-second arcade match against five fictional opponents. Click, press **F**, or tap **Fire** to tag an opponent. Your real estate career pauses during the match.
 
-Brother Malcolm is a fictional African American character and Malcolm’s evil twin. Find him near the spare desk. Meeting him in person triggers a one-time swipe of up to $125 from your expense float. If you play as him, check the expense envelope by that desk to pocket the cash. The ledger records the swipe and any repayment.
+Brother Malcolm keeps the local weather on his TV near the spare desk. If you play as him, check the expense envelope there to record a one-time $125 field allowance.
 
-Bridger arrives 15 minutes late to the office and to scheduled cabin visits. He is unavailable by phone. Gene, the Zillow lender, wants buyers ready in five minutes and has yet to figure out which part of the wall is a door.
+Bridger arrives 15 minutes late to the office and to scheduled cabin visits. He is unavailable by phone. Gene is a local mortgage lender who wants buyers ready in five minutes.
 
 ## Arcade pickups
 

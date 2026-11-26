@@ -90,6 +90,7 @@
       this.gps = null;
       this.frameDirty = true;
       this.ui.close(false);
+      let parkingRecovered = false;
       if (saved && this.validPoint(saved.player) && this.validPoint(saved.car)) {
         Object.assign(this.player,{ x:saved.player.x,z:saved.player.z,
           yaw:saved.player.yaw,pitch:clamp(saved.player.pitch??0,-.65,.66) });
@@ -103,6 +104,17 @@
         this.world.warm(this.player.x,this.player.z);
       }
       this.syncDoors();
+      if (this.driving && !this.canPark(this.car)) {
+        const position = this.safeParking(this.car);
+        if (position) {
+          Object.assign(this.car,position);
+          Object.assign(this.player,{x:position.x,z:position.z,yaw:position.yaw});
+        } else {
+          this.driving = false;
+          this.setupScene(this.career.state.agent);
+        }
+        parkingRecovered = true;
+      }
       if (saved && !this.driving && !this.canWalk(this.player.x,this.player.z)) {
         this.clearFooting();
       }
@@ -113,6 +125,7 @@
       this.save();
       this.updateHUD(true);
       this.showingReminders();
+      if (parkingRecovered) this.ui.notice('Your SUV was moved to a clear parking spot. You can exit once stopped.');
       if (resume) this.captureLook();
       else this.ui.tutorial();
     }
@@ -170,6 +183,8 @@
       for (const file of ND.files) {
         if (this.career.state.files[file.id].unlocked) this.world.unlocked.add(file.id);
         else this.world.unlocked.delete(file.id);
+        if (this.career.state.files[file.id].stage==='closed') this.world.sold.add(file.id);
+        else this.world.sold.delete(file.id);
       }
     }
 
@@ -184,11 +199,30 @@
     }
 
     showingReminders() {
+      const leads = this.career.newLeads;
+      if (leads?.length) {
+        const fresh = leads.splice(0);
+        const file = fresh.at(-1);
+        this.syncDoors();
+        this.sound.phoneBuzz();
+        this.ui.notice((fresh.length>1 ? fresh.length+' new leads · ' : 'New lead · ')+file.client+' at '+
+          this.world.features[file.id].name+'. Open your phone.',6500);
+        this.save();
+      }
+      const offers = this.career.marketOffers.splice(0);
+      if (offers.length) {
+        this.sound.phoneBuzz();
+        this.ui.notice('Offer ready to review · '+offers.map((file)=>file.client).join(', ')+'.',6500);
+        this.save();
+      }
       const alerts = this.career.showingAlerts;
       if (!alerts.length) return;
-      const {file,level,left,lost,closes} = alerts.splice(0).sort((a,b)=>b.level-a.level)[0];
+      const {file,level,left,lost,closes,coveredBy} = alerts.splice(0).sort((a,b)=>b.level-a.level)[0];
       const client = file.client;
-      if (level===1) {
+      if (level===4) {
+        this.sound.phoneBuzz();
+        this.ui.notice(this.career.role(coveredBy)+' finished '+client+'’s showing. Notes are in the deal.',6500);
+      } else if (level===1) {
         this.ui.notice(left===0 ? client+'’s showing is due now.' : client+'’s showing in '+left+' min.',5200);
       } else if (level===2) {
         this.sound.phoneBuzz();
@@ -558,10 +592,47 @@
     }
 
     findExit(car, toward) {
-      const exits = [[2.75,0],[-2.75,0],[0,3.29],[0,-3.29],[3.5,1.3],[-3.5,1.3]]
-        .map(([x,z])=>ND.toWorld(car,x,z));
-      if (toward) exits.sort((a,b)=>distance(a,toward)-distance(b,toward));
-      return exits.find((p)=>this.world.allowed(p.x,p.z,.25,false)) || null;
+      const ground = this.world.height(car.x,car.z);
+      const exits = [[2.32,0],[-2.32,0],[2.32,-1.45],[-2.32,-1.45],[2.32,1.45],[-2.32,1.45],
+        [0,3.29],[0,-3.29],[2.55,2.62],[-2.55,2.62],[2.55,-2.62],[-2.55,-2.62]]
+        .map(([x,z])=>({
+          point:ND.toWorld(car,x,z),
+          edge:ND.toWorld(car,clamp(x,-1.18,1.18),clamp(z,-2.38,2.38)),
+        }));
+      if (toward) exits.sort((a,b)=>distance(a.point,toward)-distance(b.point,toward));
+      const safe = exits.find(({point,edge})=>this.world.allowed(point.x,point.z,.31,false) &&
+        !this.world.inside(point.x,point.z) && Math.abs(this.world.height(point.x,point.z)-ground)<1 &&
+        this.world.allowed(edge.x,edge.z,.15,false) && this.world.canSee(edge,point));
+      return safe?.point || null;
+    }
+
+    canPark(car) {
+      return [-1.58,0,1.58].every((z)=>{
+        const point = ND.toWorld(car,0,z);
+        return this.world.allowed(point.x,point.z,.85,true);
+      }) && Boolean(this.findExit(car));
+    }
+
+    safeParking(car) {
+      const road = this.geo.nearest(car.x,car.z,90,(segment)=>segment.width>=6);
+      const candidates = [];
+      if (road) {
+        const base = {...road,yaw:road.heading};
+        const edge = road.segment.width/2+.95;
+        for (const z of [0,-5,5,-12,12,-24,24]) {
+          for (const x of [edge,-edge,edge+.9,-edge-.9,edge/2,-edge/2]) {
+            candidates.push({...ND.toWorld(base,x,z),yaw:base.yaw});
+          }
+        }
+      }
+      for (const radius of [3.5,7,12,20,30]) {
+        for (let i=0;i<8;i++) {
+          const yaw=i*Math.PI/4;
+          candidates.push({x:car.x+Math.sin(yaw)*radius,z:car.z-Math.cos(yaw)*radius,yaw:car.yaw});
+        }
+      }
+      candidates.sort((a,b)=>distance(a,car)-distance(b,car));
+      return candidates.find((position)=>this.canPark(position)) || null;
     }
 
     exitCar(update = true, toward) {
@@ -569,14 +640,21 @@
         this.ui.notice('Stop the SUV before getting out.');
         return;
       }
-      const outside = this.findExit(this.car,toward);
-      if (!outside) { this.ui.notice('Move the SUV to a clear spot.'); return; }
+      let outside = this.findExit(this.car,toward);
+      let recovered = false;
+      if (!outside) {
+        const position = this.safeParking(this.car);
+        if (!position) { this.ui.notice('Move the SUV to a clear spot.'); return; }
+        Object.assign(this.car,position);
+        outside = this.findExit(this.car,toward);
+        recovered = true;
+      }
       this.driving = false;
       this.car.speed = 0;
       this.snowContact = false;
       Object.assign(this.player,{...outside,yaw:this.car.yaw,pitch:0});
       this.cameraY = null;
-      if (update) this.changed();
+      if (update) this.changed(recovered ? 'SUV moved to a clear spot.' : '');
     }
 
     returnToCar() {
@@ -584,10 +662,12 @@
       const walk = distance(this.player,this.car);
       if (walk < 3.3) return;
       this.world.warm(this.car.x,this.car.z);
-      const outside = this.findExit(this.car);
+      let outside = this.findExit(this.car);
       if (!outside) {
-        this.enterCar();
-        return;
+        const position = this.safeParking(this.car);
+        if (!position) { this.ui.notice('The SUV has no clear walking approach.'); return; }
+        Object.assign(this.car,position);
+        outside = this.findExit(this.car);
       }
       this.career.addTime(walk * .011);
       Object.assign(this.player,{...outside,yaw:direction(outside,this.car),pitch:0});
@@ -655,12 +735,8 @@
       const r = c.record;
       const s = this.world.features[c.file.id];
       const o = this.world.features.office;
-      const [ox,oz] = ND.local(o,p.x,p.z);
-      const inOffice = Math.abs(ox)<o.w/2 && Math.abs(oz)<o.d/2;
-      const inside = Object.values(this.world.features).find((site)=>{
-        const [x,z] = ND.local(site,p.x,p.z);
-        return Math.abs(x)<site.w/2 && Math.abs(z)<site.d/2;
-      });
+      const inside = this.world.interiorAt(p.x,p.z);
+      const inOffice = inside===o;
       const inListing = inside===s;
       const stage = r.stage;
       const picks = [];
@@ -671,7 +747,7 @@
       };
       if (inOffice) {
         const title = { lead:c.file.side==='seller'?'Review the listing file':'Review the buyer file',
-          title:'Review title and financing',sign:'Sign at the closing table' }[stage];
+          title:'Review title and financing',sign:'Use the closing table' }[stage];
         if (title) {
           add(o.deskApproach,4.25,title,() => this.ui.desk());
         }
@@ -780,13 +856,23 @@
     }
 
     book(tomorrow) {
-      const id = this.career.file.id;
+      const c = this.career;
+      const id = c.file.id;
       const site = this.world.features[id];
       const road = this.geo.route(this.car,site.parking);
-      this.career.book(this.career.driveMinutes((road?.meters||0)*ND.MILES),tomorrow);
-      this.setGPS(id);
-      this.changed('Showing booked for '+time(this.career.record.showAt,true)+'.','booking');
-      this.ui.phone('deal');
+      const at = c.showingSlot(c.driveMinutes((road?.meters||0)*ND.MILES),tomorrow);
+      const finish = () => {
+        if (!c.book(at)) return;
+        this.setGPS(id);
+        this.changed('Showing booked for '+time(c.record.showAt,true)+'.','booking');
+        this.ui.phone('deal');
+      };
+      const conflict = c.showingConflict(at);
+      if (!conflict) { finish(); return; }
+      this.ui.dialog('Appointments overlap',[
+        conflict.client+' is booked at '+time(c.state.files[conflict.id].showAt,true)+'. This showing would be '+time(at,true)+'.',
+        'You can hand a booked showing off to the office if a teammate is free.',
+      ],[button('Book this time',finish,true),button('Pick another time',() => this.ui.phone('deal'))]);
     }
 
     setGPS(id, openMap = false) {
@@ -946,13 +1032,14 @@
       const town = this.geo.townFor(p.x,p.z);
       byId('hud-town').textContent = town.name;
       byId('hud-street').textContent = this.labelForRoad;
-      byId('hud-clock').textContent = time(c.state.minute,true)+' · '+this.weather.label;
+      byId('hud-clock').textContent = time(c.state.minute,true)+' · '+
+        (!this.driving && this.world.inside(p.x,p.z) ? 'Indoors' : this.weather.label);
       const showing = c.nextShowing;
       const appointment = byId('showing-clock');
       appointment.hidden = !showing;
       if (showing) {
         const {state,file,left,at} = showing;
-        const when = state==='missed' ? 'Showing missed · Rebook' : state==='due' ? 'Showing due now' :
+        const when = state==='covered' ? 'Teammate covering' : state==='missed' ? 'Showing missed · Rebook' : state==='due' ? 'Showing due now' :
           state==='late' ? Math.abs(left)+' min late' : left>=24*60 ? time(at,true) : left+' min to showing';
         appointment.dataset.state = state;
         if (byId('showing-when').textContent!==when) byId('showing-when').textContent = when;
@@ -1147,8 +1234,9 @@
           this.world.drawShadows(center,p,this.car,this.seconds,onFoot);
         const snow = this.weather.snow ? this.rain : 0;
         const mist = this.weather.label==='Lake mist' ? this.rain : 0;
+        const room = onFoot ? this.world.interiorAt(p.x,p.z) : null;
         this.renderer.begin(camera,this.seconds,minutes,this.rain-mist*.79-snow*.55,castShadows,{
-          world:true,snow,mist,headlights:this.headlightBeam(minutes),
+          world:true,snow,mist,headlights:this.headlightBeam(minutes),room,
         });
         const shown = onFoot && this.walkCamera && distance(p,{x:camera.eye[0],z:camera.eye[2]})>1;
         this.world.draw(camera,p,this.car,this.seconds,shown,this.driving && this.driveCamera===1);

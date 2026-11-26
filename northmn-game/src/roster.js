@@ -12,7 +12,7 @@
     emily: ['Quick response','Accept a new online or referral file in three minutes.',{intake:3}],
     gaige: ['After hours','Book showings until 7 PM.',{afterHours:60}],
     jillian: ['Credit negotiation','Secure up to $400 more on requested repair credits.',{repair:400}],
-    joel: ['Lender’s line','Schedule closing one day after title review.',{closeDays:1}],
+    joel: ['Lender’s line','Get the earlier afternoon closing slot when the packet is ready.',{closeEarlier:true}],
     jordan: ['Builder’s eye','Earn extra trust when accurately noting basement and roof concerns.',{structuralTrust:5}],
     kaila: ['Rural connections','Earn extra trust for well and septic notes at the cabin.',{markets:['cabin'],marketTrust:6}],
     liz: ['Closing checklist','Complete title review in 14 minutes.',{titleTime:14}],
@@ -23,7 +23,7 @@
     stephanie: ['Seller’s advocate','Attract stronger opening offers when you publish a listing.',{buyerBump:1250}],
     tania: ['Range local','Earn extra client trust for walkthroughs in Hibbing and Hoyt Lakes.',{markets:['range','hoyt'],marketTrust:5}],
     tanya: ['Listing packet','Write each walkthrough note in three minutes.',{noteTime:3}],
-    'brother-malcolm': ['Twin’s cut','Pocket $125 from the North Desk expense float once per career.',{floatCash:125}],
+    'brother-malcolm': ['Field allowance','Record an approved $125 expense allowance once per career.',{expenseAllowance:125}],
     gene: ['Five-minute buyer','Review a new file in five minutes.',{intake:5}],
   };
 
@@ -65,10 +65,10 @@
     ['tania', 'Tania Suonvieri', 'Iron Range market', '#c9ab73', '#754340', 'bob', 'range',
       'I know this block. If they’re comparing that place in Chisholm, remind them to look at the two condition reports.'],
     ['tanya', 'Tanya Sage', 'Listing coordinator', '#794735', '#78917c', 'long', 'rapids',
-      'Come on in, sugar. If that printer eats one more disclosure, I swear I’m gonna stab somebody. Now, y’all tell me what’s holding up this file.'],
-    ['brother-malcolm', 'Brother Malcolm', 'Malcolm’s evil twin', '#302522', '#584257', 'short', 'rapids',
-      'My brother and I keep score differently. The TV? Let’s just say I like to leave this office with more than I came in with.', '#76503d'],
-    ['gene', 'Gene', 'Zillow lender', '#a9a9a4', '#637688', 'heavy', 'rapids',
+      'Come on in, sugar. If that printer eats one more disclosure, I’m calling it a paper shredder. Now, y’all tell me what’s holding up this file.'],
+    ['brother-malcolm', 'Brother Malcolm', 'Malcolm’s twin', '#302522', '#584257', 'short', 'rapids',
+      'My brother checks three weather apps. I brought a television. Now tell me which one of us is dramatic.', '#76503d'],
+    ['gene', 'Gene', 'Local mortgage lender', '#a9a9a4', '#637688', 'heavy', 'rapids',
       'I only want people who are ready to buy a house in the next five minutes. I was just on the phone with that wall, actually.'],
   ].map(([id, name, title, hair, shirt, style, base, line, skin]) => ({
     id, name, title, hair, shirt, style, base, line, skin,
@@ -107,7 +107,7 @@
     ],
     gene: [
       'I put a five-minute timer on the pre-approval. I don’t remember if it was set to minutes or potatoes.',
-      'I thought the wall was a door. Zillow should really put that in the listing remarks.',
+      'I thought the wall was a door. I’m adding that to my office map.',
       'I pre-approved myself for the break room. We’re just waiting for the microwave to sign.',
     ],
   };

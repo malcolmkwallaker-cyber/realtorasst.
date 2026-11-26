@@ -241,9 +241,12 @@
     uniform sampler2D uShadow;
     uniform vec3 uEye, uShadowCenter;
     uniform vec3 uHeadlight, uBeam;
+    uniform vec3 uRoomCenter;
+    uniform vec2 uRoomAxis, uRoomHalfSize;
+    uniform float uRoomCeiling;
     uniform float uSnow, uMist;
     uniform mat3 uShadowBasis;
-    uniform bool uShadows, uHeadlights;
+    uniform bool uShadows, uHeadlights, uRoom;
     ${atmosphere}
     out vec4 oColor;
     float sunlight(float facing) {
@@ -270,6 +273,12 @@
       vec3 dir = normalize(view);
       vec3 n = normalize(vNormal);
       if (!gl_FrontFacing) n *= -1.;
+      bool indoors = false;
+      if (uRoom) {
+        vec3 offset = vPosition-uRoomCenter;
+        vec2 local = vec2(dot(offset.xz,uRoomAxis),dot(offset.xz,vec2(-uRoomAxis.y,uRoomAxis.x)));
+        indoors = all(lessThanEqual(abs(local),uRoomHalfSize)) && offset.y>=-.04 && offset.y<=uRoomCeiling;
+      }
       vec3 paint = vColor;
       if (vMaterial >= 0) {
         vec2 uv = vUV;
@@ -279,7 +288,7 @@
       }
       if (vMaterial == -4) paint = texture(uSign,vUV).rgb;
       if (vMaterial == -7) paint = texture(uPlate,vUV).rgb;
-      if (uSnow>.02 && (vMaterial==1 || vMaterial==4 || vMaterial==10)) {
+      if (!indoors && uSnow>.02 && (vMaterial==1 || vMaterial==4 || vMaterial==10)) {
         float cover = uSnow*(.31+.69*noise(vPosition.xz*.42))*smoothstep(.12,.66,n.y);
         paint = mix(paint,vec3(.81,.87,.89),cover*(vMaterial==10?.43:.88));
       }
@@ -288,8 +297,12 @@
       float sun = sunlight(shadow);
       vec3 light = mix(vec3(.24,.31,.44), vec3(.42,.47,.54), uDay) + bounce;
       light += uSunTint * (shadow * sun * uDay * (1. - uRain * .68));
+      if (indoors) {
+        float roomBounce = .85 + .19 * max(n.y,0.);
+        light = mix(light,vec3(.98,.91,.80)*roomBounce,.78);
+      }
       vec3 lit = paint * light;
-      if (uHeadlights && dist<73.) {
+      if (!indoors && uHeadlights && dist<73.) {
         vec3 beamRay = vPosition-uHeadlight;
         float travel = length(beamRay);
         float cone = smoothstep(.91,.989,dot(beamRay/max(travel,.01),uBeam));
@@ -331,10 +344,12 @@
           vec3(.95,.78,.56)*(shine * sun * uDay * (1.-uRain*.58)*.55);
       }
       if (vMaterial == -3) lit = paint * 1.09;
-      float groundHaze = exp(-max(0.,vPosition.y-uEye.y)*.065);
-      float dust = (uLow ? 0. : .00014*groundHaze)+uMist*groundHaze*.00146;
-      float fogWeight = 1. - exp(-dist * (.00037 + uRain * .0017 + dust));
-      lit = mix(lit, skyColor(dir), fogWeight);
+      if (!indoors) {
+        float groundHaze = exp(-max(0.,vPosition.y-uEye.y)*.065);
+        float dust = (uLow ? 0. : .00014*groundHaze)+uMist*groundHaze*.00146;
+        float fogWeight = 1. - exp(-dist * (.00037 + uRain * .0017 + dust));
+        lit = mix(lit, skyColor(dir), fogWeight);
+      }
       oColor = vec4(lit, vMaterial == -5 ? .24 : 1.);
     }
   `;
@@ -464,8 +479,23 @@
       const gl = this.gl;
       const canvas = document.createElement('canvas');
       canvas.width = 1024;
-      canvas.height = 256;
+      canvas.height = 512;
       const ctx = canvas.getContext('2d');
+      ctx.save();
+      ctx.scale(1,.5);
+      ctx.fillStyle = '#b3261e';
+      ctx.fillRect(0, 0, 1024, 512);
+      ctx.strokeStyle = '#f4efe2';
+      ctx.lineWidth = 14;
+      ctx.strokeRect(26, 30, 972, 452);
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 250px Georgia';
+      ctx.fillText('SOLD', 512, 300);
+      ctx.font = 'bold 46px system-ui';
+      ctx.fillText('PEMBERTON REAL ESTATE', 512, 420);
+      ctx.restore();
+      ctx.translate(0, 256);
       ctx.fillStyle = '#203630';
       ctx.fillRect(0, 0, 1024, 256);
       ctx.strokeStyle = '#86998a';
@@ -658,7 +688,7 @@
       return map;
     }
 
-    begin(camera, seconds, minutes, rain, castShadows, { world=false,snow=0,mist=0,headlights } = {}) {
+    begin(camera, seconds, minutes, rain, castShadows, { world=false,snow=0,mist=0,headlights,room } = {}) {
       const gl = this.gl;
       const naturally = minutes % 1440 / 60;
       const hour = world && this.lighting==='golden' ? 18.95 : naturally;
@@ -694,6 +724,13 @@
       gl.uniform1i(u.uPlate,3);
       gl.uniform1f(u.uSnow,snow);
       gl.uniform1f(u.uMist,mist);
+      gl.uniform1i(u.uRoom,Number(Boolean(room)));
+      if (room) {
+        gl.uniform3f(u.uRoomCenter,room.x,room.y,room.z);
+        gl.uniform2f(u.uRoomAxis,Math.cos(room.yaw),Math.sin(room.yaw));
+        gl.uniform2f(u.uRoomHalfSize,room.w/2-.12,room.d/2-.12);
+        gl.uniform1f(u.uRoomCeiling,room.id==='office'?2.91:2.53);
+      }
       gl.uniform1i(u.uHeadlights,Number(Boolean(headlights)));
       if (headlights) {
         gl.uniform3fv(u.uHeadlight,headlights.position);

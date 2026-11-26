@@ -58,7 +58,7 @@
   }
 
   function voiceBuffer(context, id) {
-    const voice = voices[id];
+    const voice = voices[id] || voices[String(id).split('~')[0]];
     if (!voice) return null;
     const words = voice.phrase.split(' ');
     const parts = words.map((word,index) => syllable(word,index,voice,words.length));
