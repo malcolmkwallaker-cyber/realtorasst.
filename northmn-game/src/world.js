@@ -172,6 +172,7 @@
       this.actorMeshes = new Map();
       this.suv = renderer.upload(Models.suv(color('#536c5d')));
       this.cockpit = renderer.upload(Models.cockpit());
+      this.dashDigits=Array.from({length:10},(_,i)=>renderer.upload(Models.dashboardDigit(i)));
       this.trafficModels = ['#838989','#794b3f','#b9b2a0','#3b4958','#6e705a'].map((paint) =>
         renderer.upload(Models.suv(color(paint), true)));
       this.truckMesh=renderer.upload(Models.loggingTruck());
@@ -1152,7 +1153,16 @@
       if (!carView && Math.hypot(car.x-player.x,car.z-player.z)<340 && visible(car.x,car.z,3)) {
         render.draw(this.suv,car.x,this.height(car.x,car.z)+.13,car.z,car.yaw);
       }
-      if (carView) render.draw(this.cockpit,car.x,this.height(car.x,car.z)+.13,car.z,car.yaw);
+      if (carView) {
+        const base=this.height(car.x,car.z)+.13;
+        render.draw(this.cockpit,car.x,base,car.z,car.yaw);
+        const speed=String(Math.round(Math.abs(car.speed)*2.23694)).padStart(3,' ');
+        for (let i=0;i<speed.length;i++) {
+          if (speed[i]===' ') continue;
+          const at=toWorld(car,.052+i*.053,-1.176);
+          render.draw(this.dashDigits[Number(speed[i])],at.x,base+1.19,at.z,car.yaw);
+        }
+      }
       if (showPlayer) {
         const pose = player.walking ? [0,1,0,-1][Math.floor(player.stride/1.55)%4] : 0;
         render.draw(this.actor(player.agent,pose),player.x,this.height(player.x,player.z)+player.bob,player.z,player.yaw);

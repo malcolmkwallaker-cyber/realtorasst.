@@ -571,7 +571,8 @@
     mesh.box(-.938,1.07,-1.42,1.876,.057,.51,dash,M.cloth);
     mesh.box(-.698,1.13,-1.31,.60,.16,.23,dash);
     mesh.box(-.666,1.155,-1.075,.536,.105,.021,c('#182528'),M.glass);
-    mesh.box(-.585,1.187,-1.050,.103,.024,.012,c('#a3dac2'),M.lamp);
+    mesh.box(.028,1.173,-1.295,.216,.113,.105,dash);
+    mesh.box(.033,1.179,-1.188,.206,.099,.007,c('#1c2a29'));
     mesh.box(-.380,1.201,-1.050,.132,.012,.012,c('#cdb47c'),M.lamp);
     mesh.box(-.145,.908,-1.031,.305,.194,.124,c('#182120'));
     mesh.box(-.123,.939,-.904,.254,.127,.026,c('#456b65'),M.glass);
@@ -596,6 +597,18 @@
     }
     mesh.ellipsoid(-.426,1.24,-.763,.073,.062,.035,dash,-1,10,6);
     mesh.box(-.155,1.643,-1.161,.31,.086,.026,c('#464b48'),M.glass);
+    return mesh;
+  }
+
+  function dashboardDigit(value) {
+    const mesh=new Mesh(), lit=c('#baeace');
+    const strokes=[[0,.069,.036,.008],[.031,.036,.007,.035],[.031,.004,.007,.033],
+      [0,0,.036,.008],[-.002,.004,.007,.033],[-.002,.036,.007,.035],[0,.034,.036,.008]];
+    const digits=['012345','12','01643','01623','5612','05623','056432','012','0123456','012356'];
+    for (const index of digits[value]) {
+      const [x,y,w,h]=strokes[Number(index)];
+      mesh.box(x,y,0,w,h,.003,lit,M.lamp);
+    }
     return mesh;
   }
 
@@ -801,5 +814,5 @@
   }
 
   Object.assign(ND, { Models: { beam, featured, house, pine, birch, pole, suv, person, lockedDoor, yardSign, loggingTruck, deer,
-    officePorchLayout,cockpit,mailbox,streetMarker,shrub } });
+    officePorchLayout,cockpit,dashboardDigit,mailbox,streetMarker,shrub } });
 })();
