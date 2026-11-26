@@ -11,7 +11,7 @@
   const STAR_SECONDS = 15;
   const BRIDGER_DELAY = 15;
   const SHOWING_REMINDER = 15;
-  const MISSED_SHOWING_TRUST = 4;
+  const LATE_SHOWING_TRUST = 3;
   const events = [
     { id:'steady', title:'Clear roads', detail:'Normal showing windows and light traffic in the morning.' },
     { id:'snow', title:'Morning flurries', detail:'Snow crossings and shaded pavement stay slick into late morning.' },
@@ -508,12 +508,11 @@
         const left = r.showAt-Math.floor(minute);
         const level = left < -this.showingGrace ? 3 : left < 0 ? 2 : left <= SHOWING_REMINDER ? 1 : 0;
         if (level <= (r.showingAlert || 0)) continue;
+        const lost = level>=2 && (r.showingAlert||0)<2 ? -this.trust(-LATE_SHOWING_TRUST,r) : 0;
         r.showingAlert = level;
-        let lost = 0;
         if (level===3) {
           r.missedAt = r.showAt;
           r.stage = 'schedule';
-          lost = -this.trust(-MISSED_SHOWING_TRUST,r);
           this.day.missed++;
         }
         this.showingAlerts.push({ level,file,left,lost,closes:r.showAt+this.showingGrace });

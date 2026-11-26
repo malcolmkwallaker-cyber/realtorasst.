@@ -217,20 +217,16 @@
       }
       const alerts = this.career.showingAlerts;
       if (!alerts.length) return;
-      const {file,level,left,lost,closes,coveredBy} = alerts.splice(0).sort((a,b)=>b.level-a.level)[0];
-      const client = file.client;
-      if (level===4) {
-        this.sound.phoneBuzz();
-        this.ui.notice(this.career.role(coveredBy)+' finished '+client+'’s showing. Notes are in the deal.',6500);
-      } else if (level===1) {
-        this.ui.notice(left===0 ? client+'’s showing is due now.' : client+'’s showing in '+left+' min.',5200);
-      } else if (level===2) {
-        this.sound.phoneBuzz();
-        this.ui.notice('Late for '+client+' · You can arrive until '+time(closes)+'.',6000);
-      } else {
-        this.sound.phoneBuzz();
-        this.ui.notice('Missed showing with '+client+(lost?' · −'+lost+' trust':'')+' · Rebook in Phone.',6500);
-      }
+      const reminders = alerts.splice(0);
+      const messages = reminders.map(({file,level,left,lost,closes,coveredBy}) => {
+        const penalty = lost ? ' · −'+lost+' trust for arriving late' : '';
+        if (level===4) return this.career.role(coveredBy)+' finished '+file.client+'’s showing. Notes are in the deal.';
+        if (level===1) return left===0 ? 'Showing due now' : 'Showing in '+left+' minutes, head to the property';
+        if (level===2) return 'Showing late · '+file.client+penalty+' · Arrive by '+time(closes)+'.';
+        return 'Missed showing with '+file.client+penalty+' · Rebook in Phone.';
+      });
+      this.sound.phoneBuzz();
+      this.ui.notice(messages.join(' / '),6500);
       this.save();
     }
 
@@ -1040,7 +1036,7 @@
       if (showing) {
         const {state,file,left,at} = showing;
         const when = state==='covered' ? 'Teammate covering' : state==='missed' ? 'Showing missed · Rebook' : state==='due' ? 'Showing due now' :
-          state==='late' ? Math.abs(left)+' min late' : left>=24*60 ? time(at,true) : left+' min to showing';
+          state==='late' ? 'Showing late' : 'Showing in '+left+' min';
         appointment.dataset.state = state;
         if (byId('showing-when').textContent!==when) byId('showing-when').textContent = when;
         if (byId('showing-who').textContent!==file.client) byId('showing-who').textContent = file.client;

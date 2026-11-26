@@ -25,7 +25,7 @@ Graphics starts on **High** for new players and remembers your selection. High a
 
 Touch screens show movement, turning, camera, and interaction controls. **Route to showing** puts driving directions on the map. **Fast Travel** parks you at the destination and advances your clock, mileage, and fuel use. Press **C** in the SUV to see the cockpit.
 
-Watch the showing countdown for a 15-minute reminder and a buzz when you run late. If the showing window closes, you lose up to four trust and can rebook from your phone. The Inbox keeps a calendar of booked showings, inspections, and closings. If two showings overlap, ask an available teammate to cover one and read their notes in Deal afterward. Phone and menus pause the field clock. The first-day tutorial is available from Pause.
+Watch the showing countdown for a 15-minute reminder and a buzz when you run late. Once the appointment time passes, arriving late costs three trust once per showing. The lockbox stays available for 50 minutes after the appointment. After the window closes, rebook at the lockbox or from your phone. The Inbox keeps a calendar of booked showings, inspections, and closings. If two showings overlap, ask an available teammate to cover one and read their notes in Deal afterward. Phone and menus pause the field clock. The first-day tutorial is available from Pause.
 
 When driving yourself, follow the GPS arrow and watch your speed, fuel, and notices for deer, logging trucks, and slick pavement. The SUV tops out at 120 mph on highways. During a showing, the client follows your tour and reacts to your observations. Access mix-ups sometimes cost time and trust.
 

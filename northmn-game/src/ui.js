@@ -796,7 +796,7 @@
         const message = Number.isFinite(r.missedAt) ? 'This showing window has closed. Rebook with '+c.file.client+'.' :
           'The seller releases access for booked showings.';
         this.dialog('Property lockbox',[message],[
-          button('Open deal',() => this.phone('deal'),true),
+          button(Number.isFinite(r.missedAt)?'Rebook showing':'Open deal',() => this.phone('deal'),true),
         ]);
         return;
       }
