@@ -781,12 +781,12 @@
         const remaining=c.file.notes.filter((note)=>!r.notes.includes(note[0]));
         for (const note of remaining) {
           if ((inListing && note[0]!=='roof') || (!inside && note[0]==='roof')) {
-            add(points[note[0]],note[0]==='roof'?2.8:2.45,'Inspect '+note[1].toLowerCase(),() => this.ui.observation(note));
+            if (this.world.clearPath(p,points[note[0]])) add(points[note[0]],note[0]==='roof'?3.45:3.12,'Inspect '+note[1].toLowerCase(),() => this.ui.observation(note));
           }
         }
       }
-      if (stage==='inspection' && inListing) {
-        add(this.inspectionPoint(s),2.5,'Review the inspection',() => this.ui.inspection());
+      if (stage==='inspection' && inListing && this.world.clearPath(p,this.inspectionPoint(s))) {
+        add(this.inspectionPoint(s),3.18,'Review the inspection',() => this.ui.inspection());
       }
       if (!inside) {
         const [x,z] = ND.local(this.car,p.x,p.z);
@@ -846,7 +846,7 @@
         const remaining=this.career.file.notes.filter((note)=>!this.career.record.notes.includes(note[0]));
         const [note]=remaining.filter((n)=>indoors===(n[0]!=='roof'))
           .sort((a,b)=>distance(p,points[a[0]])-distance(p,points[b[0]]));
-        if (note) return {...goal,point:{...points[note[0]],y:site.y,label:note[1],markerHeight:1.58}};
+        if (note) return {...goal,point:this.walkMarker(site,points[note[0]],note[1])};
         if (indoors && remaining.some((n)=>n[0]==='roof')) {
           return {...goal,point:{...site.threshold,y:site.y,label:'Exit for the roof view',markerHeight:1.78}};
         }
@@ -855,10 +855,21 @@
         const [sx,sz] = ND.local(site,p.x,p.z);
         if (Math.abs(sx)<site.w/2 && Math.abs(sz)<site.d/2) {
           return {title:'Review the visible defect',detail:'Walk to the inspection marker to review the estimate.',
-            point:{...this.inspectionPoint(site),y:site.y,label:'Inspection finding',markerHeight:1.1}};
+            point:this.walkMarker(site,this.inspectionPoint(site),'Inspection finding')};
         }
       }
       return goal;
+    }
+
+    walkMarker(site,target,label) {
+      const player=this.player;
+      if (this.world.clearPath(player,target)) return {...target,y:site.y,label,markerHeight:1.36,walkMarker:true};
+      const cached=this.inspectionRoute;
+      if (!cached || cached.site!==site || cached.label!==label || distance(player,cached.start)>.72) {
+        this.inspectionRoute={site,label,start:{x:player.x,z:player.z},path:this.world.walkingRoute(site,player,target,.4)};
+      }
+      const waypoint=this.inspectionRoute.path.findLast((point)=>distance(player,point)>.3 && this.world.clearPath(player,point,.24));
+      return waypoint ? {...waypoint,y:site.y,label:'This way · '+label,markerHeight:.65,walkMarker:true} : null;
     }
 
     book(tomorrow) {
@@ -1087,6 +1098,10 @@
       const goal = this.goal();
       const target = this.driving && this.gps && distance(this.player,this.gps.target)>40 ? this.gps.target : goal.point;
       if (!target) { el.hidden = true; return; }
+      if (target.walkMarker && !this.world.clearPath({x:camera.eye[0],z:camera.eye[2]},target,.09)) {
+        el.hidden=true;
+        return;
+      }
       const d = distance(this.player,target);
       const xy = ND.project(camera,[target.x,(target.y??this.world.height(target.x,target.z))+(target.markerHeight??2.35),target.z]);
       if (!xy || d > 900 || xy[0] < .05 || xy[0] > .95 || xy[1] < .09 || xy[1] > .81) {

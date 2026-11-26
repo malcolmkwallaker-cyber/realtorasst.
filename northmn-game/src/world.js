@@ -553,6 +553,15 @@
       return distance;
     }
 
+    clearPath(from,to,radius=.18) {
+      const dx=to.x-from.x,dz=to.z-from.z;
+      const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.16));
+      for (let i=1;i<=steps;i++) {
+        if (this.collides(from.x+dx*i/steps,from.z+dz*i/steps,radius)) return false;
+      }
+      return true;
+    }
+
     canSee(from,to) {
       const d = Math.hypot(to.x-from.x,to.z-from.z);
       if (d<=.58) return true;
