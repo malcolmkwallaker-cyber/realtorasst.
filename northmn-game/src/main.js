@@ -758,14 +758,14 @@
       if (prize) add(prize,1.5,'Open mystery block',() => this.collectPrize(prize));
       if (!inside) {
         if (stage==='booked' || (stage==='schedule' && !r.unlocked)) {
-          add(doorAt(s),3.45,'Check property lockbox',() => this.ui.lockbox());
+          add(doorAt(s),3.45,stage==='booked'?'Open lockbox':'Check property lockbox',() => this.ui.lockbox());
         } else if (stage==='inspection') {
           add(doorAt(s),3.45,r.inspectionWalk?'Enter for inspection':'Meet the inspector',() => this.ui.beginInspection());
         }
         for (const file of ND.files) {
           const lot = this.world.features[file.id];
           if (!c.state.files[file.id].unlocked || (lot===s && ['booked','inspection'].includes(stage))) continue;
-          add(doorAt(lot),3.05,'Enter '+lot.name,() => this.enterBuilding(lot));
+          add(doorAt(lot),3.05,'Enter house · '+lot.name,() => this.enterBuilding(lot));
         }
       } else if (!inOffice) {
         add(inside.threshold,1.65,'Step outside',() => {
