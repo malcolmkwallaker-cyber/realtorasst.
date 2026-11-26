@@ -494,7 +494,7 @@
       const brake = key('Space') || !usable;
       const grip = 1-(this.weather.snow?.48:this.weather.label==='Rain'?.25:0)*this.rain;
       const previousSpeed = car.speed;
-      const thrust = 7.2*(1-.42*Math.max(0,previousSpeed)/topSpeed);
+      const thrust = 8.4*(1-.42*Math.max(0,previousSpeed)/topSpeed);
       const acceleration = push*(previousSpeed*push<-.4?12:thrust)*grip*(push>0?coffee:1);
       car.speed += brake ? -Math.sign(car.speed)*Math.min(Math.abs(car.speed),dt*17*grip) :
         push ? acceleration*dt : -car.speed*Math.min(1,dt*.9);

@@ -629,7 +629,7 @@
         (end-start)/2.65,(r-l)/2.65);
     }
 
-    drawRoads(mesh, segments, x0, z0, urban) {
+    drawRoads(mesh, segments, x0, z0, urban, boxes) {
       const poleSlots = new Set();
       for (const s of segments) {
         const range = clip(s.a.x,s.a.z,s.b.x,s.b.z,x0,z0,x0+CHUNK,z0+CHUNK);
@@ -674,6 +674,7 @@
           const slot = Math.floor(x/53) + ',' + Math.floor(z/53);
           if (!poleSlots.has(slot) && !this.geo.wet(x,z) && !this.exclusion(x,z,2)) {
             poleSlots.add(slot);
+            boxes.push({x,z,yaw:0,w:.30,d:.30,kind:'utility pole'});
             mesh.at(x,this.geo.height(x,z),z,s.heading-Math.PI/2,() => Models.pole(mesh,urban ? 6.7 : 8.6, !urban));
           }
         }
@@ -700,7 +701,7 @@
       const low = this.renderer.low;
       this.terrain(mesh,x0,z0,CHUNK,low?12:16,false);
       const segments = this.geo.roads.area(x0-11,z0-11,x0+CHUNK+11,z0+CHUNK+11);
-      this.drawRoads(mesh,segments,x0,z0,urban);
+      this.drawRoads(mesh,segments,x0,z0,urban,boxes);
       if (urban) {
         for (let i = 9; i < CHUNK; i += 22) {
           for (let j = 9; j < CHUNK; j += 23) {
