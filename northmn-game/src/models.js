@@ -258,20 +258,23 @@
     mesh.box(-w / 2 + .41, .05, d / 2 - 2.20, 1.62, .37, 1.87, wood, M.oak);
     mesh.box(-w / 2 + .42, .41, d / 2 - 2.19, 1.60, .20, 1.84, c('#b3b7a8'), M.cloth);
     mesh.box(-w / 2 + .51, .61, d / 2 - 2.03, .62, .12, .37, ivory, M.drywall);
+    waterHeater(mesh,w/2-.63,-d/2+1.58);
     if (lot.id === 'ramble') {
       window(mesh,-.64,1.06,rear-.045,1.28,.64);
       waterMark(mesh,rear-.049);
       mesh.floor(-1.20,.009,d/2-2.05,2.33,1.79,c('#b8b0a0'),M.concrete);
       mesh.box(-.64,.012,d/2-1.61,1.34,.039,1.28,c('#635746'),M.oak);
       mesh.box(.37,.094,d/2-1.45,.18,.039,.11,steel);
-      waterHeater(mesh,w/2-.63,-d/2+1.58);
+      const damp = [[-.68,-.32],[-.72,-.67],[-.81,-.94],[-.77,-1.18],[-.92,-1.30],[-1.09,-1.02],[-1.12,-.68],[-1.01,-.38]];
+      for (let i=0;i<damp.length;i++) {
+        const [x,z]=damp[i], [nx,nz]=damp[(i+1)%damp.length];
+        mesh.triangle([-.89,.018,d/2-.79],[x,.018,d/2+z],[nx,.018,d/2+nz],c('#736b59'),M.concrete);
+      }
       const pipe = c('#9aa49d');
       mesh.box(-w/2+.54,.48,d/2+.02,.097,2.21,.12,pipe);
       mesh.box(-w/2+.52,1.04,d/2+.136,.136,.047,.026,steel);
       beam(mesh,[-w/2+.59,.19,d/2+.06],[-w/2+.74,.05,d/2+.79],.095,pipe);
       mesh.floor(-w/2+.28,-.047,d/2+.09,.76,1.13,c('#78664d'),M.gravel);
-    } else if (lot.id==='duluth' || lot.id==='hoyt') {
-      waterHeater(mesh,w/2-.63,-d/2+1.58);
     } else if (lot.id==='range') {
       mesh.box(w/2-.309,1.06,-d/2+1.46,.093,.44,.39,c('#797d76'));
       mesh.box(w/2-.318,1.14,-d/2+1.54,.035,.25,.19,c('#555956'));

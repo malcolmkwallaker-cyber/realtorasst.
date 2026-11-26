@@ -291,9 +291,7 @@
           this.obstacle(lot,-lot.w/2+.43,-lot.d/2+1.89,.32,.32);
           this.obstacle(lot, lot.w / 2 - 1.49, -lot.d / 2 + .5, 2.61, .64);
           this.obstacle(lot, lot.w / 2 - 2.38, -1.11, 1.37, .84);
-          if (['ramble','hoyt','duluth'].includes(lot.id)) {
-            this.obstacle(lot,lot.w/2-.63,-lot.d/2+1.58,.54,.54);
-          }
+          this.obstacle(lot,lot.w/2-.63,-lot.d/2+1.58,.54,.54);
         }
         const asphalt = lot.type === 'cabin' ? M.gravel : M.asphalt;
         this.driveway(mesh, lot, asphalt);
