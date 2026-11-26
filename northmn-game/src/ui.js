@@ -18,7 +18,7 @@
       'Watch the showing countdown. You get a fifteen-minute reminder and a buzz when you’re late. A missed showing costs a little trust and goes back to scheduling.',
     ]],
     ['Get to the showing',[
-      'Route to showing sets directions on the map. You can hold W to drive your SUV there, or choose Fast Travel from Map to arrive parked. Fast Travel uses fuel and advances the workday.',
+      'Set showing route gives you directions on the map. You can hold W to drive your SUV there, or choose Fast Travel from Map to arrive parked. Fast Travel uses fuel and advances the workday.',
       'Open the lockbox at the property. Walk with the buyer and flag conditions worth checking. Your notes carry through to the offer and inspection.',
     ]],
     ['Take a break',[
@@ -44,6 +44,23 @@
         if (event.target === this.overlay) this.close();
       });
       window.addEventListener('resize', () => this.drawMap());
+    }
+
+    resetIntroductions() {
+      this.introduced = new Set();
+      try { localStorage.removeItem('north-desk-first-opens'); } catch {}
+    }
+
+    firstOpen(id) {
+      if (!this.introduced) {
+        let seen=[];
+        try { seen=JSON.parse(localStorage.getItem('north-desk-first-opens')) || []; } catch {}
+        this.introduced=new Set(Array.isArray(seen)?seen:[]);
+      }
+      if (this.introduced.has(id)) return false;
+      this.introduced.add(id);
+      try { localStorage.setItem('north-desk-first-opens',JSON.stringify([...this.introduced])); } catch {}
+      return true;
     }
 
     show(title, kind, html) {
@@ -256,7 +273,8 @@
           break;
         }
       }
-      this.show('Phone','phone',nav+html);
+      const hint = this.firstOpen('phone') ? '<p class="day-brief">Use Inbox to pick a client, Deal to book or negotiate, Team to call, and Ledger to check earnings.</p>' : '';
+      this.show('Phone','phone',nav+hint+html);
       this.content.querySelectorAll('[data-tab]').forEach((item) => {
         item.onclick = () => this.phone(item.dataset.tab);
       });
@@ -360,7 +378,7 @@
         } else if (career.state.minute<r.showAt && !career.showingConflict(r.showAt,career.coveringAgent)) {
           actions.push(button('Ask '+career.role(career.coveringAgent)+' to cover',() => this.delegate()));
         }
-        actions.push(navigate(f.id,'Route to showing'));
+        actions.push(navigate(f.id,'Set showing route'));
       }
       if (r.stage === 'tour') {
         extra = '<p>'+r.notes.length+' of '+f.notes.length+' observations logged. Walk the property to finish your notes.</p>';
@@ -969,7 +987,7 @@
         button('Back to work',() => this.close()),
       ];
       this.dialog('Tanya’s Laser Tag',[
-        'Take an optional 45-second arcade break. Your real estate workday pauses during the match.',
+        ...(this.firstOpen('laser') ? ['Take an optional 45-second arcade break. Your real estate workday pauses during the match.'] : []),
         'Good Lord, that scoreboard owes me a rematch. Step up here, sugar, and tag all five opponents in 45 seconds.',
         'Move with WASD. Aim with the mouse or arrow keys. Click or press F to fire. On touch screens, drag to aim and tap Fire.',
       ],actions,'tanya');
@@ -1074,7 +1092,8 @@
       if (!this.mapPose || focus) {
         this.mapPose = focus && selected ? { x:selected.x,z:selected.z,zoom:8 } : null;
       }
-      this.show('Northern Minnesota','map','<div class="map-layout"><div class="map-canvas">'+
+      const hint = this.firstOpen('map') ? '<p class="day-brief">Pick a destination for driving directions. Fast Travel takes the trip for you and uses time and fuel.</p>' : '';
+      this.show('Northern Minnesota','map',hint+'<div class="map-layout"><div class="map-canvas">'+
         '<canvas id="regional-map" aria-label="Map of Northern Minnesota roads and lakes"></canvas>'+
         '<div class="map-buttons"><button type="button" id="zoom-in" aria-label="Zoom in">+</button>'+
         '<button type="button" id="zoom-out" aria-label="Zoom out">−</button>'+
@@ -1181,9 +1200,9 @@
       const miles = selected.route.meters * ND.MILES;
       const near = g.driving || g.nearCar(12);
       el.innerHTML = '<strong>'+escape(selected.target.label)+'</strong><p>'+miles.toFixed(1)+' mi by road</p>'+
-        '<p class="detail">Follow GPS for directions. Fast Travel arrives parked and uses about '+
+        '<p class="detail">Drive it yourself follows the route with you at the wheel. Fast Travel arrives parked and uses about '+
         Math.round(g.career.driveMinutes(miles))+' in-game minutes and fuel.</p>'+
-        '<div class="actions"><button type="button" class="small primary" id="follow-gps">Follow GPS</button>'+
+        '<div class="actions"><button type="button" class="small primary" id="follow-gps">Drive it yourself</button>'+
         '<button type="button" class="small" id="assist-gps">'+(near?'Fast Travel':'Return to SUV')+'</button></div>'+
         '<div class="actions"><button class="small" type="button" id="zoom-stop">Show destination</button>'+
         '<button class="small" type="button" id="clear-route">Clear GPS</button></div>';

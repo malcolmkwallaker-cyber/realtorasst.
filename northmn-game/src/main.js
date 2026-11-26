@@ -91,6 +91,7 @@
       this.gps = null;
       this.frameDirty = true;
       this.ui.close(false);
+      if (!saved) this.ui.resetIntroductions();
       let parkingRecovered = false;
       if (saved && this.validPoint(saved.player) && this.validPoint(saved.car)) {
         Object.assign(this.player,{ x:saved.player.x,z:saved.player.z,
@@ -818,6 +819,16 @@
     goal() {
       const p = this.player;
       const goal = this.career.goal(this.world);
+      const c = this.career;
+      if (c.file.id==='ramble' && !c.file.gen && !c.record.coveredBy && !Number.isFinite(c.record.missedAt)) {
+        const guide = {
+          lead:'Meet Liz at her desk and accept Mara’s file.',
+          schedule:'Open Phone → Deal and book Mara’s showing.',
+          booked:'Drive the SUV to Mara’s lockbox · '+time(c.record.showAt,true),
+          tour:'Walk the rooms with Mara and log each observation.',
+        };
+        if (guide[c.record.stage]) goal.detail=guide[c.record.stage];
+      }
       const site = this.world.features[this.career.file.id];
       const office = this.world.features.office;
       const [x,z] = ND.local(office,p.x,p.z);
