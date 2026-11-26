@@ -23,7 +23,7 @@ Graphics starts on **High** for new players and remembers your selection. High a
 | M | Open the regional GPS |
 | Esc | Pause or close a window |
 
-Touch screens show movement, turning, camera, and interaction controls. **Set showing route** puts driving directions on the map. **Fast Travel** parks you at the destination and advances your clock, mileage, and fuel use. Press **C** in the SUV to see the cockpit.
+Touch screens show movement, turning, camera, and interaction controls. **Set showing route** puts driving directions on the map. **Fast Travel** parks you at the destination and advances your clock, mileage, and fuel use. Walking starts in the pulled-back view. Press **C** to change it. Your walking view survives dialogs and workdays. In the SUV, **C** switches to the cockpit.
 
 Watch the showing countdown for a 15-minute reminder and a buzz when you run late. Once the appointment time passes, arriving late costs three trust once per showing. The lockbox stays available for 50 minutes after the appointment. After the window closes, rebook at the lockbox or from your phone. The Inbox keeps a calendar of booked showings, inspections, and closings. If two showings overlap, ask an available teammate to cover one and read their notes in Deal afterward. Phone and menus pause the field clock. The first-day tutorial is available from Pause.
 

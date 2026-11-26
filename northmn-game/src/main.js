@@ -30,7 +30,8 @@
       this.started = false;
       this.driving = false;
       this.driveCamera = 0;
-      this.walkCamera = 0;
+      this.walkCamera = 1;
+      try { if (localStorage.getItem('north-desk-walk-view')==='first') this.walkCamera=0; } catch {}
       this.last = 0;
       this.hudAt = 0;
       this.autoSaveAt = 0;
@@ -86,7 +87,7 @@
       this.driving = false;
       this.snowContact = false;
       this.geneTalkAt = 0;
-      this.walkCamera = this.driveCamera = 0;
+      this.driveCamera=0;
       this.cameraY = null;
       this.gps = null;
       this.frameDirty = true;
@@ -143,7 +144,7 @@
       this.keys.clear();
       this.driving = false;
       this.carLook = 0;
-      this.walkCamera = this.driveCamera = 0;
+      this.driveCamera=0;
       this.snowContact = false;
       this.setupScene(this.career.state.agent);
       const office = this.world.features.office;
@@ -481,7 +482,10 @@
 
     toggleView() {
       if (this.driving) this.driveCamera = (this.driveCamera + 1) % 2;
-      else this.walkCamera = (this.walkCamera + 1) % 2;
+      else {
+        this.walkCamera=1-this.walkCamera;
+        try { localStorage.setItem('north-desk-walk-view',this.walkCamera?'chase':'first'); } catch {}
+      }
       this.player.pitch = this.driving || this.walkCamera ? -.08 : 0;
       this.cameraY = null;
     }
@@ -1052,14 +1056,24 @@
         return ND.frame([seat.x,ground+1.68,seat.z],yaw,pitch-.075,aspect,Math.PI/(2.91-speedFov));
       }
       if (this.walkCamera) {
-        const back = this.world.cameraDistance(p.x,p.z,-fx,-fz,4.35);
-        if (back>1.25) {
-          const x = p.x-fx*back;
-          const z = p.z-fz*back;
-          const eye = this.world.inside(x,z) ? 2.22 : 2.73;
-          return ND.frame([x,Math.max(ground+eye,this.world.height(x,z)+1.7),z],
-            yaw,pitch*.66-.21,aspect,Math.PI/3.31);
+        const vehicle=distance(p,this.car)<8 ? this.car : null;
+        const trace=offset=>{
+          const dx=-Math.sin(yaw+offset),dz=Math.cos(yaw+offset);
+          const reach=this.world.cameraDistance(p.x,p.z,dx,dz,4.35,vehicle);
+          return {x:p.x+dx*reach,z:p.z+dz*reach,reach,offset};
+        };
+        let eye=trace(0);
+        if (eye.reach<2.05) {
+          for (const offset of [.68,-.68,1.32,-1.32]) {
+            const side=trace(offset);
+            if (side.reach-Math.abs(offset)*.52>eye.reach-Math.abs(eye.offset)*.52+.20) eye=side;
+            if (eye.reach>=3.9) break;
+          }
         }
+        const room=this.world.interiorAt(eye.x,eye.z);
+        const height=room?room.y+2.18:Math.max(ground+2.65,this.world.height(eye.x,eye.z)+1.7);
+        const aim=Math.atan2(p.x+fx*1.15-eye.x,eye.z-p.z-fz*1.15);
+        return ND.frame([eye.x,height,eye.z],aim,pitch*.66-.21,aspect,Math.PI/3.31);
       }
       const clearance = this.world.cameraDistance(p.x,p.z,Math.sin(yaw),-Math.cos(yaw),.76);
       const setback = clearance<.69 ? this.world.cameraDistance(p.x,p.z,-Math.sin(yaw),Math.cos(yaw),.73-clearance) : 0;

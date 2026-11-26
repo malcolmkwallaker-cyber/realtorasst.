@@ -552,11 +552,16 @@
       return false;
     }
 
-    cameraDistance(x,z,dx,dz,distance) {
+    cameraDistance(x,z,dx,dz,distance,parkedCar=null) {
       const steps = Math.ceil(distance/.13);
       for (let i=1;i<=steps;i++) {
         const at = i/steps*distance;
-        if (this.collides(x+dx*at,z+dz*at,.23)) return Math.max(0,at-.28);
+        const px=x+dx*at,pz=z+dz*at;
+        if (parkedCar) {
+          const [across,along]=local(parkedCar,px,pz);
+          if (Math.abs(across)<1.23 && Math.abs(along)<2.55) return Math.max(0,at-.28);
+        }
+        if (this.collides(px,pz,.23)) return Math.max(0,at-.28);
       }
       return distance;
     }
